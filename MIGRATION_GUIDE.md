@@ -1,6 +1,7 @@
 # Laravel Admin Panel Migration Guide
 
 ## Overview
+
 This Laravel project is a migration from the old CodeIgniter (CI) admin panel. All database tables, data, and functionality have been migrated to Laravel while maintaining compatibility with the existing CI database structure.
 
 ## Project Structure
@@ -50,19 +51,23 @@ design-rullart/
 ## Database Configuration
 
 ### Current Setup
-- **Laravel Database:** `laravel_123`
-- **CI Database (Source):** `rullart_rullart`
-- **Connection:** Both databases are on the same MySQL server (localhost)
+
+-   **Laravel Database:** `laravel_123`
+-   **CI Database (Source):** `rullart_rullart`
+-   **Connection:** Both databases are on the same MySQL server (localhost)
 
 ### Database Tables
+
 All 66 tables from the CI project have been migrated:
-- Core tables: `customers`, `ordermaster`, `orderitems`, `products`, `category`
-- Admin tables: `admin`
-- Support tables: `returnrequest`, `productrating`, `shoppingcart`, etc.
+
+-   Core tables: `customers`, `ordermaster`, `orderitems`, `products`, `category`
+-   Admin tables: `admin`
+-   Support tables: `returnrequest`, `productrating`, `shoppingcart`, etc.
 
 ## Initial Setup
 
 ### 1. Install Dependencies
+
 ```bash
 cd design-rullart
 composer install
@@ -70,7 +75,9 @@ npm install
 ```
 
 ### 2. Configure Environment
+
 Copy `.env.example` to `.env` and update:
+
 ```env
 DB_CONNECTION=mysql
 DB_HOST=127.0.0.1
@@ -81,27 +88,33 @@ DB_PASSWORD=
 ```
 
 ### 3. Generate Application Key
+
 ```bash
 php artisan key:generate
 ```
 
 ### 4. Run Migrations
+
 ```bash
 php artisan migrate
 ```
 
 ### 5. Create Admin User
+
 ```bash
 php artisan db:seed --class=AdminSeeder
 ```
 
 Or use the password fix script:
+
 ```bash
 php fix_admin_password.php
 ```
 
 ### 6. Copy Data from CI Database (Optional)
+
 If you need to copy fresh data from CI database:
+
 ```bash
 php copy_data_from_ci.php
 ```
@@ -109,20 +122,26 @@ php copy_data_from_ci.php
 ## Admin Login
 
 ### Default Credentials
-- **Username:** `admin`
-- **Password:** `password`
+
+-   **Username:** `admin`
+-   **Password:** `password`
 
 ### Custom Admin User
+
 To create/update admin user with custom credentials:
+
 ```bash
 php fix_admin_password.php
 ```
 
 Edit the script to change username/password, or run:
+
 ```bash
 php artisan tinker
 ```
+
 Then:
+
 ```php
 DB::table('admin')->insert([
     'id' => 1,
@@ -141,12 +160,14 @@ DB::table('admin')->insert([
 ## Authentication System
 
 ### Admin Authentication
-- Uses custom `Admin` model with MD5 password hashing
-- Custom guard: `auth:admin`
-- Login field: `user` (username/email)
-- Password field: `pass` (MD5 hash)
+
+-   Uses custom `Admin` model with MD5 password hashing
+-   Custom guard: `auth:admin`
+-   Login field: `user` (username/email)
+-   Password field: `pass` (MD5 hash)
 
 ### Login Flow
+
 1. User submits credentials at `/admin/login`
 2. `AdminLoginController@store` validates and authenticates
 3. Uses MD5 hash comparison: `md5($password) === $admin->pass`
@@ -155,31 +176,38 @@ DB::table('admin')->insert([
 ## Common Tasks
 
 ### Fix Missing Tables
+
 If you encounter "table doesn't exist" errors:
+
 ```bash
 php fix_all_missing_tables.php
 ```
 
 This script will:
-- Check all core tables
-- Create missing tables from CI database structure
-- Copy data from CI database
-- Handle invalid datetime values
+
+-   Check all core tables
+-   Create missing tables from CI database structure
+-   Copy data from CI database
+-   Handle invalid datetime values
 
 ### Update Admin Password
+
 ```bash
 php fix_admin_password.php
 ```
 
 Or manually:
+
 ```bash
 php artisan tinker
 ```
+
 ```php
 DB::table('admin')->where('user', 'info@rullart.com')->update(['pass' => md5('new_password')]);
 ```
 
 ### Clear Cache
+
 ```bash
 php artisan config:clear
 php artisan cache:clear
@@ -187,6 +215,7 @@ php artisan view:clear
 ```
 
 ### Check Migration Status
+
 ```bash
 php artisan migrate:status
 ```
@@ -196,11 +225,13 @@ php artisan migrate:status
 ### Adding New Admin Pages
 
 1. **Create Controller:**
+
 ```bash
 php artisan make:controller Admin/YourController
 ```
 
 2. **Add Route** in `routes/admin.php`:
+
 ```php
 Route::get('your-page', [YourController::class, 'index'])->name('your-page');
 ```
@@ -208,6 +239,7 @@ Route::get('your-page', [YourController::class, 'index'])->name('your-page');
 3. **Create View** in `resources/views/admin/your-page.blade.php`
 
 4. **Add Menu Item** in `resources/views/layouts/partials/sidenav.blade.php`:
+
 ```blade
 <li class="side-nav-item">
     <a href="{{ route('admin.your-page') }}" class="side-nav-link">
@@ -237,11 +269,13 @@ $orders = Order::with('customer')->get();
 ### Database Queries
 
 Since we're using the CI database structure, be aware:
-- Primary keys are integers (not auto-increment in some cases)
-- Timestamps use custom fields (`createdon`, `updateddate`, etc.)
-- Some tables don't have `created_at`/`updated_at` columns
+
+-   Primary keys are integers (not auto-increment in some cases)
+-   Timestamps use custom fields (`createdon`, `updateddate`, etc.)
+-   Some tables don't have `created_at`/`updated_at` columns
 
 Example:
+
 ```php
 // Correct
 Customer::where('customerid', 123)->first();
@@ -253,22 +287,29 @@ Customer::where('created_at', '>', now())->get();
 ## Troubleshooting
 
 ### Error: "Table doesn't exist"
+
 **Solution:** Run `php fix_all_missing_tables.php`
 
 ### Error: "Invalid datetime format: 0000-00-00"
+
 **Solution:** The fix script handles this automatically. If you see this error, the data copy failed. Re-run the fix script.
 
 ### Error: "These credentials do not match"
-**Solution:** 
+
+**Solution:**
+
 1. Check if admin user exists: `php artisan tinker` then `DB::table('admin')->get()`
 2. Update password: `php fix_admin_password.php`
 3. Verify MD5 hash matches
 
 ### Error: "Incorrect integer value for user_id"
+
 **Solution:** This was fixed in `Admin.php` model. The `getAuthIdentifier()` now returns integer `id` instead of username string.
 
 ### Session Issues
+
 Clear all caches:
+
 ```bash
 php artisan config:clear
 php artisan cache:clear
@@ -278,26 +319,31 @@ php artisan view:clear
 ## Important Files
 
 ### Key Configuration Files
-- `config/auth.php` - Admin guard configuration
-- `.env` - Database connection settings
+
+-   `config/auth.php` - Admin guard configuration
+-   `.env` - Database connection settings
 
 ### Key Models
-- `app/Models/Admin.php` - Admin authentication model
-- `app/Models/Customer.php` - Customer model
-- `app/Models/Order.php` - Order model
+
+-   `app/Models/Admin.php` - Admin authentication model
+-   `app/Models/Customer.php` - Customer model
+-   `app/Models/Order.php` - Order model
 
 ### Key Controllers
-- `app/Http/Controllers/Admin/AdminLoginController.php` - Login/logout
-- `app/Http/Controllers/Admin/DashboardController.php` - Dashboard data
+
+-   `app/Http/Controllers/Admin/AdminLoginController.php` - Login/logout
+-   `app/Http/Controllers/Admin/DashboardController.php` - Dashboard data
 
 ### Key Views
-- `resources/views/admin/login.blade.php` - Login form
-- `resources/views/admin/dashboard.blade.php` - Dashboard
-- `resources/views/layouts/partials/sidenav.blade.php` - Sidebar menu
+
+-   `resources/views/admin/login.blade.php` - Login form
+-   `resources/views/admin/dashboard.blade.php` - Dashboard
+-   `resources/views/layouts/partials/sidenav.blade.php` - Sidebar menu
 
 ## Helper Scripts
 
 ### Available Scripts
+
 1. **`fix_all_missing_tables.php`** - Fixes all missing tables and copies data
 2. **`fix_admin_password.php`** - Creates/updates admin user password
 3. **`copy_data_from_ci.php`** - Copies all data from CI database
@@ -315,6 +361,7 @@ php artisan view:clear
 ## Support
 
 If you encounter issues:
+
 1. Check this guide first
 2. Run `php fix_all_missing_tables.php` to ensure all tables exist
 3. Clear all caches
@@ -323,15 +370,14 @@ If you encounter issues:
 
 ## Next Steps
 
-- [ ] Complete all admin page views
-- [ ] Add CRUD operations for all entities
-- [ ] Implement search and filtering
-- [ ] Add export functionality
-- [ ] Set up proper error handling
-- [ ] Add unit tests
+-   [ ] Complete all admin page views
+-   [ ] Add CRUD operations for all entities
+-   [ ] Implement search and filtering
+-   [ ] Add export functionality
+-   [ ] Set up proper error handling
+-   [ ] Add unit tests
 
 ---
 
 **Last Updated:** December 2025
 **Version:** 1.0
-
