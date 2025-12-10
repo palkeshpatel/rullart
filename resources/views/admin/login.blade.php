@@ -23,13 +23,13 @@
                         @csrf
 
                         <div class="mb-3">
-                            <label for="userEmail" class="form-label">Email address <span class="text-danger">*</span></label>
+                            <label for="userName" class="form-label">Username <span class="text-danger">*</span></label>
                             <div class="input-group">
-                                <input type="email" class="form-control" id="userEmail" name="email" value="{{ old('email') }}" required autofocus>
+                                <input type="text" class="form-control" id="userName" name="user" value="{{ old('user') }}" required autofocus>
                             </div>
-                            @if ($errors->get('email'))
+                            @if ($errors->get('user'))
                                 <ul class="list-unstyled ps-0 mt-1">
-                                    @foreach ((array) $errors->get('email') as $message)
+                                    @foreach ((array) $errors->get('user') as $message)
                                         <li class="text-danger mb-1">{{ $message }}</li>
                                     @endforeach
                                 </ul>

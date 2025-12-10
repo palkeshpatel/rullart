@@ -16,8 +16,8 @@ class Admin
      */
     public function handle(Request $request, Closure $next): Response
     {
-        // Just check if user is authenticated, no role check needed
-        if (!Auth::check()) {
+        // Check if admin is authenticated using admin guard
+        if (!Auth::guard('admin')->check()) {
             return redirect()->route('admin.login');
         }
 
