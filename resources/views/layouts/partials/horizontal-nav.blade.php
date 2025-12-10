@@ -26,7 +26,6 @@
                                     <i class="ti ti-basket"></i> Ecommerce <div class="menu-arrow"></div>
                                 </a>
                                 <div class="dropdown-menu" aria-labelledby="topnav-ecommerce">
-                                    <a href="{{ route('admin.products') }}" class="dropdown-item">Products</a>
                                     <a href="{{ route('admin.categories') }}" class="dropdown-item">Categories</a>
                                 </div>
                             </div>

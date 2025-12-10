@@ -117,11 +117,6 @@
                 </a>
                 <div class="collapse" id="sidebarEcommerce">
                     <ul class="sub-menu">
-                        <li class="side-nav-item">
-                            <a href="{{ route('admin.products')}}" class="side-nav-link">
-                                            <span class="menu-text" data-lang="eco-pro-list">Products</span>
-                                        </a>
-                                    </li>
                                     <li class="side-nav-item">
                             <a href="{{ route('admin.categories')}}" class="side-nav-link">
                                 <span class="menu-text" data-lang="eco-categories">Categories</span>

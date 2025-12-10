@@ -32,14 +32,6 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
         return view('admin.dashboard');
     });
 
-    Route::get('product', function () {
-        return view('admin.product');
-    })->name('product');
-
-    Route::get('products', function () {
-        return view('admin.products');
-    })->name('products');
-
     Route::get('category', function () {
         return view('admin.category');
     })->name('category');
