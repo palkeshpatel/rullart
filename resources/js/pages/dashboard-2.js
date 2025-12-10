@@ -310,7 +310,7 @@ function showToast() {
     toast.innerHTML = `
         <div class="toast-header bg-white bg-opacity-10 text-white border-0">
             <img src="/images/logo-sm.png" alt="brand-logo" height="16" class="me-1" />
-            <strong class="me-auto text-white">INSPINIA</strong>
+            <strong class="me-auto text-white">Rullart</strong>
             <small>Now</small>
             <button type="button" class="ms-2 btn-close btn-close-white" data-bs-dismiss="toast" aria-label="Close"></button>
         </div>

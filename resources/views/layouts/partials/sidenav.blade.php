@@ -4,13 +4,13 @@
     <!-- Brand Logo -->
     <a href="/" class="logo">
         <span class="logo logo-light">
-            <span class="logo-lg"><img src="/images/logo.png" alt="logo"></span>
-            <span class="logo-sm"><img src="/images/logo-sm.png" alt="small logo"></span>
+            <span class="logo-lg"><span class="text-white fw-bold fs-18">Rullart</span></span>
+            <span class="logo-sm"><span class="text-white fw-bold">Rullart</span></span>
         </span>
 
         <span class="logo logo-dark">
-            <span class="logo-lg"><img src="/images/logo-black.png" alt="dark logo"></span>
-            <span class="logo-sm"><img src="/images/logo-sm.png" alt="small logo"></span>
+            <span class="logo-lg"><span class="text-dark fw-bold fs-18">Rullart</span></span>
+            <span class="logo-sm"><span class="text-dark fw-bold">Rullart</span></span>
         </span>
     </a>
 

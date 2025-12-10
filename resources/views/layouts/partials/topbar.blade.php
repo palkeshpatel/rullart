@@ -7,20 +7,20 @@
                 <!-- Logo light -->
                 <a href="{{ route('admin.dashboard') }}" class="logo-light">
                     <span class="logo-lg">
-                        <img src="/images/logo.png" alt="logo">
+                        <span class="text-white fw-bold fs-18">Rullart</span>
                     </span>
                     <span class="logo-sm">
-                        <img src="/images/logo-sm.png" alt="small logo">
+                        <span class="text-white fw-bold">Rullart</span>
                     </span>
                 </a>
 
                 <!-- Logo Dark -->
                 <a href="{{ route('admin.dashboard') }}" class="logo-dark">
                     <span class="logo-lg">
-                        <img src="/images/logo-black.png" alt="dark logo">
+                        <span class="text-dark fw-bold fs-18">Rullart</span>
                     </span>
                     <span class="logo-sm">
-                        <img src="/images/logo-sm.png" alt="small logo">
+                        <span class="text-dark fw-bold">Rullart</span>
                     </span>
                 </a>
             </div>

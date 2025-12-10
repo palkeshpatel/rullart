@@ -337,56 +337,56 @@ class App {
             });
         });
 
-        // Match current URL
-        const currentUrl = window.location.href.split(/[?#]/)[0];
-        const allLinks = sideNav.querySelectorAll('a');
+        // Match current URL - DISABLED: Highlighting removed
+        // const currentUrl = window.location.href.split(/[?#]/)[0];
+        // const allLinks = sideNav.querySelectorAll('a');
 
-        allLinks.forEach(link => {
-            if (link.href === currentUrl) {
+        // allLinks.forEach(link => {
+        //     if (link.href === currentUrl) {
 
-                sideNav.querySelectorAll('a.active, li.active, .collapse.show').forEach(el => {
-                    el.classList.remove('active')
-                    el.classList.remove('show')
-                });
+        //         sideNav.querySelectorAll('a.active, li.active, .collapse.show').forEach(el => {
+        //             el.classList.remove('active')
+        //             el.classList.remove('show')
+        //         });
 
-                link.classList.add('active');
+        //         link.classList.add('active');
 
-                // Traverse up to activate all parents and show collapses
-                let currentElement = link.closest('li');
-                while (currentElement && currentElement !== sideNav) {
-                    currentElement.classList.add('active');
+        //         // Traverse up to activate all parents and show collapses
+        //         let currentElement = link.closest('li');
+        //         while (currentElement && currentElement !== sideNav) {
+        //             currentElement.classList.add('active');
 
-                    // Show parent collapses
-                    const parentCollapse = currentElement.closest('.collapse');
-                    if (parentCollapse) {
-                        new bootstrap.Collapse(parentCollapse, {toggle: false}).show();
+        //             // Show parent collapses
+        //             const parentCollapse = currentElement.closest('.collapse');
+        //             if (parentCollapse) {
+        //                 new bootstrap.Collapse(parentCollapse, {toggle: false}).show();
 
-                        // Also mark the <li> that contains the collapse as active
-                        const collapseParentLi = parentCollapse.closest('li');
-                        if (collapseParentLi) {
-                            collapseParentLi.classList.add('active');
-                        }
+        //                 // Also mark the <li> that contains the collapse as active
+        //                 const collapseParentLi = parentCollapse.closest('li');
+        //                 if (collapseParentLi) {
+        //                     collapseParentLi.classList.add('active');
+        //                 }
 
-                        currentElement = collapseParentLi;
-                    } else {
-                        currentElement = currentElement.parentElement;
-                    }
-                }
-            }
-        });
+        //                 currentElement = collapseParentLi;
+        //             } else {
+        //                 currentElement = currentElement.parentElement;
+        //             }
+        //         }
+        //     }
+        // });
 
-        // Auto-scroll to active item
-        setTimeout(() => {
-            const activeItem = sideNav.querySelector('li.active .active');
-            const scrollContainer = document.querySelector('.sidenav-menu .simplebar-content-wrapper');
+        // Auto-scroll to active item - DISABLED: Highlighting removed
+        // setTimeout(() => {
+        //     const activeItem = sideNav.querySelector('li.active .active');
+        //     const scrollContainer = document.querySelector('.sidenav-menu .simplebar-content-wrapper');
 
-            if (activeItem && scrollContainer) {
-                const offset = activeItem.offsetTop - 300;
-                if (offset > 100) {
-                    scrollToPosition(scrollContainer, offset, 600);
-                }
-            }
-        }, 200);
+        //     if (activeItem && scrollContainer) {
+        //         const offset = activeItem.offsetTop - 300;
+        //         if (offset > 100) {
+        //             scrollToPosition(scrollContainer, offset, 600);
+        //         }
+        //     }
+        // }, 200);
 
         // Smooth scroll utility
         function scrollToPosition(element, to, duration) {

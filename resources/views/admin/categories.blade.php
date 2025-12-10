@@ -6,54 +6,7 @@
 @section('content')
     @include('layouts.partials/page-title', ['title' => 'Categories'])
 
-    <div class="row row-cols-xxl-4 row-cols-md-2 row-cols-1 align-items-center g-1">
-        <div class="col">
-            <div class="card mb-1">
-                <div class="card-body">
-                    <h5 title="Total Categories">Categories</h5>
-                    <div class="d-flex align-items-center gap-2 my-3">
-                        <div class="avatar-md flex-shrink-0">
-                            <span class="avatar-title text-bg-primary rounded-circle fs-22">
-                                <i class="ti ti-tags"></i>
-                            </span>
-                        </div>
-                        <h3 class="mb-0">24</h3>
-                        <span class="badge badge-soft-primary fw-medium ms-2 fs-xs ms-auto">+3 New</span>
-                    </div>
-                    <p class="mb-0">
-                        <span class="text-primary"><i class="ti ti-point-filled"></i></span>
-                        <span class="text-nowrap text-muted">Active Categories</span>
-                        <span class="float-end"><b>20</b></span>
-                    </p>
-                </div>
-            </div>
-        </div>
 
-        <div class="col">
-            <div class="card mb-1">
-                <div class="card-body">
-                    <a href="#!" class="text-muted float-end mt-n1 fs-xl"><i class="ti ti-external-link"></i></a>
-                    <h5 title="Total Products">Products</h5>
-                    <div class="d-flex align-items-center gap-2 my-3">
-                        <div class="avatar-md flex-shrink-0">
-                            <span class="avatar-title text-bg-secondary rounded-circle fs-22">
-                                <i class="ti ti-package"></i>
-                            </span>
-                        </div>
-                        <h3 class="mb-0">1,240</h3>
-                        <span class="badge badge-soft-secondary fw-medium ms-2 fs-xs ms-auto">+24 New</span>
-                    </div>
-                    <p class="mb-0">
-                        <span class="text-secondary"><i class="ti ti-point-filled"></i></span>
-                        <span class="text-nowrap text-muted">Total Products</span>
-                        <span class="float-end"><b>980</b></span>
-                    </p>
-                </div>
-            </div>
-        </div>
-
-
-    </div><!-- end row -->
 
     <div class="row">
         <div class="col-12">
@@ -62,39 +15,13 @@
 
                     <div class="d-flex gap-2">
                         <div class="app-search">
-                            <input data-table-search type="search" class="form-control"
-                                placeholder="Search category name...">
+                            <input data-table-search type="search" class="form-control" placeholder="Search category name...">
                             <i data-lucide="search" class="app-search-icon text-muted"></i>
                         </div>
                         <button data-table-delete-selected class="btn btn-danger d-none">Delete</button>
                     </div>
 
-                    <div class="d-flex align-items-center gap-2">
 
-                        <span class="me-2 fw-semibold">Filter By:</span>
-
-                        <!-- Status Filter -->
-                        <div class="app-search">
-                            <select data-table-filter="status" class="form-select form-control my-1 my-md-0">
-                                <option value="">Status</option>
-                                <option value="Published">Published</option>
-                                <option value="Pending">Pending</option>
-                                <option value="Inactive">Inactive</option>
-                            </select>
-                            <i data-lucide="box" class="app-search-icon text-muted"></i>
-                        </div>
-
-                        <!-- Records Per Page -->
-                        <div>
-                            <select data-table-set-rows-per-page class="form-select form-control my-1 my-md-0">
-                                <option value="5">5</option>
-                                <option value="10">10</option>
-                                <option value="15">15</option>
-                                <option value="20">20</option>
-                            </select>
-                        </div>
-
-                    </div>
 
                     <div class="d-flex gap-1">
                         <a href="/admin/category" class="btn btn-danger ms-1">
