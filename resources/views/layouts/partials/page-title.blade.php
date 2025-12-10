@@ -6,10 +6,6 @@
 
     <div class="text-end">
         <ol class="breadcrumb m-0 py-0">
-            <li class="breadcrumb-item"><a href="javascript: void(0);">Inspinia</a></li>
-            @isset($subtitle)
-            <li class="breadcrumb-item"><a href="javascript: void(0);">{{ $subtitle }}</a></li>
-            @endif
             <li class="breadcrumb-item active">{{ $title }}</li>
         </ol>
     </div>
