@@ -13,14 +13,14 @@ use App\Http\Controllers\RoutingController;
 |
 */
 
-// Admin Login Routes (Guest only)
-Route::middleware('guest')->prefix('admin')->name('admin.')->group(function () {
+// Admin Login Routes (Public access)
+Route::prefix('admin')->name('admin.')->group(function () {
     Route::get('login', [AdminLoginController::class, 'create'])->name('login');
     Route::post('login', [AdminLoginController::class, 'store'])->name('login.store');
 });
 
 // Admin Protected Routes
-Route::middleware(['auth:admin', 'admin'])->prefix('admin')->name('admin.')->group(function () {
+Route::middleware(['admin'])->prefix('admin')->name('admin.')->group(function () {
     Route::post('logout', [AdminLoginController::class, 'destroy'])->name('logout');
 
     // Dashboard

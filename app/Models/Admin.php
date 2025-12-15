@@ -42,10 +42,11 @@ class Admin extends Authenticatable
 
     /**
      * Get the name of the unique identifier for the user.
+     * This should return 'id' since we store the ID in the session.
      */
     public function getAuthIdentifierName()
     {
-        return 'user';
+        return 'id';
     }
 
     /**

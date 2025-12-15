@@ -7,7 +7,6 @@ use App\Models\Admin;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
@@ -16,8 +15,13 @@ class AdminLoginController extends Controller
     /**
      * Display the admin login view.
      */
-    public function create(): View
+    public function create(): View|\Illuminate\Http\RedirectResponse
     {
+        // If already logged in as admin, redirect to dashboard
+        if (Auth::guard('admin')->check()) {
+            return redirect()->route('admin.dashboard');
+        }
+
         return view('admin.login');
     }
 
@@ -33,7 +37,7 @@ class AdminLoginController extends Controller
 
         // Find admin by username
         $admin = Admin::where('user', $request->user)->first();
-
+        
         // Check if admin exists and password matches (MD5 hash)
         if (!$admin || md5($request->password) !== $admin->pass) {
             throw ValidationException::withMessages([
@@ -51,9 +55,11 @@ class AdminLoginController extends Controller
         // Log in the admin using the 'admin' guard
         Auth::guard('admin')->login($admin, $request->boolean('remember'));
 
+        // Regenerate session for security
         $request->session()->regenerate();
 
-        return redirect()->intended(route('admin.dashboard'));
+        // Redirect to dashboard
+        return redirect()->route('admin.dashboard');
     }
 
     /**
@@ -70,4 +76,3 @@ class AdminLoginController extends Controller
         return redirect()->route('admin.login');
     }
 }
-

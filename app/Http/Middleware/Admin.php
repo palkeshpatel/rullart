@@ -16,8 +16,10 @@ class Admin
      */
     public function handle(Request $request, Closure $next): Response
     {
-        // Check if admin is authenticated using admin guard
         if (!Auth::guard('admin')->check()) {
+            if ($request->expectsJson()) {
+                return response()->json(['message' => 'Unauthenticated.'], 401);
+            }
             return redirect()->route('admin.login');
         }
 
