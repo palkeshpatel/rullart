@@ -4,6 +4,7 @@
 <meta name="description" content="Rullart Admin Dashboard">
 <meta name="keywords" content="rullart admin dashboard">
 <meta name="author" content="Rullart">
+<meta name="csrf-token" content="{{ csrf_token() }}">
 
 <!-- App favicon -->
 <link rel="shortcut icon" href="/images/favicon.ico">

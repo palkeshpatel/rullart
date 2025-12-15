@@ -24,6 +24,15 @@ class CustomerController extends Controller
 
         $customers = $query->orderBy('createdon', 'desc')->paginate(25);
 
+        // Return JSON for AJAX requests
+        if ($request->expectsJson() || $request->ajax()) {
+            return response()->json([
+                'success' => true,
+                'html' => view('admin.partials.customers-table', compact('customers'))->render(),
+                'pagination' => view('admin.partials.pagination', ['items' => $customers])->render(),
+            ]);
+        }
+
         return view('admin.customers', compact('customers'));
     }
 }

@@ -158,12 +158,12 @@
             </li>
 
             <li class="side-nav-item">
-                <a data-bs-toggle="collapse" href="#manageProducts" aria-expanded="{{ request()->routeIs('admin.category') || request()->routeIs('admin.occassion') || request()->routeIs('admin.products') || request()->routeIs('admin.gift-product-4') || request()->routeIs('admin.gift-products') ? 'true' : 'false' }}" aria-controls="manageProducts" class="side-nav-link {{ request()->routeIs('admin.category') || request()->routeIs('admin.occassion') || request()->routeIs('admin.products') || request()->routeIs('admin.gift-product-4') || request()->routeIs('admin.gift-products') ? 'active' : '' }}">
+                <a data-bs-toggle="collapse" href="#manageProducts" aria-expanded="{{ request()->routeIs('admin.category') || request()->routeIs('admin.occassion') || request()->routeIs('admin.products') || request()->routeIs('admin.gift-products') ? 'true' : 'false' }}" aria-controls="manageProducts" class="side-nav-link {{ request()->routeIs('admin.category') || request()->routeIs('admin.occassion') || request()->routeIs('admin.products') || request()->routeIs('admin.gift-products') ? 'active' : '' }}">
                     <span class="menu-icon"><i class="ti ti-apple"></i></span>
                     <span class="menu-text">Manage Products</span>
                     <span class="menu-arrow"></span>
                 </a>
-                <div class="collapse {{ request()->routeIs('admin.category') || request()->routeIs('admin.occassion') || request()->routeIs('admin.products') || request()->routeIs('admin.gift-product-4') || request()->routeIs('admin.gift-products') ? 'show' : '' }}" id="manageProducts">
+                <div class="collapse {{ request()->routeIs('admin.category') || request()->routeIs('admin.occassion') || request()->routeIs('admin.products') || request()->routeIs('admin.gift-products') ? 'show' : '' }}" id="manageProducts">
                     <ul class="sub-menu">
                         <li class="side-nav-item">
                             <a href="{{ route('admin.category') }}" class="side-nav-link {{ request()->routeIs('admin.category') ? 'active' : '' }}">
@@ -178,11 +178,6 @@
                         <li class="side-nav-item">
                             <a href="{{ route('admin.products') }}" class="side-nav-link {{ request()->routeIs('admin.products') ? 'active' : '' }}">
                                 <span class="menu-text">Products</span>
-                            </a>
-                        </li>
-                        <li class="side-nav-item">
-                            <a href="{{ route('admin.gift-product-4') }}" class="side-nav-link {{ request()->routeIs('admin.gift-product-4') ? 'active' : '' }}">
-                                <span class="menu-text">Gift Product 4</span>
                             </a>
                         </li>
                         <li class="side-nav-item">
@@ -237,12 +232,12 @@
             </li>
 
             <li class="side-nav-item">
-                <a data-bs-toggle="collapse" href="#masters" aria-expanded="{{ request()->routeIs('admin.colors') || request()->routeIs('admin.areas') || request()->routeIs('admin.countries') || request()->routeIs('admin.sizes') || request()->routeIs('admin.coupon-code') || request()->routeIs('admin.discounts') || request()->routeIs('admin.courier-company') || request()->routeIs('admin.messages') ? 'true' : 'false' }}" aria-controls="masters" class="side-nav-link {{ request()->routeIs('admin.colors') || request()->routeIs('admin.areas') || request()->routeIs('admin.countries') || request()->routeIs('admin.sizes') || request()->routeIs('admin.coupon-code') || request()->routeIs('admin.discounts') || request()->routeIs('admin.courier-company') || request()->routeIs('admin.messages') ? 'active' : '' }}">
+                <a data-bs-toggle="collapse" href="#masters" aria-expanded="{{ request()->routeIs('admin.colors') || request()->routeIs('admin.areas') || request()->routeIs('admin.countries') || request()->routeIs('admin.sizes') || request()->routeIs('admin.coupon-code') || request()->routeIs('admin.discounts') || request()->routeIs('admin.messages') ? 'true' : 'false' }}" aria-controls="masters" class="side-nav-link {{ request()->routeIs('admin.colors') || request()->routeIs('admin.areas') || request()->routeIs('admin.countries') || request()->routeIs('admin.sizes') || request()->routeIs('admin.coupon-code') || request()->routeIs('admin.discounts') || request()->routeIs('admin.messages') ? 'active' : '' }}">
                     <span class="menu-icon"><i class="ti ti-list"></i></span>
                     <span class="menu-text">Masters</span>
                     <span class="menu-arrow"></span>
                 </a>
-                <div class="collapse {{ request()->routeIs('admin.colors') || request()->routeIs('admin.areas') || request()->routeIs('admin.countries') || request()->routeIs('admin.sizes') || request()->routeIs('admin.coupon-code') || request()->routeIs('admin.discounts') || request()->routeIs('admin.courier-company') || request()->routeIs('admin.messages') ? 'show' : '' }}" id="masters">
+                <div class="collapse {{ request()->routeIs('admin.colors') || request()->routeIs('admin.areas') || request()->routeIs('admin.countries') || request()->routeIs('admin.sizes') || request()->routeIs('admin.coupon-code') || request()->routeIs('admin.discounts') || request()->routeIs('admin.messages') ? 'show' : '' }}" id="masters">
                     <ul class="sub-menu">
                         <li class="side-nav-item">
                             <a href="{{ route('admin.colors') }}" class="side-nav-link {{ request()->routeIs('admin.colors') ? 'active' : '' }}">
@@ -272,11 +267,6 @@
                         <li class="side-nav-item">
                             <a href="{{ route('admin.discounts') }}" class="side-nav-link {{ request()->routeIs('admin.discounts') ? 'active' : '' }}">
                                 <span class="menu-text">Discount Offer</span>
-                            </a>
-                        </li>
-                        <li class="side-nav-item">
-                            <a href="{{ route('admin.courier-company') }}" class="side-nav-link {{ request()->routeIs('admin.courier-company') ? 'active' : '' }}">
-                                <span class="menu-text">Courier Company</span>
                             </a>
                         </li>
                         <li class="side-nav-item">
@@ -332,13 +322,13 @@
                             </a>
                         </li>
                         <li class="side-nav-item">
-                            <a href="{{ route('admin.pages.terms') }}" class="side-nav-link {{ request()->routeIs('admin.pages.terms') ? 'active' : '' }}">
-                                <span class="menu-text">Terms & Conditions</span>
+                            <a href="{{ route('admin.pages.newsletter') }}" class="side-nav-link {{ request()->routeIs('admin.pages.newsletter') ? 'active' : '' }}">
+                                <span class="menu-text">Newsletter</span>
                             </a>
                         </li>
                         <li class="side-nav-item">
-                            <a href="{{ route('admin.pages.newsletter') }}" class="side-nav-link {{ request()->routeIs('admin.pages.newsletter') ? 'active' : '' }}">
-                                <span class="menu-text">Newsletter</span>
+                            <a href="{{ route('admin.pages.terms') }}" class="side-nav-link {{ request()->routeIs('admin.pages.terms') ? 'active' : '' }}">
+                                <span class="menu-text">Terms & Conditions</span>
                             </a>
                         </li>
                     </ul>
@@ -350,23 +340,6 @@
                     <span class="menu-icon"><i class="ti ti-settings"></i></span>
                     <span class="menu-text">Settings</span>
                 </a>
-            </li>
-
-            <li class="side-nav-item">
-                <a data-bs-toggle="collapse" href="#analytics" aria-expanded="{{ request()->routeIs('admin.analytics-dashboard') ? 'true' : 'false' }}" aria-controls="analytics" class="side-nav-link {{ request()->routeIs('admin.analytics-dashboard') ? 'active' : '' }}">
-                    <span class="menu-icon"><i class="ti ti-chart-bar"></i></span>
-                    <span class="menu-text">Analytics</span>
-                    <span class="menu-arrow"></span>
-                </a>
-                <div class="collapse {{ request()->routeIs('admin.analytics-dashboard') ? 'show' : '' }}" id="analytics">
-                    <ul class="sub-menu">
-                        <li class="side-nav-item">
-                            <a href="{{ route('admin.analytics-dashboard') }}" class="side-nav-link {{ request()->routeIs('admin.analytics-dashboard') ? 'active' : '' }}">
-                                <span class="menu-text">Dashboard</span>
-                            </a>
-                        </li>
-                    </ul>
-                </div>
             </li>
 
         </ul>

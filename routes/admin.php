@@ -30,38 +30,17 @@ Route::middleware(['admin'])->prefix('admin')->name('admin.')->group(function ()
     // Manage Orders
     Route::get('customers', [\App\Http\Controllers\Admin\CustomerController::class, 'index'])->name('customers');
     Route::get('orders', [\App\Http\Controllers\Admin\OrderController::class, 'index'])->name('orders');
-    Route::get('ordersnotprocess', function () {
-        return view('admin.orders-not-process');
-    })->name('orders-not-process');
-    Route::get('wishlist', function () {
-        return view('admin.wishlist');
-    })->name('wishlist');
-    Route::get('productrate', function () {
-        return view('admin.product-rate');
-    })->name('product-rate');
-    Route::get('mobiledevice', function () {
-        return view('admin.mobile-device');
-    })->name('mobile-device');
-    Route::get('returnrequest', function () {
-        return view('admin.return-request');
-    })->name('return-request');
+    Route::get('ordersnotprocess', [\App\Http\Controllers\Admin\ShoppingCartController::class, 'index'])->name('orders-not-process');
+    Route::get('wishlist', [\App\Http\Controllers\Admin\WishlistController::class, 'index'])->name('wishlist');
+    Route::get('productrate', [\App\Http\Controllers\Admin\ProductRatingController::class, 'index'])->name('product-rate');
+    Route::get('mobiledevice', [\App\Http\Controllers\Admin\MobileDeviceController::class, 'index'])->name('mobile-device');
+    Route::get('returnrequest', [\App\Http\Controllers\Admin\ReturnRequestController::class, 'index'])->name('return-request');
 
     // Manage Products
-    Route::get('category', function () {
-        return view('admin.category');
-    })->name('category');
-    Route::get('occassion', function () {
-        return view('admin.occassion');
-    })->name('occassion');
-    Route::get('products', function () {
-        return view('admin.products');
-    })->name('products');
-    Route::get('giftproduct2', function () {
-        return view('admin.gift-product-4');
-    })->name('gift-product-4');
-    Route::get('giftproducts', function () {
-        return view('admin.gift-products');
-    })->name('gift-products');
+    Route::get('category', [\App\Http\Controllers\Admin\CategoryController::class, 'index'])->name('category');
+    Route::get('occassion', [\App\Http\Controllers\Admin\OccassionController::class, 'index'])->name('occassion');
+    Route::get('products', [\App\Http\Controllers\Admin\ProductController::class, 'index'])->name('products');
+    Route::get('giftproducts', [\App\Http\Controllers\Admin\GiftProductController::class, 'index'])->name('gift-products');
 
     // Reports
     Route::get('sales-report-date', function () {
@@ -84,30 +63,13 @@ Route::middleware(['admin'])->prefix('admin')->name('admin.')->group(function ()
     })->name('top-product-rate');
 
     // Masters
-    Route::get('colors', function () {
-        return view('admin.masters.colors');
-    })->name('colors');
-    Route::get('areas', function () {
-        return view('admin.masters.areas');
-    })->name('areas');
-    Route::get('countries', function () {
-        return view('admin.masters.countries');
-    })->name('countries');
-    Route::get('sizes', function () {
-        return view('admin.masters.sizes');
-    })->name('sizes');
-    Route::get('couponcode', function () {
-        return view('admin.masters.coupon-code');
-    })->name('coupon-code');
-    Route::get('discounts', function () {
-        return view('admin.masters.discounts');
-    })->name('discounts');
-    Route::get('couriercompany', function () {
-        return view('admin.masters.courier-company');
-    })->name('courier-company');
-    Route::get('messages', function () {
-        return view('admin.masters.messages');
-    })->name('messages');
+    Route::get('colors', [\App\Http\Controllers\Admin\ColorController::class, 'index'])->name('colors');
+    Route::get('areas', [\App\Http\Controllers\Admin\AreaController::class, 'index'])->name('areas');
+    Route::get('countries', [\App\Http\Controllers\Admin\CountryController::class, 'index'])->name('countries');
+    Route::get('sizes', [\App\Http\Controllers\Admin\SizeController::class, 'index'])->name('sizes');
+    Route::get('couponcode', [\App\Http\Controllers\Admin\CouponCodeController::class, 'index'])->name('coupon-code');
+    Route::get('discounts', [\App\Http\Controllers\Admin\DiscountController::class, 'index'])->name('discounts');
+    Route::get('messages', [\App\Http\Controllers\Admin\GiftMessageController::class, 'index'])->name('messages');
 
     // Manage Pages
     Route::get('homegallery', function () {
@@ -142,9 +104,4 @@ Route::middleware(['admin'])->prefix('admin')->name('admin.')->group(function ()
     Route::get('settings', function () {
         return view('admin.settings');
     })->name('settings');
-
-    // Analytics
-    Route::get('analytics-dashboard', function () {
-        return view('admin.analytics.dashboard');
-    })->name('analytics-dashboard');
 });

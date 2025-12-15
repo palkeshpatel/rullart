@@ -11,83 +11,59 @@
                 <h4 class="card-title mb-0">Orders List</h4>
             </div>
             <div class="card-body">
-                <div class="row mb-3">
-                    <div class="col-md-6">
-                        <label>Show 
-                            <select class="form-select form-select-sm d-inline-block" style="width: auto;">
-                                <option value="25" selected>25</option>
-                                <option value="50">50</option>
-                                <option value="100">100</option>
-                            </select> entries
-                        </label>
-                    </div>
-                    <div class="col-md-6 text-end">
-                        <form method="GET" action="{{ route('admin.orders') }}">
-                            <div class="input-group" style="max-width: 300px; margin-left: auto;">
-                                <input type="text" name="search" class="form-control form-control-sm" placeholder="Search:" value="{{ request('search') }}">
-                                <button class="btn btn-sm btn-primary" type="submit">Search</button>
+                <!-- Filters Form -->
+                <form method="GET" action="{{ route('admin.orders') }}" data-table-filters id="ordersFilterForm">
+                    <div class="row mb-3">
+                        <div class="col-md-3">
+                            <label class="form-label">Status</label>
+                            <select name="status" class="form-select form-select-sm" data-filter>
+                                <option value="">--All Status--</option>
+                                <option value="2" {{ request('status') == '2' ? 'selected' : '' }}>Process</option>
+                                <option value="1" {{ request('status') == '1' ? 'selected' : '' }}>Pending</option>
+                                <option value="7" {{ request('status') == '7' ? 'selected' : '' }}>Delivered</option>
+                                <option value="8" {{ request('status') == '8' ? 'selected' : '' }}>Cancelled</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Country</label>
+                            <select name="country" class="form-select form-select-sm" data-filter>
+                                <option value="">--All Country--</option>
+                                @foreach($countries ?? [] as $country)
+                                    <option value="{{ $country }}" {{ request('country') == $country ? 'selected' : '' }}>{{ $country }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="col-md-6 text-end">
+                            <div class="d-flex gap-2 justify-content-end align-items-end">
+                                <a href="javascript:void(0);" class="btn btn-sm btn-success" title="Export to Excel">
+                                    <i class="fa fa-file-excel-o"></i>
+                                </a>
+                                <a href="javascript:void(0);" class="btn btn-sm btn-success" title="Print">
+                                    <i class="fa fa-print"></i>
+                                </a>
+                                <label class="mb-0">Show 
+                                    <select class="form-select form-select-sm d-inline-block" style="width: auto;" id="perPageSelect">
+                                        <option value="25" {{ request('per_page', 25) == 25 ? 'selected' : '' }}>25</option>
+                                        <option value="50" {{ request('per_page', 25) == 50 ? 'selected' : '' }}>50</option>
+                                        <option value="100" {{ request('per_page', 25) == 100 ? 'selected' : '' }}>100</option>
+                                    </select> entries
+                                </label>
+                                <div class="input-group" style="max-width: 200px;">
+                                    <span class="input-group-text">Search:</span>
+                                    <input type="text" name="search" class="form-control form-control-sm" data-search placeholder="Search..." value="{{ request('search') }}">
+                                </div>
                             </div>
-                        </form>
+                        </div>
                     </div>
+                </form>
+
+                <!-- Table Container -->
+                <div class="table-container">
+                    @include('admin.partials.orders-table', ['orders' => $orders])
                 </div>
-                <div class="table-responsive">
-                    <table class="table table-centered table-custom table-sm table-nowrap table-hover mb-0">
-                        <thead>
-                            <tr>
-                                <th>Order ID</th>
-                                <th>Name</th>
-                                <th>Order Date</th>
-                                <th>Total</th>
-                                <th>Status</th>
-                                <th>Payment Method</th>
-                                <th>Action</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @forelse($orders as $order)
-                            <tr>
-                                <td>{{ $order->orderid }}</td>
-                                <td>{{ $order->firstname }} {{ $order->lastname }}</td>
-                                <td>{{ $order->orderdate ? \Carbon\Carbon::parse($order->orderdate)->format('d-M-Y') : 'N/A' }}</td>
-                                <td>{{ number_format($order->total, 2) }} {{ $order->currencycode }}</td>
-                                <td>
-                                    @if($order->fkorderstatus == 2)
-                                        <span class="badge badge-soft-warning">Process</span>
-                                    @elseif($order->fkorderstatus == 7)
-                                        <span class="badge badge-soft-success">Delivered</span>
-                                    @else
-                                        <span class="badge badge-soft-info">Pending</span>
-                                    @endif
-                                </td>
-                                <td>{{ $order->paymentmethod }}</td>
-                                <td>
-                                    <div class="dropdown">
-                                        <a href="#" class="dropdown-toggle text-muted drop-arrow-none card-drop p-0" data-bs-toggle="dropdown">
-                                            <i class="ti ti-dots-vertical fs-lg"></i>
-                                        </a>
-                                        <div class="dropdown-menu dropdown-menu-end">
-                                            <a href="#" class="dropdown-item">View Details</a>
-                                            <a href="#" class="dropdown-item">Edit</a>
-                                        </div>
-                                    </div>
-                                </td>
-                            </tr>
-                            @empty
-                            <tr>
-                                <td colspan="7" class="text-center">No matching records found</td>
-                            </tr>
-                            @endforelse
-                        </tbody>
-                    </table>
-                </div>
-                <div class="row mt-3">
-                    <div class="col-sm">
-                        <div>Showing {{ $orders->firstItem() ?? 0 }} to {{ $orders->lastItem() ?? 0 }} of {{ $orders->total() }} entries</div>
-                    </div>
-                    <div class="col-sm-auto">
-                        {{ $orders->links() }}
-                    </div>
-                </div>
+
+                <!-- Pagination -->
+                @include('admin.partials.pagination', ['items' => $orders])
             </div>
         </div>
     </div>
@@ -95,3 +71,45 @@
 
 @endsection
 
+@section('scripts')
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize AJAX data table
+    AdminAjax.initDataTable({
+        tableSelector: '#ordersTable',
+        searchSelector: '[data-search]',
+        filterSelector: '[data-filter]',
+        paginationSelector: '.pagination a',
+        loadUrl: '{{ route("admin.orders") }}',
+        containerSelector: '.table-container'
+    });
+
+    // Per page change handler
+    document.getElementById('perPageSelect')?.addEventListener('change', function() {
+        const url = new URL(window.location.href);
+        url.searchParams.set('per_page', this.value);
+        AdminAjax.loadTable(url.toString(), document.querySelector('.table-container'));
+    });
+
+    // Order status change handler
+    document.querySelectorAll('.order-status').forEach(select => {
+        select.addEventListener('change', function() {
+            const orderId = this.dataset.orderId;
+            const status = this.value;
+            
+            // Update order status via AJAX
+            AdminAjax.post('{{ route("admin.orders") }}/' + orderId + '/status', {
+                status: status
+            })
+            .then(response => {
+                AdminAjax.showSuccess('Order status updated successfully!');
+            })
+            .catch(error => {
+                AdminAjax.showError('Failed to update order status.');
+                this.value = this.dataset.originalValue; // Revert
+            });
+        });
+    });
+});
+</script>
+@endsection

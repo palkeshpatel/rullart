@@ -1,7 +1,4 @@
-@extends('layouts.vertical', ['title' => 'Admin Category'])
-
-@section('css')
-@endsection
+@extends('layouts.vertical', ['title' => 'Category'])
 
 @section('content')
 
@@ -10,57 +7,46 @@
 <div class="row">
     <div class="col-12">
         <div class="card">
-            <div class="card-header border-dashed justify-content-between align-items-center">
-                <h4 class="card-title mb-0">Category Information</h4>
+            <div class="card-header justify-content-between align-items-center border-dashed">
+                <h4 class="card-title mb-0">Category List</h4>
+                <div class="d-flex gap-2">
+                    <a href="javascript:void(0);" class="btn btn-sm btn-success" title="Export to Excel">
+                        <i class="fa fa-file-excel-o"></i>
+                    </a>
+                    <a href="javascript:void(0);" class="btn btn-sm btn-success" title="Print">
+                        <i class="fa fa-print"></i>
+                    </a>
+                </div>
             </div>
             <div class="card-body">
-                <form>
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label for="categoryName" class="form-label">Category Name <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control" id="categoryName" placeholder="Enter category name">
+                <!-- Filters Form -->
+                <form method="GET" action="{{ route('admin.category') }}" data-table-filters id="categoryFilterForm">
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label class="mb-0">Show 
+                                <select class="form-select form-select-sm d-inline-block" style="width: auto;" id="perPageSelect">
+                                    <option value="25" {{ request('per_page', 25) == 25 ? 'selected' : '' }}>25</option>
+                                    <option value="50" {{ request('per_page', 25) == 50 ? 'selected' : '' }}>50</option>
+                                    <option value="100" {{ request('per_page', 25) == 100 ? 'selected' : '' }}>100</option>
+                                </select> entries
+                            </label>
                         </div>
-                        <div class="col-md-6 mb-3">
-                            <label for="categorySlug" class="form-label">Slug <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control" id="categorySlug" placeholder="category-slug">
+                        <div class="col-md-6 text-end">
+                            <div class="input-group" style="max-width: 300px; margin-left: auto;">
+                                <span class="input-group-text">Search:</span>
+                                <input type="text" name="search" class="form-control form-control-sm" data-search placeholder="Search..." value="{{ request('search') }}">
+                            </div>
                         </div>
-                    </div>
-
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label for="parentCategory" class="form-label">Parent Category</label>
-                            <select class="form-select" id="parentCategory">
-                                <option value="">None (Main Category)</option>
-                                <option value="electronics">Electronics</option>
-                                <option value="fashion">Fashion</option>
-                                <option value="home">Home & Living</option>
-                            </select>
-                        </div>
-                        <div class="col-md-6 mb-3">
-                            <label for="categoryStatus" class="form-label">Status</label>
-                            <select class="form-select" id="categoryStatus">
-                                <option value="published">Published</option>
-                                <option value="pending">Pending</option>
-                                <option value="inactive">Inactive</option>
-                            </select>
-                        </div>
-                    </div>
-
-                    <div class="mb-3">
-                        <label for="categoryDescription" class="form-label">Description</label>
-                        <textarea class="form-control" id="categoryDescription" rows="5" placeholder="Enter category description"></textarea>
-                    </div>
-
-                    <div class="mb-3">
-                        <label for="categoryImage" class="form-label">Category Image</label>
-                        <input type="file" class="form-control" id="categoryImage" accept="image/*">
-                    </div>
-
-                    <div class="d-flex gap-2">
-                        <button type="submit" class="btn btn-primary">Save Category</button>
-                        <a href="/admin/categories" class="btn btn-secondary">Cancel</a>
                     </div>
                 </form>
+
+                <!-- Table Container -->
+                <div class="table-container">
+                    @include('admin.partials.categories-table', ['categories' => $categories])
+                </div>
+
+                <!-- Pagination -->
+                @include('admin.partials.pagination', ['items' => $categories])
             </div>
         </div>
     </div>
@@ -69,5 +55,22 @@
 @endsection
 
 @section('scripts')
-@endsection
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    AdminAjax.initDataTable({
+        tableSelector: '#categoriesTable',
+        searchSelector: '[data-search]',
+        filterSelector: '[data-filter]',
+        paginationSelector: '.pagination a',
+        loadUrl: '{{ route("admin.category") }}',
+        containerSelector: '.table-container'
+    });
 
+    document.getElementById('perPageSelect')?.addEventListener('change', function() {
+        const url = new URL(window.location.href);
+        url.searchParams.set('per_page', this.value);
+        AdminAjax.loadTable(url.toString(), document.querySelector('.table-container'));
+    });
+});
+</script>
+@endsection
