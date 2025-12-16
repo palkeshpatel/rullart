@@ -36,7 +36,8 @@ class OrderController extends Controller
             });
         }
 
-        $orders = $query->orderBy('orderdate', 'desc')->paginate(25);
+        $perPage = $request->get('per_page', 25);
+        $orders = $query->orderBy('orderdate', 'desc')->paginate($perPage);
 
         // Get unique countries for filter
         $countries = Order::select('country')->distinct()->whereNotNull('country')->orderBy('country')->pluck('country');
@@ -47,6 +48,7 @@ class OrderController extends Controller
                 'success' => true,
                 'html' => view('admin.partials.orders-table', compact('orders'))->render(),
                 'pagination' => view('admin.partials.pagination', ['items' => $orders])->render(),
+                'hasFilters' => $request->has('status') || $request->has('country') || $request->has('search'),
             ]);
         }
 

@@ -17,10 +17,10 @@
         </thead>
         <tbody>
             @forelse($orders as $order)
-            <tr>
+            <tr data-order-id="{{ $order->orderid }}" class="order-row">
                 <td>
-                    <a href="#" class="text-primary">
-                        <i class="fa fa-plus-circle text-success"></i> {{ $order->orderid }}
+                    <a href="javascript:void(0);" class="text-primary toggle-order-details" data-order-id="{{ $order->orderid }}">
+                        <i class="fa fa-plus-circle text-success toggle-icon"></i> {{ $order->orderid }}
                     </a>
                 </td>
                 <td>{{ $order->firstname }} {{ $order->lastname }}</td>
@@ -42,6 +42,34 @@
                 <td>
                     <a href="#" class="btn btn-sm btn-info">View</a>
                     <a href="#" class="btn btn-sm btn-warning">Edit</a>
+                </td>
+            </tr>
+            <tr class="order-details-row" data-order-id="{{ $order->orderid }}" style="display: none;">
+                <td colspan="11" class="bg-light">
+                    <div class="p-3">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <strong>Order From:</strong> 
+                                @if($order->mobiledevice)
+                                    {{ ucfirst($order->mobiledevice) }} 
+                                    @if($order->platform)
+                                        {{ ucfirst($order->platform) }}
+                                    @endif
+                                @else
+                                    Web
+                                @endif
+                            </div>
+                            <div class="col-md-6 text-end">
+                                <strong>Action:</strong>
+                                <a href="#" class="btn btn-sm btn-info ms-2">
+                                    <i class="fa fa-eye"></i> View
+                                </a>
+                                <a href="#" class="btn btn-sm btn-warning ms-2">
+                                    <i class="fa fa-edit"></i> Edit
+                                </a>
+                            </div>
+                        </div>
+                    </div>
                 </td>
             </tr>
             @empty

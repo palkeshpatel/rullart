@@ -182,6 +182,14 @@ const AdminAjax = {
 
         // Merge with provided params
         params = { ...params, ...options.params };
+        
+        // Preserve per_page if exists in form
+        if (form) {
+            const perPageSelect = form.querySelector('#perPageSelect');
+            if (perPageSelect && perPageSelect.value) {
+                params.per_page = perPageSelect.value;
+            }
+        }
 
         return this.get(url, params)
             .then(response => {
@@ -191,6 +199,23 @@ const AdminAjax = {
                     container.innerHTML = response.table;
                 } else {
                     container.innerHTML = '<div class="alert alert-warning">No data available</div>';
+                }
+                
+                // Update pagination if provided separately
+                if (response.pagination) {
+                    const paginationContainer = container.closest('.card-body')?.querySelector('.pagination-container');
+                    if (paginationContainer) {
+                        paginationContainer.innerHTML = response.pagination;
+                    } else {
+                        // If pagination container not found, try to find existing pagination
+                        const existingPagination = container.closest('.card-body')?.querySelector('.row.mt-3');
+                        if (existingPagination) {
+                            existingPagination.outerHTML = response.pagination;
+                        } else {
+                            // Append after table container
+                            container.insertAdjacentHTML('afterend', response.pagination);
+                        }
+                    }
                 }
 
                 // Re-initialize any scripts if needed
@@ -252,14 +277,60 @@ const AdminAjax = {
             });
         });
 
-        // Pagination handler (delegated)
-        container.addEventListener('click', function(e) {
-            const paginationLink = e.target.closest(paginationSelector);
-            if (paginationLink && paginationLink.href) {
-                e.preventDefault();
-                AdminAjax.loadTable(paginationLink.href, container);
-            }
-        });
+        // Pagination handler - attach directly to pagination container for better control
+        const paginationContainer = container.closest('.card-body')?.querySelector('.pagination-container') || 
+                                   document.querySelector('.pagination-container');
+        
+        if (paginationContainer) {
+            paginationContainer.addEventListener('click', function(e) {
+                const paginationLink = e.target.closest('.pagination a');
+                if (paginationLink && paginationLink.href && !paginationLink.classList.contains('disabled')) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    
+                    // Get current form data to preserve filters
+                    const form = document.querySelector('form[data-table-filters]');
+                    const formData = new FormData(form || {});
+                    
+                    // Get per_page value from select
+                    const perPageSelect = document.getElementById('perPageSelect');
+                    if (perPageSelect && perPageSelect.value) {
+                        formData.set('per_page', perPageSelect.value);
+                    }
+                    
+                    // Parse URL to get page number
+                    try {
+                        const url = new URL(paginationLink.href);
+                        const page = url.searchParams.get('page');
+                        if (page) {
+                            formData.set('page', page);
+                        }
+                    } catch (err) {
+                        // If URL parsing fails, try to extract page from href
+                        const match = paginationLink.href.match(/[?&]page=(\d+)/);
+                        if (match) {
+                            formData.set('page', match[1]);
+                        }
+                    }
+                    
+                    // Build params object
+                    const params = {};
+                    formData.forEach((value, key) => {
+                        if (value) params[key] = value;
+                    });
+                    
+                    AdminAjax.loadTable(loadUrl || window.location.href, container, {
+                        params: params,
+                        onSuccess: options.onSuccess
+                    });
+                }
+            });
+        }
+        
+        // Store onSuccess callback for later use
+        if (options.onSuccess) {
+            container.dataset.onSuccess = 'true';
+        }
     }
 };
 

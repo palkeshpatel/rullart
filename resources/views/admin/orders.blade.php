@@ -43,9 +43,12 @@
                                 </a>
                                 <label class="mb-0">Show 
                                     <select class="form-select form-select-sm d-inline-block" style="width: auto;" id="perPageSelect">
-                                        <option value="25" {{ request('per_page', 25) == 25 ? 'selected' : '' }}>25</option>
-                                        <option value="50" {{ request('per_page', 25) == 50 ? 'selected' : '' }}>50</option>
-                                        <option value="100" {{ request('per_page', 25) == 100 ? 'selected' : '' }}>100</option>
+                                        @php
+                                            $currentPerPage = request('per_page', 25);
+                                        @endphp
+                                        <option value="25" {{ $currentPerPage == 25 ? 'selected' : '' }}>25</option>
+                                        <option value="50" {{ $currentPerPage == 50 ? 'selected' : '' }}>50</option>
+                                        <option value="100" {{ $currentPerPage == 100 ? 'selected' : '' }}>100</option>
                                     </select> entries
                                 </label>
                                 <div class="input-group" style="max-width: 200px;">
@@ -63,7 +66,9 @@
                 </div>
 
                 <!-- Pagination -->
-                @include('admin.partials.pagination', ['items' => $orders])
+                <div class="pagination-container">
+                    @include('admin.partials.pagination', ['items' => $orders])
+                </div>
             </div>
         </div>
     </div>
@@ -81,35 +86,135 @@ document.addEventListener('DOMContentLoaded', function() {
         filterSelector: '[data-filter]',
         paginationSelector: '.pagination a',
         loadUrl: '{{ route("admin.orders") }}',
-        containerSelector: '.table-container'
+        containerSelector: '.table-container',
+        onSuccess: function(response) {
+            initOrderRowToggles();
+            initOrderStatusHandlers();
+            
+            // Update pagination if provided
+            if (response.pagination) {
+                const paginationContainer = document.querySelector('.pagination-container');
+                if (paginationContainer) {
+                    paginationContainer.innerHTML = response.pagination;
+                }
+            }
+            
+            // Update per_page select to match current value from response
+            // Extract per_page from the pagination HTML or use current form value
+            const perPageSelect = document.getElementById('perPageSelect');
+            if (perPageSelect) {
+                // Try to get per_page from URL params in pagination links
+                const paginationLinks = document.querySelectorAll('.pagination a');
+                if (paginationLinks.length > 0) {
+                    const firstLink = paginationLinks[0].href;
+                    const urlParams = new URLSearchParams(firstLink.split('?')[1] || '');
+                    const perPage = urlParams.get('per_page');
+                    if (perPage && perPageSelect.value !== perPage) {
+                        perPageSelect.value = perPage;
+                    }
+                }
+            }
+        }
     });
 
     // Per page change handler
     document.getElementById('perPageSelect')?.addEventListener('change', function() {
-        const url = new URL(window.location.href);
-        url.searchParams.set('per_page', this.value);
-        AdminAjax.loadTable(url.toString(), document.querySelector('.table-container'));
-    });
-
-    // Order status change handler
-    document.querySelectorAll('.order-status').forEach(select => {
-        select.addEventListener('change', function() {
-            const orderId = this.dataset.orderId;
-            const status = this.value;
-            
-            // Update order status via AJAX
-            AdminAjax.post('{{ route("admin.orders") }}/' + orderId + '/status', {
-                status: status
-            })
-            .then(response => {
-                AdminAjax.showSuccess('Order status updated successfully!');
-            })
-            .catch(error => {
-                AdminAjax.showError('Failed to update order status.');
-                this.value = this.dataset.originalValue; // Revert
-            });
+        const form = document.getElementById('ordersFilterForm');
+        const formData = new FormData(form);
+        formData.set('per_page', this.value);
+        formData.delete('page'); // Reset to page 1 when changing per_page
+        
+        const params = new URLSearchParams();
+        formData.forEach((value, key) => {
+            if (value) params.set(key, value);
+        });
+        
+        AdminAjax.loadTable('{{ route("admin.orders") }}', document.querySelector('.table-container'), {
+            params: Object.fromEntries(params),
+            onSuccess: function(response) {
+                initOrderRowToggles();
+                initOrderStatusHandlers();
+                
+                // Update pagination if provided
+                if (response.pagination) {
+                    const paginationContainer = document.querySelector('.pagination-container');
+                    if (paginationContainer) {
+                        paginationContainer.innerHTML = response.pagination;
+                    }
+                }
+            }
         });
     });
+    
+    // Initialize order row toggle functionality
+    function initOrderRowToggles() {
+        // Remove old event listeners by cloning nodes
+        document.querySelectorAll('.toggle-order-details').forEach(toggle => {
+            const newToggle = toggle.cloneNode(true);
+            toggle.parentNode.replaceChild(newToggle, toggle);
+        });
+        
+        // Add fresh event listeners
+        document.querySelectorAll('.toggle-order-details').forEach(toggle => {
+            toggle.addEventListener('click', function(e) {
+                e.preventDefault();
+                const orderId = this.dataset.orderId;
+                const detailsRow = document.querySelector(`tr.order-details-row[data-order-id="${orderId}"]`);
+                const icon = this.querySelector('.toggle-icon');
+                
+                if (detailsRow) {
+                    if (detailsRow.style.display === 'none') {
+                        detailsRow.style.display = '';
+                        icon.classList.remove('fa-plus-circle');
+                        icon.classList.add('fa-minus-circle');
+                        icon.classList.remove('text-success');
+                        icon.classList.add('text-danger');
+                    } else {
+                        detailsRow.style.display = 'none';
+                        icon.classList.remove('fa-minus-circle');
+                        icon.classList.add('fa-plus-circle');
+                        icon.classList.remove('text-danger');
+                        icon.classList.add('text-success');
+                    }
+                }
+            });
+        });
+    }
+    
+    // Initialize on page load
+    initOrderRowToggles();
+
+    // Order status change handler (use delegation for dynamic content)
+    function initOrderStatusHandlers() {
+        document.querySelectorAll('.order-status').forEach(select => {
+            // Remove old listeners
+            const newSelect = select.cloneNode(true);
+            select.parentNode.replaceChild(newSelect, select);
+        });
+        
+        document.querySelectorAll('.order-status').forEach(select => {
+            select.addEventListener('change', function() {
+                const orderId = this.dataset.orderId;
+                const status = this.value;
+                const originalValue = this.value;
+                
+                // Update order status via AJAX
+                AdminAjax.post('{{ route("admin.orders") }}/' + orderId + '/status', {
+                    status: status
+                })
+                .then(response => {
+                    AdminAjax.showSuccess('Order status updated successfully!');
+                })
+                .catch(error => {
+                    AdminAjax.showError('Failed to update order status.');
+                    this.value = originalValue; // Revert
+                });
+            });
+        });
+    }
+    
+    // Initialize order status handlers
+    initOrderStatusHandlers();
 });
 </script>
 @endsection
