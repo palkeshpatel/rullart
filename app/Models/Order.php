@@ -39,4 +39,9 @@ class Order extends Model
     {
         return $this->hasMany(OrderItem::class, 'fkorderid', 'orderid');
     }
+
+    // Ensure orderid is cast correctly for relationship
+    protected $casts = [
+        'orderid' => 'integer',
+    ];
 }

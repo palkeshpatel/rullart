@@ -85,6 +85,9 @@
             </div>
         </div>
     </div>
+
+    <!-- Order View Modal Container -->
+    <div id="orderViewModalContainer"></div>
 @endsection
 
 @section('scripts')
@@ -229,6 +232,66 @@
 
             // Initialize order status handlers
             initOrderStatusHandlers();
+
+            // View order modal handler
+            function initViewOrderModal() {
+                // Use event delegation for dynamically loaded content
+                document.addEventListener('click', function(e) {
+                    const viewBtn = e.target.closest('.view-order-btn');
+                    if (viewBtn) {
+                        e.preventDefault();
+                        const orderId = viewBtn.dataset.orderId;
+                        openOrderModal(orderId);
+                    }
+                });
+            }
+
+            function openOrderModal(orderId) {
+                const modalContainer = document.getElementById('orderViewModalContainer');
+                
+                // Show loading state
+                modalContainer.innerHTML = '<div class="modal fade" id="orderViewModal" tabindex="-1"><div class="modal-dialog modal-xl"><div class="modal-content"><div class="modal-body"><div class="text-center p-4"><div class="spinner-border" role="status"><span class="visually-hidden">Loading...</span></div></div></div></div></div></div>';
+                
+                // Show loading modal
+                const loadingModal = new bootstrap.Modal(document.getElementById('orderViewModal'));
+                loadingModal.show();
+
+                // Fetch order data via AJAX
+                AdminAjax.get('{{ route("admin.orders") }}/' + orderId)
+                    .then(response => {
+                        if (response.html) {
+                            // Close loading modal
+                            loadingModal.hide();
+                            
+                            // Update modal container with actual content
+                            modalContainer.innerHTML = response.html;
+                            
+                            // Initialize Lucide icons if needed
+                            if (typeof createIcons !== 'undefined') {
+                                createIcons({icons});
+                            }
+                            
+                            // Show modal using Bootstrap
+                            const modal = document.getElementById('orderViewModal');
+                            const bsModal = new bootstrap.Modal(modal);
+                            bsModal.show();
+                            
+                            // Clean up when modal is hidden
+                            modal.addEventListener('hidden.bs.modal', function() {
+                                modalContainer.innerHTML = '';
+                            }, { once: true });
+                        }
+                    })
+                    .catch(error => {
+                        loadingModal.hide();
+                        console.error('Error loading order:', error);
+                        AdminAjax.showError('Failed to load order details.');
+                        modalContainer.innerHTML = '';
+                    });
+            }
+
+            // Initialize view order modal
+            initViewOrderModal();
         });
     </script>
 @endsection

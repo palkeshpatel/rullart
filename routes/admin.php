@@ -30,6 +30,9 @@ Route::middleware(['admin'])->prefix('admin')->name('admin.')->group(function ()
     // Manage Orders
     Route::get('customers', [\App\Http\Controllers\Admin\CustomerController::class, 'index'])->name('customers');
     Route::get('orders', [\App\Http\Controllers\Admin\OrderController::class, 'index'])->name('orders');
+    Route::get('orders/{id}/edit', [\App\Http\Controllers\Admin\OrderController::class, 'edit'])->name('orders.edit');
+    Route::put('orders/{id}', [\App\Http\Controllers\Admin\OrderController::class, 'update'])->name('orders.update');
+    Route::get('orders/{id}', [\App\Http\Controllers\Admin\OrderController::class, 'show'])->name('orders.show');
     Route::get('ordersnotprocess', [\App\Http\Controllers\Admin\ShoppingCartController::class, 'index'])->name('orders-not-process');
     Route::get('wishlist', [\App\Http\Controllers\Admin\WishlistController::class, 'index'])->name('wishlist');
     Route::get('productrate', [\App\Http\Controllers\Admin\ProductRatingController::class, 'index'])->name('product-rate');

@@ -59,10 +59,10 @@
                             <div class="col-md-4 text-end">
                                 <div class="d-flex justify-content-end gap-1 align-items-center">
                                     <strong>Action:</strong>
-                                    <a href="#" class="btn btn-light btn-icon btn-sm rounded-circle" title="View">
+                                    <a href="javascript:void(0);" class="btn btn-light btn-icon btn-sm rounded-circle view-order-btn" data-order-id="{{ $order->orderid }}" title="View">
                                         <i class="ti ti-eye fs-lg"></i>
                                     </a>
-                                    <a href="#" class="btn btn-light btn-icon btn-sm rounded-circle" title="Edit">
+                                    <a href="{{ route('admin.orders.edit', $order->orderid) }}" class="btn btn-light btn-icon btn-sm rounded-circle" title="Edit">
                                         <i class="ti ti-edit fs-lg"></i>
                                     </a>
                                 </div>

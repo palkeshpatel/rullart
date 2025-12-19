@@ -13,7 +13,14 @@ class OrderItem extends Model
 
     protected $fillable = [
         'fkorderid', 'fkproductid', 'title', 'qty', 'price',
-        'actualprice', 'size', 'discount', 'subtotal', 'photo'
+        'actualprice', 'size', 'discount', 'subtotal', 'photo', 'fkstatusid'
+    ];
+
+    // Ensure foreign keys are cast correctly
+    protected $casts = [
+        'fkorderid' => 'integer',
+        'fkproductid' => 'integer',
+        'orderitemid' => 'integer',
     ];
 
     public function order()
