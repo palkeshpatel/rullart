@@ -74,7 +74,7 @@
 
                     <!-- Table Container -->
                     <div class="table-container">
-                        @include('admin.partials.orders-table', ['orders' => $orders])
+                        @include('admin.orders.partials.table', ['orders' => $orders])
                     </div>
 
                     <!-- Pagination -->
@@ -232,3 +232,4 @@
         });
     </script>
 @endsection
+

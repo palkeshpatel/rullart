@@ -46,12 +46,12 @@ class OrderController extends Controller
         if ($request->expectsJson() || $request->ajax()) {
             return response()->json([
                 'success' => true,
-                'html' => view('admin.partials.orders-table', compact('orders'))->render(),
+                'html' => view('admin.orders.partials.table', compact('orders'))->render(),
                 'pagination' => view('admin.partials.pagination', ['items' => $orders])->render(),
                 'hasFilters' => $request->has('status') || $request->has('country') || $request->has('search'),
             ]);
         }
 
-        return view('admin.orders', compact('orders', 'countries'));
+        return view('admin.orders.index', compact('orders', 'countries'));
     }
 }
