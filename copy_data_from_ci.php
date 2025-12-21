@@ -1,7 +1,7 @@
 <?php
 
 /**
- * Copy data from CI database (rullart_rullart) to Laravel database (laravel_123)
+ * Copy data from CI database (rullart_rullart_qatarbeta) to Laravel database (rullart_qatarbeta_laravel)
  * Run this script: php copy_data_from_ci.php
  */
 
@@ -17,7 +17,7 @@ use Illuminate\Support\Facades\Schema;
 $ciConfig = [
     'host' => '127.0.0.1',
     'port' => '3306',
-    'database' => 'rullart_rullart',
+    'database' => 'rullart_rullart_qatarbeta',
     'username' => 'root',
     'password' => '',
 ];
@@ -26,7 +26,7 @@ $ciConfig = [
 $laravelConfig = [
     'host' => env('DB_HOST', '127.0.0.1'),
     'port' => env('DB_PORT', '3306'),
-    'database' => env('DB_DATABASE', 'laravel_123'),
+    'database' => env('DB_DATABASE', 'rullart_qatarbeta_laravel'),
     'username' => env('DB_USERNAME', 'root'),
     'password' => env('DB_PASSWORD', ''),
 ];
@@ -107,7 +107,7 @@ try {
 
             // Fetch data from CI database
             $ciData = $ciConnection->query("SELECT * FROM `{$table}`")->fetchAll(PDO::FETCH_ASSOC);
-            
+
             if (empty($ciData)) {
                 echo "  ⚠ No data fetched. Skipping...\n\n";
                 continue;
@@ -126,7 +126,7 @@ try {
                         // Handle invalid datetime values
                         foreach ($row as $key => $value) {
                             if (is_string($value) && (
-                                $value === '0000-00-00 00:00:00' || 
+                                $value === '0000-00-00 00:00:00' ||
                                 $value === '0000-00-00' ||
                                 preg_match('/^\d{4}-\d{2}-\d{2} 00:00:00$/', $value)
                             )) {
@@ -154,16 +154,13 @@ try {
                 DB::rollBack();
                 echo "  ❌ Error copying data: " . $e->getMessage() . "\n\n";
             }
-
         } catch (\Exception $e) {
             echo "  ❌ Error processing table {$table}: " . $e->getMessage() . "\n\n";
         }
     }
 
     echo "\n✅ Data migration completed!\n";
-
 } catch (\Exception $e) {
     echo "\n❌ Fatal error: " . $e->getMessage() . "\n";
     exit(1);
 }
-
