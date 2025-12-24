@@ -51,24 +51,24 @@ Route::middleware(['admin'])->prefix('admin')->name('admin.')->group(function ()
     Route::get('giftproducts', [\App\Http\Controllers\Admin\GiftProductController::class, 'index'])->name('gift-products');
 
     // Reports
-    Route::get('sales-report-date', function () {
-        return view('admin.reports.sales-report-date');
-    })->name('sales-report-date');
-    Route::get('sales-report-month', function () {
-        return view('admin.reports.sales-report-month');
-    })->name('sales-report-month');
-    Route::get('sales-report-year', function () {
-        return view('admin.reports.sales-report-year');
-    })->name('sales-report-year');
-    Route::get('sales-report-customer', function () {
-        return view('admin.reports.sales-report-customer');
-    })->name('sales-report-customer');
-    Route::get('top-product-month', function () {
-        return view('admin.reports.top-product-month');
-    })->name('top-product-month');
-    Route::get('top-product-rate', function () {
-        return view('admin.reports.top-product-rate');
-    })->name('top-product-rate');
+    Route::get('sales-report-date', [\App\Http\Controllers\Admin\Reports\SalesReportController::class, 'datewise'])->name('sales-report-date');
+    Route::get('sales-report-date/export/{format}', [\App\Http\Controllers\Admin\Reports\SalesReportController::class, 'exportDatewise'])->name('sales-report-date.export');
+    Route::get('sales-report-date/print', [\App\Http\Controllers\Admin\Reports\SalesReportController::class, 'printDatewise'])->name('sales-report-date.print');
+    Route::get('sales-report-month', [\App\Http\Controllers\Admin\Reports\SalesReportController::class, 'monthwise'])->name('sales-report-month');
+    Route::get('sales-report-month/export/{format}', [\App\Http\Controllers\Admin\Reports\SalesReportController::class, 'exportMonthwise'])->name('sales-report-month.export');
+    Route::get('sales-report-month/print', [\App\Http\Controllers\Admin\Reports\SalesReportController::class, 'printMonthwise'])->name('sales-report-month.print');
+    Route::get('sales-report-year', [\App\Http\Controllers\Admin\Reports\SalesReportController::class, 'yearwise'])->name('sales-report-year');
+    Route::get('sales-report-year/export/{format}', [\App\Http\Controllers\Admin\Reports\SalesReportController::class, 'exportYearwise'])->name('sales-report-year.export');
+    Route::get('sales-report-year/print', [\App\Http\Controllers\Admin\Reports\SalesReportController::class, 'printYearwise'])->name('sales-report-year.print');
+    Route::get('sales-report-customer', [\App\Http\Controllers\Admin\Reports\SalesReportController::class, 'customerwise'])->name('sales-report-customer');
+    Route::get('sales-report-customer/export/{format}', [\App\Http\Controllers\Admin\Reports\SalesReportController::class, 'exportCustomerwise'])->name('sales-report-customer.export');
+    Route::get('sales-report-customer/print', [\App\Http\Controllers\Admin\Reports\SalesReportController::class, 'printCustomerwise'])->name('sales-report-customer.print');
+    Route::get('top-product-month', [\App\Http\Controllers\Admin\Reports\SalesReportController::class, 'topProductMonth'])->name('top-product-month');
+    Route::get('top-product-month/export/{format}', [\App\Http\Controllers\Admin\Reports\SalesReportController::class, 'exportTopProductMonth'])->name('top-product-month.export');
+    Route::get('top-product-month/print', [\App\Http\Controllers\Admin\Reports\SalesReportController::class, 'printTopProductMonth'])->name('top-product-month.print');
+    Route::get('top-product-rate', [\App\Http\Controllers\Admin\Reports\SalesReportController::class, 'topProductRate'])->name('top-product-rate');
+    Route::get('top-product-rate/export/{format}', [\App\Http\Controllers\Admin\Reports\SalesReportController::class, 'exportTopProductRate'])->name('top-product-rate.export');
+    Route::get('top-product-rate/print', [\App\Http\Controllers\Admin\Reports\SalesReportController::class, 'printTopProductRate'])->name('top-product-rate.print');
 
     // Masters
     Route::get('colors', [\App\Http\Controllers\Admin\ColorController::class, 'index'])->name('colors');

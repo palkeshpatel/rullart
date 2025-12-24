@@ -45,7 +45,7 @@ class RoutingController extends BaseController
         // For admin routes, use the same view structure without admin prefix
         // The route prefix 'admin' should not affect the view path
         $viewPath = $first . '.' . $second;
-        
+
         // Use View::make to explicitly specify the view path
         return ViewFacade::make($viewPath);
     }
