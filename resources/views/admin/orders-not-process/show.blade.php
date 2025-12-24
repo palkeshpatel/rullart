@@ -203,18 +203,99 @@
                     <!-- Delete Button -->
                     <div class="row mt-3">
                         <div class="col-12">
-                            <form method="POST" action="{{ route('admin.orders-not-process.destroy', $cart->cartid) }}" onsubmit="return confirm('Are you sure you want to delete this cart? This action cannot be undone.');">
-                                @csrf
-                                @method('DELETE')
-                                <button type="submit" class="btn btn-danger">
-                                    <i class="ti ti-trash me-1"></i> Delete Cart
-                                </button>
-                            </form>
+                            <button type="button" class="btn btn-danger" id="deleteCartBtn" data-cart-id="{{ $cart->cartid }}">
+                                <i class="ti ti-trash me-1"></i> Delete Cart
+                            </button>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
+@endsection
+
+@section('scripts')
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Show confirmation modal
+    function showConfirmModal(message, onConfirm) {
+        // Create or get modal container
+        let modalContainer = document.getElementById('confirmModalContainer');
+        if (!modalContainer) {
+            modalContainer = document.createElement('div');
+            modalContainer.id = 'confirmModalContainer';
+            document.body.appendChild(modalContainer);
+        }
+
+        // Create modal HTML
+        modalContainer.innerHTML = `
+            <div class="modal fade" id="confirmDeleteModal" tabindex="-1" aria-labelledby="confirmDeleteModalLabel" aria-hidden="true">
+                <div class="modal-dialog modal-dialog-centered">
+                    <div class="modal-content">
+                        <div class="modal-header border-0 pb-0">
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body text-center px-4 pb-4">
+                            <div class="mb-3">
+                                <i class="ti ti-alert-triangle text-danger" style="font-size: 48px;"></i>
+                            </div>
+                            <h5 class="modal-title mb-3" id="confirmDeleteModalLabel">Confirm Delete</h5>
+                            <p class="text-muted mb-0">${message}</p>
+                        </div>
+                        <div class="modal-footer border-0 justify-content-center gap-2 pb-4">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                            <button type="button" class="btn btn-danger" id="confirmDeleteBtn">Delete</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        // Show modal
+        const modal = new bootstrap.Modal(document.getElementById('confirmDeleteModal'));
+        modal.show();
+
+        // Handle confirm button click
+        document.getElementById('confirmDeleteBtn').addEventListener('click', function() {
+            modal.hide();
+            if (onConfirm) {
+                onConfirm();
+            }
+        });
+
+        // Clean up when modal is hidden
+        document.getElementById('confirmDeleteModal').addEventListener('hidden.bs.modal', function() {
+            modalContainer.innerHTML = '';
+        });
+    }
+
+    // Delete cart button handler
+    document.getElementById('deleteCartBtn')?.addEventListener('click', function() {
+        const cartId = this.getAttribute('data-cart-id');
+        
+        showConfirmModal('Are you sure you want to delete this cart? This action cannot be undone.', function() {
+            // Create form and submit
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = `{{ route('admin.orders-not-process.destroy', ':id') }}`.replace(':id', cartId);
+            
+            const csrfToken = document.createElement('input');
+            csrfToken.type = 'hidden';
+            csrfToken.name = '_token';
+            csrfToken.value = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+            
+            const methodInput = document.createElement('input');
+            methodInput.type = 'hidden';
+            methodInput.name = '_method';
+            methodInput.value = 'DELETE';
+            
+            form.appendChild(csrfToken);
+            form.appendChild(methodInput);
+            document.body.appendChild(form);
+            form.submit();
+        });
+    });
+});
+</script>
 @endsection
 

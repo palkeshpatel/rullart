@@ -205,17 +205,90 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    // Show confirmation modal
+    function showConfirmModal(message, onConfirm) {
+        // Create or get modal container
+        let modalContainer = document.getElementById('confirmModalContainer');
+        if (!modalContainer) {
+            modalContainer = document.createElement('div');
+            modalContainer.id = 'confirmModalContainer';
+            document.body.appendChild(modalContainer);
+        }
+
+        // Create modal HTML
+        modalContainer.innerHTML = `
+            <div class="modal fade" id="confirmDeleteModal" tabindex="-1" aria-labelledby="confirmDeleteModalLabel" aria-hidden="true">
+                <div class="modal-dialog modal-dialog-centered">
+                    <div class="modal-content">
+                        <div class="modal-header border-0 pb-0">
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body text-center px-4 pb-4">
+                            <div class="mb-3">
+                                <i class="ti ti-alert-triangle text-danger" style="font-size: 48px;"></i>
+                            </div>
+                            <h5 class="modal-title mb-3" id="confirmDeleteModalLabel">Confirm Delete</h5>
+                            <p class="text-muted mb-0">${message}</p>
+                        </div>
+                        <div class="modal-footer border-0 justify-content-center gap-2 pb-4">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                            <button type="button" class="btn btn-danger" id="confirmDeleteBtn">Delete</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        // Show modal
+        const modal = new bootstrap.Modal(document.getElementById('confirmDeleteModal'));
+        modal.show();
+
+        // Handle confirm button click
+        document.getElementById('confirmDeleteBtn').addEventListener('click', function() {
+            modal.hide();
+            if (onConfirm) {
+                onConfirm();
+            }
+        });
+
+        // Clean up when modal is hidden
+        document.getElementById('confirmDeleteModal').addEventListener('hidden.bs.modal', function() {
+            modalContainer.innerHTML = '';
+        });
+    }
+
     // Delete button in modal
     document.querySelectorAll('.delete-cart-btn-modal').forEach(btn => {
         btn.addEventListener('click', function() {
             const cartId = this.getAttribute('data-cart-id');
-            const modal = bootstrap.Modal.getInstance(document.getElementById('cartViewModal'));
-            if (modal) modal.hide();
+            const cartModal = bootstrap.Modal.getInstance(document.getElementById('cartViewModal'));
+            if (cartModal) cartModal.hide();
             
-            // Trigger delete
+            // Show confirmation modal
             setTimeout(() => {
-                const deleteBtn = document.querySelector(`.delete-cart-btn[data-cart-id="${cartId}"]`);
-                if (deleteBtn) deleteBtn.click();
+                showConfirmModal('Are you sure you want to delete this cart? This action cannot be undone.', function() {
+                    fetch(`{{ route('admin.orders-not-process.destroy', ':id') }}`.replace(':id', cartId), {
+                        method: 'DELETE',
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest',
+                            'Accept': 'application/json',
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || ''
+                        }
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            // Reload page or redirect
+                            window.location.href = '{{ route('admin.orders-not-process') }}';
+                        } else {
+                            alert(data.message || 'Error deleting cart');
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error deleting cart:', error);
+                        alert('Error deleting cart');
+                    });
+                });
             }, 300);
         });
     });
