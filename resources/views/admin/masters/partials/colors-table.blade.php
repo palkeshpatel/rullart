@@ -33,11 +33,14 @@
                 <td>{{ $color->displayorder }}</td>
                 <td>
                     <div class="d-flex gap-1">
-                        <a href="javascript:void(0);" class="btn btn-light btn-icon btn-sm rounded-circle" title="View">
+                        <a href="javascript:void(0);" class="btn btn-light btn-icon btn-sm rounded-circle view-color-btn" data-color-id="{{ $color->filtervalueid }}" title="View">
                             <i class="ti ti-eye fs-lg"></i>
                         </a>
-                        <a href="javascript:void(0);" class="btn btn-light btn-icon btn-sm rounded-circle" title="Edit">
+                        <a href="javascript:void(0);" class="btn btn-light btn-icon btn-sm rounded-circle edit-color-btn" data-color-id="{{ $color->filtervalueid }}" title="Edit">
                             <i class="ti ti-edit fs-lg"></i>
+                        </a>
+                        <a href="javascript:void(0);" class="btn btn-light btn-icon btn-sm rounded-circle delete-color-btn" data-color-id="{{ $color->filtervalueid }}" data-color-name="{{ $color->filtervalue }}" title="Delete">
+                            <i class="ti ti-trash fs-lg"></i>
                         </a>
                     </div>
                 </td>
