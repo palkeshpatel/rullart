@@ -5,10 +5,35 @@
 
     <div class="row">
         <div class="col-12">
+            <!-- Filters Section - Top Bar -->
+            <form method="GET" action="{{ route('admin.category') }}" data-table-filters id="categoryFilterForm">
+                <div class="card mb-3">
+                    <div class="card-body">
+                        <div class="row align-items-end">
+                            <div class="col-md-3">
+                                <label class="form-label mb-1">Category:</label>
+                                <select name="parent_category" class="form-select form-select-sm" data-filter>
+                                    <option value="">--Parent--</option>
+                                    <option value="0" {{ request('parent_category') == '0' ? 'selected' : '' }}>No Parent (Main Categories)</option>
+                                    @foreach ($parentCategories ?? [] as $parent)
+                                        <option value="{{ $parent->categoryid }}"
+                                            {{ request('parent_category') == $parent->categoryid ? 'selected' : '' }}>{{ $parent->category }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </form>
+
             <!-- Category Table Card -->
             <div class="card">
                 <div class="card-header justify-content-between align-items-center border-dashed">
                     <h4 class="card-title mb-0">Category List</h4>
+                    <a href="javascript:void(0);" class="btn btn-success btn-sm">
+                        <i class="ti ti-plus me-1"></i> Add category
+                    </a>
                 </div>
                 <div class="card-body">
                     <!-- Search and Per Page Controls -->

@@ -27,8 +27,26 @@ class GiftProductController extends Controller
         // You can add specific filter for gift products if there's a flag in the database
         // $query->where('isgift', 1); // Example if there's an isgift column
 
-        $products = $query->orderBy('productid', 'desc')->paginate(25);
+        // Filter by category
+        if ($request->filled('category') && $request->category !== '' && $request->category !== '--All Category--') {
+            $query->where('fkcategoryid', $request->category);
+        }
 
-        return view('admin.gift-products', compact('products'));
+        $perPage = $request->get('per_page', 25);
+        $products = $query->orderBy('productid', 'desc')->paginate($perPage);
+
+        // Get categories for dropdown
+        $categories = \App\Models\Category::orderBy('category')->get();
+
+        // Return JSON for AJAX requests
+        if ($request->expectsJson() || $request->ajax()) {
+            return response()->json([
+                'success' => true,
+                'html' => view('admin.partials.gift-products-table', compact('products'))->render(),
+                'pagination' => view('admin.partials.pagination', ['items' => $products])->render(),
+            ]);
+        }
+
+        return view('admin.gift-products', compact('products', 'categories'));
     }
 }

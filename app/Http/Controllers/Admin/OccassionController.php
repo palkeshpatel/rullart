@@ -22,7 +22,17 @@ class OccassionController extends Controller
             });
         }
 
-        $occassions = $query->orderBy('occassionid', 'desc')->paginate(25);
+        $perPage = $request->get('per_page', 25);
+        $occassions = $query->orderBy('occassionid', 'desc')->paginate($perPage);
+
+        // Return JSON for AJAX requests
+        if ($request->expectsJson() || $request->ajax()) {
+            return response()->json([
+                'success' => true,
+                'html' => view('admin.partials.occassions-table', compact('occassions'))->render(),
+                'pagination' => view('admin.partials.pagination', ['items' => $occassions])->render(),
+            ]);
+        }
 
         return view('admin.occassion', compact('occassions'));
     }

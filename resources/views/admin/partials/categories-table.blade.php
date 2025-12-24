@@ -21,8 +21,14 @@
                 <td>{{ $category->showmenu ? 'Yes' : 'No' }}</td>
                 <td>{{ $category->displayorder }}</td>
                 <td>
-                    <a href="#" class="btn btn-sm btn-info">View</a>
-                    <a href="#" class="btn btn-sm btn-warning">Edit</a>
+                    <div class="d-flex gap-1">
+                        <a href="javascript:void(0);" class="btn btn-light btn-icon btn-sm rounded-circle view-category-btn" data-category-id="{{ $category->categoryid }}" title="View">
+                            <i class="ti ti-eye fs-lg"></i>
+                        </a>
+                        <a href="{{ route('admin.category.edit', $category->categoryid) }}" class="btn btn-light btn-icon btn-sm rounded-circle" title="Edit">
+                            <i class="ti ti-edit fs-lg"></i>
+                        </a>
+                    </div>
                 </td>
             </tr>
             @empty

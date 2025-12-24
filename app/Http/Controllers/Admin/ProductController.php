@@ -32,7 +32,11 @@ class ProductController extends Controller
             $query->where('ispublished', $request->published);
         }
 
-        $products = $query->orderBy('productid', 'desc')->paginate(25);
+        $perPage = $request->get('per_page', 25);
+        $products = $query->orderBy('productid', 'desc')->paginate($perPage);
+
+        // Get categories for dropdown
+        $categories = \App\Models\Category::orderBy('category')->get();
 
         // Return JSON for AJAX requests
         if ($request->expectsJson() || $request->ajax()) {
@@ -43,6 +47,6 @@ class ProductController extends Controller
             ]);
         }
 
-        return view('admin.products', compact('products'));
+        return view('admin.products', compact('products', 'categories'));
     }
 }
