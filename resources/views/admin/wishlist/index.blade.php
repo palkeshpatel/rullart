@@ -95,20 +95,6 @@
                             const paginationContainer = document.querySelector('.pagination-container');
                             if (paginationContainer) {
                                 paginationContainer.innerHTML = response.pagination;
-                                // Re-initialize pagination handler after update
-                                AdminAjax.initDataTable({
-                                    tableSelector: '#wishlistTable',
-                                    searchSelector: '[data-search]',
-                                    filterSelector: '[data-filter]',
-                                    paginationSelector: '.pagination a',
-                                    loadUrl: '{{ route('admin.wishlist') }}',
-                                    containerSelector: '.table-container',
-                                    onSuccess: function(resp) {
-                                        if (resp.pagination) {
-                                            document.querySelector('.pagination-container').innerHTML = resp.pagination;
-                                        }
-                                    }
-                                });
                             }
                         }
                     }

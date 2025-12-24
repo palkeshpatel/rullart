@@ -33,10 +33,20 @@
                         @endif
                     </td>
                     <td>
-                        <span class="badge badge-soft-info">Pending</span>
+                        @if(isset($cart->paymentmethod) && $cart->paymentmethod)
+                            <span class="badge badge-soft-info">{{ ucfirst($cart->paymentmethod) }}</span>
+                        @else
+                            <span class="badge badge-soft-warning">N/A</span>
+                        @endif
                     </td>
                     <td>
-                        <span class="badge badge-soft-secondary">Web</span>
+                        @if(isset($cart->platform) && $cart->platform)
+                            {{ $cart->platform }}
+                        @elseif(isset($cart->mobiledevice) && $cart->mobiledevice)
+                            {{ ucfirst($cart->mobiledevice) }}
+                        @else
+                            <span class="badge badge-soft-secondary">Web</span>
+                        @endif
                     </td>
                     <td>0</td>
                     <td>-</td>

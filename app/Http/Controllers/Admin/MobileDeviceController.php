@@ -10,7 +10,7 @@ class MobileDeviceController extends Controller
 {
     public function index(Request $request)
     {
-        $query = MobileDevice::query();
+        $query = MobileDevice::with('customer');
 
         // Search functionality
         if ($request->has('search') && $request->search) {
@@ -19,7 +19,13 @@ class MobileDeviceController extends Controller
                 $q->where('device_id', 'like', "%{$search}%")
                   ->orWhere('device_name', 'like', "%{$search}%")
                   ->orWhere('os', 'like', "%{$search}%")
-                  ->orWhere('version', 'like', "%{$search}%");
+                  ->orWhere('version', 'like', "%{$search}%")
+                  ->orWhereHas('customer', function($customerQuery) use ($search) {
+                      $customerQuery->where('firstname', 'like', "%{$search}%")
+                                    ->orWhere('lastname', 'like', "%{$search}%")
+                                    ->orWhere('email', 'like', "%{$search}%")
+                                    ->orWhere('mobile', 'like', "%{$search}%");
+                  });
             });
         }
 

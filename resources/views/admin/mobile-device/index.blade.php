@@ -1,15 +1,21 @@
 @extends('layouts.vertical', ['title' => 'Mobile Devices'])
 
 @section('content')
-    @include('layouts.partials/page-title', ['title' => 'Mobile Devices'])
+    @include('layouts.partials/page-title', ['title' => 'Customers Mobile Devices List'])
 
     <div class="row">
         <div class="col-12">
             <div class="card">
                 <div class="card-header justify-content-between align-items-center border-dashed">
-                    <h4 class="card-title mb-0">Mobile Devices</h4>
+                    <h4 class="card-title mb-0">Customers Mobile Devices List</h4>
+                    <button type="button" class="btn btn-sm btn-primary">
+                        <i class="ti ti-send"></i> Send To All Customer
+                    </button>
                 </div>
                 <div class="card-body">
+                    <!-- Filters Form -->
+                    <form method="GET" action="{{ route('admin.mobile-device') }}" data-table-filters id="mobileDeviceFilterForm">
+                    </form>
                     <!-- Search and Per Page Controls -->
                     <div class="row mb-3">
                         <div class="col-md-12">
@@ -29,12 +35,13 @@
                                             <option value="25" {{ $currentPerPage == 25 ? 'selected' : '' }}>25</option>
                                             <option value="50" {{ $currentPerPage == 50 ? 'selected' : '' }}>50</option>
                                             <option value="100" {{ $currentPerPage == 100 ? 'selected' : '' }}>100</option>
-                                        </select>
+                                        </select> entries
                                     </label>
                                 </div>
                             </div>
                         </div>
                     </div>
+                    </form>
 
                     <!-- Table Container -->
                     <div class="table-container">
@@ -57,24 +64,40 @@
             AdminAjax.initDataTable({
                 tableSelector: '#devicesTable',
                 searchSelector: '[data-search]',
+                filterSelector: '[data-filter]',
+                paginationSelector: '.pagination a',
                 loadUrl: '{{ route('admin.mobile-device') }}',
                 containerSelector: '.table-container',
                 onSuccess: function(response) {
                     if (response.pagination) {
-                        document.querySelector('.pagination-container').innerHTML = response.pagination;
+                        const paginationContainer = document.querySelector('.pagination-container');
+                        if (paginationContainer) {
+                            paginationContainer.innerHTML = response.pagination;
+                        }
                     }
                 }
             });
 
+            // Per page change handler
             document.getElementById('perPageSelect')?.addEventListener('change', function() {
-                const formData = new FormData();
+                const form = document.querySelector('form[data-table-filters]');
+                const formData = new FormData(form || {});
                 formData.set('per_page', this.value);
-                const params = Object.fromEntries(formData);
+                formData.delete('page'); // Reset to page 1 when changing per_page
+
+                const params = new URLSearchParams();
+                formData.forEach((value, key) => {
+                    if (value) params.set(key, value);
+                });
+
                 AdminAjax.loadTable('{{ route('admin.mobile-device') }}', document.querySelector('.table-container'), {
-                    params: params,
+                    params: Object.fromEntries(params),
                     onSuccess: function(response) {
                         if (response.pagination) {
-                            document.querySelector('.pagination-container').innerHTML = response.pagination;
+                            const paginationContainer = document.querySelector('.pagination-container');
+                            if (paginationContainer) {
+                                paginationContainer.innerHTML = response.pagination;
+                            }
                         }
                     }
                 });

@@ -25,4 +25,9 @@ class ShoppingCart extends Model
     {
         return $this->belongsTo(Customer::class, 'fkcustomerid', 'customerid');
     }
+
+    public function addressbook()
+    {
+        return $this->belongsTo(AddressBook::class, 'fkaddressbookid', 'addressid');
+    }
 }
