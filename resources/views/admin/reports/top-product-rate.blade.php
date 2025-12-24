@@ -15,7 +15,7 @@
                             <i class="ti ti-file-excel me-1"></i> Export
                         </a>
                         <a href="{{ route('admin.top-product-rate.export', ['format' => 'pdf']) }}" 
-                            class="btn btn-success btn-sm pdf-export-btn" title="Export to PDF" download>
+                            class="btn btn-success btn-sm pdf-export-btn" title="Export to PDF">
                             <i class="ti ti-file-pdf me-1"></i> PDF
                         </a>
                         <a href="{{ route('admin.top-product-rate.print') }}" 

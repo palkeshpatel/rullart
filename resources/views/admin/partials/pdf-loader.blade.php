@@ -47,22 +47,20 @@
                     // Show loading modal immediately
                     loadingModal.show();
                     
-                    // Create hidden iframe to trigger download
-                    const iframe = document.createElement('iframe');
-                    iframe.style.display = 'none';
-                    iframe.style.width = '0';
-                    iframe.style.height = '0';
-                    iframe.style.position = 'absolute';
-                    iframe.style.left = '-9999px';
-                    iframe.src = pdfUrl;
-                    document.body.appendChild(iframe);
+                    // Create a temporary anchor element and click it to trigger download
+                    const link = document.createElement('a');
+                    link.href = pdfUrl;
+                    link.download = ''; // Let server set filename via Content-Disposition
+                    link.style.display = 'none';
+                    document.body.appendChild(link);
                     
-                    // Hide modal after download starts (3 seconds)
+                    // Trigger click
+                    link.click();
+                    
+                    // Clean up
                     setTimeout(function() {
+                        document.body.removeChild(link);
                         loadingModal.hide();
-                        if (document.body.contains(iframe)) {
-                            document.body.removeChild(iframe);
-                        }
                     }, 3000);
                 });
             });

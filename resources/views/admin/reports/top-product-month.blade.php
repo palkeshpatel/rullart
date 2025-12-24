@@ -51,7 +51,7 @@
                             <i class="ti ti-file-excel me-1"></i> Export
                         </a>
                         <a href="{{ route('admin.top-product-month.export', ['format' => 'pdf', 'month' => request('month', date('m')), 'year' => request('year', date('Y'))]) }}" 
-                            class="btn btn-success btn-sm pdf-export-btn" title="Export to PDF" download>
+                            class="btn btn-success btn-sm pdf-export-btn" title="Export to PDF">
                             <i class="ti ti-file-pdf me-1"></i> PDF
                         </a>
                         <a href="{{ route('admin.top-product-month.print', ['month' => request('month', date('m')), 'year' => request('year', date('Y'))]) }}" 

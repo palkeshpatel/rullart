@@ -53,7 +53,7 @@
                             <i class="ti ti-file-excel me-1"></i> Export
                         </a>
                         <a href="{{ route('admin.sales-report-date.export', ['format' => 'pdf', 'date_from' => request('date_from'), 'date_to' => request('date_to')]) }}" 
-                            class="btn btn-success btn-sm pdf-export-btn" title="Export to PDF" download>
+                            class="btn btn-success btn-sm pdf-export-btn" title="Export to PDF">
                             <i class="ti ti-file-pdf me-1"></i> PDF
                         </a>
                         <a href="{{ route('admin.sales-report-date.print', ['date_from' => request('date_from'), 'date_to' => request('date_to')]) }}" 
