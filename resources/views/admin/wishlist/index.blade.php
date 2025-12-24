@@ -10,31 +10,34 @@
                     <h4 class="card-title mb-0">Wishlist</h4>
                 </div>
                 <div class="card-body">
-                    <!-- Search and Per Page Controls -->
-                    <div class="row mb-3">
-                        <div class="col-md-12">
-                            <div class="d-flex gap-2 justify-content-between align-items-center">
-                                <div class="app-search app-search-sm" style="max-width: 300px;">
-                                    <input type="text" name="search" class="form-control form-control-sm" data-search
-                                        placeholder="Search wishlist..." value="{{ request('search') }}">
-                                    <i data-lucide="search" class="app-search-icon text-muted"></i>
-                                </div>
-                                <div class="d-flex align-items-center">
-                                    <label class="mb-0 me-2">Show
-                                        <select class="form-select form-select-sm d-inline-block" style="width: auto;"
-                                            id="perPageSelect">
-                                            @php
-                                                $currentPerPage = request('per_page', 25);
-                                            @endphp
-                                            <option value="25" {{ $currentPerPage == 25 ? 'selected' : '' }}>25</option>
-                                            <option value="50" {{ $currentPerPage == 50 ? 'selected' : '' }}>50</option>
-                                            <option value="100" {{ $currentPerPage == 100 ? 'selected' : '' }}>100</option>
-                                        </select>
-                                    </label>
+                    <!-- Filters Form -->
+                    <form method="GET" action="{{ route('admin.wishlist') }}" data-table-filters id="wishlistFilterForm">
+                        <!-- Search and Per Page Controls -->
+                        <div class="row mb-3">
+                            <div class="col-md-12">
+                                <div class="d-flex gap-2 justify-content-between align-items-center">
+                                    <div class="app-search app-search-sm" style="max-width: 300px;">
+                                        <input type="text" name="search" class="form-control form-control-sm" data-search
+                                            placeholder="Search wishlist..." value="{{ request('search') }}">
+                                        <i data-lucide="search" class="app-search-icon text-muted"></i>
+                                    </div>
+                                    <div class="d-flex align-items-center">
+                                        <label class="mb-0 me-2">Show
+                                            <select class="form-select form-select-sm d-inline-block" style="width: auto;"
+                                                id="perPageSelect">
+                                                @php
+                                                    $currentPerPage = request('per_page', 25);
+                                                @endphp
+                                                <option value="25" {{ $currentPerPage == 25 ? 'selected' : '' }}>25</option>
+                                                <option value="50" {{ $currentPerPage == 50 ? 'selected' : '' }}>50</option>
+                                                <option value="100" {{ $currentPerPage == 100 ? 'selected' : '' }}>100</option>
+                                            </select>
+                                        </label>
+                                    </div>
                                 </div>
                             </div>
                         </div>
-                    </div>
+                    </form>
 
                     <!-- Table Container -->
                     <div class="table-container">
@@ -57,9 +60,12 @@
             AdminAjax.initDataTable({
                 tableSelector: '#wishlistTable',
                 searchSelector: '[data-search]',
+                filterSelector: '[data-filter]',
+                paginationSelector: '.pagination a',
                 loadUrl: '{{ route('admin.wishlist') }}',
                 containerSelector: '.table-container',
                 onSuccess: function(response) {
+                    // Update pagination if provided
                     if (response.pagination) {
                         const paginationContainer = document.querySelector('.pagination-container');
                         if (paginationContainer) {
@@ -69,15 +75,41 @@
                 }
             });
 
+            // Per page change handler
             document.getElementById('perPageSelect')?.addEventListener('change', function() {
-                const formData = new FormData();
+                const form = document.getElementById('wishlistFilterForm') || document.querySelector('form[data-table-filters]');
+                const formData = new FormData(form || {});
                 formData.set('per_page', this.value);
-                const params = Object.fromEntries(formData);
+                formData.delete('page'); // Reset to page 1 when changing per_page
+
+                const params = new URLSearchParams();
+                formData.forEach((value, key) => {
+                    if (value) params.set(key, value);
+                });
+
                 AdminAjax.loadTable('{{ route('admin.wishlist') }}', document.querySelector('.table-container'), {
-                    params: params,
+                    params: Object.fromEntries(params),
                     onSuccess: function(response) {
+                        // Update pagination if provided
                         if (response.pagination) {
-                            document.querySelector('.pagination-container').innerHTML = response.pagination;
+                            const paginationContainer = document.querySelector('.pagination-container');
+                            if (paginationContainer) {
+                                paginationContainer.innerHTML = response.pagination;
+                                // Re-initialize pagination handler after update
+                                AdminAjax.initDataTable({
+                                    tableSelector: '#wishlistTable',
+                                    searchSelector: '[data-search]',
+                                    filterSelector: '[data-filter]',
+                                    paginationSelector: '.pagination a',
+                                    loadUrl: '{{ route('admin.wishlist') }}',
+                                    containerSelector: '.table-container',
+                                    onSuccess: function(resp) {
+                                        if (resp.pagination) {
+                                            document.querySelector('.pagination-container').innerHTML = resp.pagination;
+                                        }
+                                    }
+                                });
+                            }
                         }
                     }
                 });
