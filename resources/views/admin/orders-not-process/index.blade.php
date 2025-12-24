@@ -121,9 +121,103 @@
                                 paginationContainer.innerHTML = response.pagination;
                             }
                         }
+                        // Re-initialize view and delete buttons after table reload
+                        initCartActions();
                     }
                 });
             });
+
+            // Initialize view and delete buttons
+            function initCartActions() {
+                // View cart button
+                document.querySelectorAll('.view-cart-btn').forEach(btn => {
+                    btn.addEventListener('click', function() {
+                        const cartId = this.getAttribute('data-cart-id');
+                        loadCartView(cartId);
+                    });
+                });
+
+                // Delete cart button
+                document.querySelectorAll('.delete-cart-btn').forEach(btn => {
+                    btn.addEventListener('click', function() {
+                        const cartId = this.getAttribute('data-cart-id');
+                        deleteCart(cartId);
+                    });
+                });
+            }
+
+            // Load cart view in modal
+            function loadCartView(cartId) {
+                fetch(`{{ route('admin.orders-not-process.show', ':id') }}`.replace(':id', cartId), {
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'Accept': 'application/json'
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // Create modal if it doesn't exist
+                        let modalContainer = document.getElementById('cartViewModalContainer');
+                        if (!modalContainer) {
+                            modalContainer = document.createElement('div');
+                            modalContainer.id = 'cartViewModalContainer';
+                            document.body.appendChild(modalContainer);
+                        }
+                        modalContainer.innerHTML = data.html;
+                        
+                        // Show modal
+                        const modal = new bootstrap.Modal(document.getElementById('cartViewModal'));
+                        modal.show();
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading cart view:', error);
+                    alert('Error loading cart details');
+                });
+            }
+
+            // Delete cart
+            function deleteCart(cartId) {
+                if (!confirm('Are you sure you want to delete this cart? This action cannot be undone.')) {
+                    return;
+                }
+
+                fetch(`{{ route('admin.orders-not-process.destroy', ':id') }}`.replace(':id', cartId), {
+                    method: 'DELETE',
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'Accept': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || ''
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // Reload table
+                        AdminAjax.loadTable('{{ route('admin.orders-not-process') }}', document.querySelector('.table-container'), {
+                            onSuccess: function(response) {
+                                if (response.pagination) {
+                                    const paginationContainer = document.querySelector('.pagination-container');
+                                    if (paginationContainer) {
+                                        paginationContainer.innerHTML = response.pagination;
+                                    }
+                                }
+                                initCartActions();
+                            }
+                        });
+                    } else {
+                        alert(data.message || 'Error deleting cart');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error deleting cart:', error);
+                    alert('Error deleting cart');
+                });
+            }
+
+            // Initialize on page load
+            initCartActions();
         });
     </script>
 @endsection

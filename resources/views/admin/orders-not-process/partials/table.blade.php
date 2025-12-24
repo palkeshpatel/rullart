@@ -1,71 +1,81 @@
 <div class="table-responsive">
-    <table class="table table-custom table-nowrap table-hover table-centered mb-0" id="cartsTable">
-        <thead class="bg-light align-middle bg-opacity-25 thead-sm">
-            <tr class="text-uppercase fs-xxs">
-                <th class="text-muted">Ref #</th>
-                <th class="text-muted">Name</th>
-                <th class="text-muted">Email</th>
-                <th class="text-muted">Total</th>
-                <th class="text-muted">Order Date</th>
-                <th class="text-muted">Payment Method</th>
-                <th class="text-muted">Order From</th>
-                <th class="text-muted">Email Count</th>
-                <th class="text-muted">Email Send Date</th>
-                <th class="text-muted">Action</th>
+    <table class="table table-bordered table-striped table-hover" id="cartsTable">
+        <thead>
+            <tr>
+                <th><i class="fa fa-sort"></i> Ref #</th>
+                <th><i class="fa fa-sort"></i> Name</th>
+                <th><i class="fa fa-sort"></i> Email</th>
+                <th><i class="fa fa-sort"></i> Total</th>
+                <th><i class="fa fa-sort"></i> Order Date</th>
+                <th><i class="fa fa-sort"></i> Payment Method</th>
+                <th><i class="fa fa-sort"></i> Order From</th>
+                <th>Email Count</th>
+                <th>Email Send Date</th>
+                <th>Action</th>
             </tr>
         </thead>
         <tbody>
             @forelse($carts as $cart)
                 <tr>
                     <td>
-                        <a href="#" class="link-reset fw-semibold">#{{ $cart->shoppingcartid }}</a>
+                        <a href="javascript:void(0);" class="text-primary">{{ $cart->cartid }}</a>
                     </td>
                     <td>
-                        {{ $cart->customer ? ($cart->customer->firstname . ' ' . $cart->customer->lastname) : 'N/A' }}
+                        @php
+                            $name = trim(($cart->customer->firstname ?? '') . ' ' . ($cart->customer->lastname ?? ''));
+                        @endphp
+                        {{ $name ?: 'N/A' }}
                     </td>
-                    <td>{{ $cart->customer ? $cart->customer->email : 'N/A' }}</td>
-                    <td class="fw-semibold">{{ number_format($cart->totalamt ?? 0, 3) }}</td>
+                    <td>{{ $cart->customer->email ?? 'N/A' }}</td>
+                    <td>{{ number_format($cart->total ?? 0, 3) }}</td>
                     <td>
-                        @if($cart->updatedon)
-                            {{ \Carbon\Carbon::parse($cart->updatedon)->format('d/M/Y H:i') }}
+                        @if($cart->orderdate)
+                            {{ \Carbon\Carbon::parse($cart->orderdate)->format('d/M/Y H:i') }}
                         @else
                             N/A
                         @endif
                     </td>
                     <td>
                         @if(isset($cart->paymentmethod) && $cart->paymentmethod)
-                            <span class="badge badge-soft-info">{{ ucfirst($cart->paymentmethod) }}</span>
+                            {{ ucfirst($cart->paymentmethod) }}
                         @else
-                            <span class="badge badge-soft-warning">N/A</span>
+                            N/A
                         @endif
                     </td>
                     <td>
-                        @if(isset($cart->platform) && $cart->platform)
-                            {{ $cart->platform }}
-                        @elseif(isset($cart->mobiledevice) && $cart->mobiledevice)
-                            {{ ucfirst($cart->mobiledevice) }}
-                        @else
-                            <span class="badge badge-soft-secondary">Web</span>
-                        @endif
+                        @php
+                            $orderFrom = '';
+                            if (isset($cart->mobiledevice) && $cart->mobiledevice) {
+                                $orderFrom = ucfirst($cart->mobiledevice);
+                                if (isset($cart->platform) && $cart->platform) {
+                                    $orderFrom .= ' ' . $cart->platform;
+                                }
+                            } elseif (isset($cart->platform) && $cart->platform) {
+                                $orderFrom = 'Web ' . $cart->platform;
+                            } elseif (isset($cart->browser) && $cart->browser) {
+                                $orderFrom = 'Web ' . $cart->browser;
+                            } else {
+                                $orderFrom = 'Web';
+                            }
+                        @endphp
+                        {{ $orderFrom }}
                     </td>
                     <td>0</td>
                     <td>-</td>
                     <td>
-                        <div class="d-flex gap-2">
-                            <button type="button" class="btn btn-sm btn-primary" title="View">
-                                <i class="ti ti-eye"></i>
-                            </button>
-                            <button type="button" class="btn btn-sm btn-danger" title="Delete">
-                                <i class="ti ti-trash"></i>
-                            </button>
+                        <div class="d-flex gap-1">
+                            <a href="javascript:void(0);" class="btn btn-light btn-icon btn-sm rounded-circle view-cart-btn" data-cart-id="{{ $cart->cartid }}" title="View">
+                                <i class="ti ti-eye fs-lg"></i>
+                            </a>
+                            <a href="javascript:void(0);" class="btn btn-light btn-icon btn-sm rounded-circle delete-cart-btn" data-cart-id="{{ $cart->cartid }}" title="Delete">
+                                <i class="ti ti-trash fs-lg"></i>
+                            </a>
                         </div>
                     </td>
                 </tr>
             @empty
                 <tr>
-                    <td colspan="10" class="text-center py-4">
-                        <div class="text-muted">No incomplete shopping carts found.</div>
-                    </td>
+                    <td colspan="10" class="text-center">No incomplete shopping carts found.</td>
                 </tr>
             @endforelse
         </tbody>
