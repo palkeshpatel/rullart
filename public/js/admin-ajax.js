@@ -101,7 +101,7 @@ const AdminAjax = {
         try {
             const response = await fetch(url, config);
             const contentType = response.headers.get('content-type');
-            
+
             if (contentType && contentType.includes('application/json')) {
                 const json = await response.json();
                 if (!response.ok) {
@@ -109,7 +109,7 @@ const AdminAjax = {
                 }
                 return json;
             }
-            
+
             const text = await response.text();
             return {
                 success: response.ok,
@@ -155,8 +155,8 @@ const AdminAjax = {
      * Load table data via AJAX
      */
     loadTable(url, containerSelector, options = {}) {
-        const container = typeof containerSelector === 'string' 
-            ? document.querySelector(containerSelector) 
+        const container = typeof containerSelector === 'string'
+            ? document.querySelector(containerSelector)
             : containerSelector;
 
         if (!container) {
@@ -172,7 +172,7 @@ const AdminAjax = {
         // Get current filters from form if exists
         const form = container.closest('.card')?.querySelector('form') || document.querySelector('form[data-table-filters]');
         let params = {};
-        
+
         if (form) {
             const formData = new FormData(form);
             formData.forEach((value, key) => {
@@ -182,7 +182,7 @@ const AdminAjax = {
 
         // Merge with provided params
         params = { ...params, ...options.params };
-        
+
         // Preserve per_page if exists in form
         if (form) {
             const perPageSelect = form.querySelector('#perPageSelect');
@@ -200,7 +200,7 @@ const AdminAjax = {
                 } else {
                     container.innerHTML = '<div class="alert alert-warning">No data available</div>';
                 }
-                
+
                 // Update pagination if provided separately
                 if (response.pagination) {
                     const paginationContainer = container.closest('.card-body')?.querySelector('.pagination-container');
@@ -247,8 +247,8 @@ const AdminAjax = {
             containerSelector = '.table-container'
         } = options;
 
-        const container = typeof containerSelector === 'string' 
-            ? document.querySelector(containerSelector) 
+        const container = typeof containerSelector === 'string'
+            ? document.querySelector(containerSelector)
             : containerSelector;
 
         if (!container) return;
@@ -278,26 +278,40 @@ const AdminAjax = {
         });
 
         // Pagination handler - attach directly to pagination container for better control
-        const paginationContainer = container.closest('.card-body')?.querySelector('.pagination-container') || 
+        const paginationContainer = container.closest('.card-body')?.querySelector('.pagination-container') ||
                                    document.querySelector('.pagination-container');
-        
+
         // Function to handle pagination clicks
         const handlePaginationClick = function(e) {
             const paginationLink = e.target.closest('.pagination a, .pagination li a');
             if (paginationLink && paginationLink.href && !paginationLink.classList.contains('disabled') && !paginationLink.closest('li')?.classList.contains('disabled')) {
                 e.preventDefault();
                 e.stopPropagation();
-                
-                // Get current form data to preserve filters
+
+                // Build params object to preserve filters and search
+                const params = {};
+
+                // Get current form data to preserve filters (if form exists)
                 const form = document.querySelector('form[data-table-filters]');
-                const formData = new FormData(form || {});
-                
+                if (form) {
+                    const formData = new FormData(form);
+                    formData.forEach((value, key) => {
+                        if (value) params[key] = value;
+                    });
+                }
+
                 // Get per_page value from select
                 const perPageSelect = document.getElementById('perPageSelect');
                 if (perPageSelect && perPageSelect.value) {
-                    formData.set('per_page', perPageSelect.value);
+                    params['per_page'] = perPageSelect.value;
                 }
-                
+
+                // Get search value if exists
+                const searchInput = document.querySelector('[data-search]');
+                if (searchInput && searchInput.value) {
+                    params['search'] = searchInput.value;
+                }
+
                 // Parse URL to get page number
                 let page = null;
                 try {
@@ -310,20 +324,14 @@ const AdminAjax = {
                         page = match[1];
                     }
                 }
-                
+
                 if (page) {
-                    formData.set('page', page);
+                    params['page'] = page;
                 }
-                
-                // Build params object
-                const params = {};
-                formData.forEach((value, key) => {
-                    if (value) params[key] = value;
-                });
-                
+
                 // Use base URL without query params to avoid URL changes
                 const baseUrl = loadUrl || window.location.pathname;
-                
+
                 AdminAjax.loadTable(baseUrl, container, {
                     params: params,
                     onSuccess: function(response) {
@@ -341,11 +349,11 @@ const AdminAjax = {
                 });
             }
         };
-        
+
         if (paginationContainer) {
             paginationContainer.addEventListener('click', handlePaginationClick);
         }
-        
+
         // Store onSuccess callback for later use
         if (options.onSuccess) {
             container.dataset.onSuccess = 'true';
