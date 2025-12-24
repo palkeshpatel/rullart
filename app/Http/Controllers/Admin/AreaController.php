@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Area;
+use App\Models\Country;
 use Illuminate\Http\Request;
 
 class AreaController extends Controller
@@ -33,11 +34,125 @@ class AreaController extends Controller
         if ($request->expectsJson() || $request->ajax()) {
             return response()->json([
                 'success' => true,
-                'html' => view('admin.masters.partials.areas-table', compact('areas'))->render(),
+                'html' => view('admin.masters.partials.area.areas-table', compact('areas'))->render(),
                 'pagination' => view('admin.partials.pagination', ['items' => $areas])->render(),
             ]);
         }
 
         return view('admin.masters.areas', compact('areas'));
+    }
+
+    public function create(Request $request)
+    {
+        $countries = Country::where('isactive', 1)->orderBy('countryname')->get();
+
+        // Return JSON for AJAX modal requests
+        if ($request->ajax() || $request->expectsJson()) {
+            return response()->json([
+                'success' => true,
+                'html' => view('admin.masters.partials.area.area-form', ['area' => null, 'countries' => $countries])->render(),
+            ]);
+        }
+
+        return view('admin.masters.area-create', compact('countries'));
+    }
+
+    public function store(Request $request)
+    {
+        $validated = $request->validate([
+            'fkcountryid' => 'required|integer|exists:countrymaster,countryid',
+            'areaname' => 'required|string|max:255',
+            'areanameAR' => 'nullable|string|max:255',
+            'isactive' => 'nullable',
+        ]);
+
+        $validated['isactive'] = $request->has('isactive') ? 1 : 0;
+
+        $area = Area::create($validated);
+
+        if ($request->ajax() || $request->expectsJson()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Area created successfully',
+                'data' => $area
+            ]);
+        }
+
+        return redirect()->route('admin.areas')
+            ->with('success', 'Area created successfully');
+    }
+
+    public function show(Request $request, $id)
+    {
+        $area = Area::with('country')->findOrFail($id);
+
+        // Return JSON for AJAX modal requests
+        if ($request->ajax() || $request->expectsJson()) {
+            return response()->json([
+                'success' => true,
+                'html' => view('admin.masters.partials.area.area-view', compact('area'))->render(),
+            ]);
+        }
+
+        return view('admin.masters.area-view', compact('area'));
+    }
+
+    public function edit(Request $request, $id)
+    {
+        $area = Area::findOrFail($id);
+        $countries = Country::where('isactive', 1)->orderBy('countryname')->get();
+
+        // Return JSON for AJAX modal requests
+        if ($request->ajax() || $request->expectsJson()) {
+            return response()->json([
+                'success' => true,
+                'html' => view('admin.masters.partials.area.area-form', compact('area', 'countries'))->render(),
+            ]);
+        }
+
+        return view('admin.masters.area-edit', compact('area', 'countries'));
+    }
+
+    public function update(Request $request, $id)
+    {
+        $area = Area::findOrFail($id);
+
+        $validated = $request->validate([
+            'fkcountryid' => 'required|integer|exists:countrymaster,countryid',
+            'areaname' => 'required|string|max:255',
+            'areanameAR' => 'nullable|string|max:255',
+            'isactive' => 'nullable',
+        ]);
+
+        $validated['isactive'] = $request->has('isactive') ? 1 : 0;
+
+        $area->update($validated);
+
+        if ($request->ajax() || $request->expectsJson()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Area updated successfully',
+                'data' => $area
+            ]);
+        }
+
+        return redirect()->route('admin.areas')
+            ->with('success', 'Area updated successfully');
+    }
+
+    public function destroy(Request $request, $id)
+    {
+        $area = Area::findOrFail($id);
+        $area->delete();
+
+        if ($request->ajax() || $request->expectsJson()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Area deleted successfully'
+            ]);
+        }
+
+        return redirect()->route('admin.areas')
+            ->with('success', 'Area deleted successfully');
     }
 }

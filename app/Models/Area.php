@@ -17,4 +17,9 @@ class Area extends Model
         'areanameAR',
         'isactive',
     ];
+
+    public function country()
+    {
+        return $this->belongsTo(Country::class, 'fkcountryid', 'countryid');
+    }
 }

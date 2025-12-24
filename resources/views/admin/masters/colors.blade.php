@@ -42,7 +42,7 @@
 
                     <!-- Table Container -->
                     <div class="table-container">
-                        @include('admin.masters.partials.colors-table', ['colors' => $colors])
+                        @include('admin.masters.partials.color.colors-table', ['colors' => $colors])
                     </div>
 
                     <!-- Pagination -->

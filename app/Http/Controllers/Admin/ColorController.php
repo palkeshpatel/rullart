@@ -33,7 +33,7 @@ class ColorController extends Controller
         if ($request->expectsJson() || $request->ajax()) {
             return response()->json([
                 'success' => true,
-                'html' => view('admin.masters.partials.colors-table', compact('colors'))->render(),
+                'html' => view('admin.masters.partials.color.colors-table', compact('colors'))->render(),
                 'pagination' => view('admin.partials.pagination', ['items' => $colors])->render(),
             ]);
         }
@@ -47,7 +47,7 @@ class ColorController extends Controller
         if ($request->ajax() || $request->expectsJson()) {
             return response()->json([
                 'success' => true,
-                'html' => view('admin.masters.partials.color-form', ['color' => null])->render(),
+                'html' => view('admin.masters.partials.color.color-form', ['color' => null])->render(),
             ]);
         }
 
@@ -90,7 +90,7 @@ class ColorController extends Controller
         if ($request->ajax() || $request->expectsJson()) {
             return response()->json([
                 'success' => true,
-                'html' => view('admin.masters.partials.color-view', compact('color'))->render(),
+                'html' => view('admin.masters.partials.color.color-view', compact('color'))->render(),
             ]);
         }
 
@@ -105,7 +105,7 @@ class ColorController extends Controller
         if ($request->ajax() || $request->expectsJson()) {
             return response()->json([
                 'success' => true,
-                'html' => view('admin.masters.partials.color-form', compact('color'))->render(),
+                'html' => view('admin.masters.partials.color.color-form', compact('color'))->render(),
             ]);
         }
 

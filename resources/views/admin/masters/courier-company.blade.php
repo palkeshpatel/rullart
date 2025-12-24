@@ -60,7 +60,7 @@
 
                     <!-- Table Container -->
                     <div class="table-container">
-                        @include('admin.masters.partials.courier-company-table', ['courierCompanies' => $courierCompanies])
+                        @include('admin.masters.partials.courier.courier-company-table', ['courierCompanies' => $courierCompanies])
                     </div>
 
                     <!-- Pagination -->

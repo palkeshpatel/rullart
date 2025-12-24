@@ -37,7 +37,7 @@ class CouponCodeController extends Controller
         if ($request->expectsJson() || $request->ajax()) {
             return response()->json([
                 'success' => true,
-                'html' => view('admin.masters.partials.coupon-code-table', compact('couponCodes'))->render(),
+                'html' => view('admin.masters.partials.coupon.coupon-code-table', compact('couponCodes'))->render(),
                 'pagination' => view('admin.partials.pagination', ['items' => $couponCodes])->render(),
             ]);
         }

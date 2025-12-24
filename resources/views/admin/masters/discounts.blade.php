@@ -70,7 +70,7 @@
 
                     <!-- Table Container -->
                     <div class="table-container">
-                        @include('admin.masters.partials.discounts-table', ['discounts' => $discounts])
+                        @include('admin.masters.partials.discounts.discounts-table', ['discounts' => $discounts])
                     </div>
 
                     <!-- Pagination -->

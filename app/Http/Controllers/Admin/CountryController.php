@@ -39,7 +39,7 @@ class CountryController extends Controller
         if ($request->expectsJson() || $request->ajax()) {
             return response()->json([
                 'success' => true,
-                'html' => view('admin.masters.partials.countries-table', compact('countries'))->render(),
+                'html' => view('admin.masters.partials.countries.countries-table', compact('countries'))->render(),
                 'pagination' => view('admin.partials.pagination', ['items' => $countries])->render(),
             ]);
         }

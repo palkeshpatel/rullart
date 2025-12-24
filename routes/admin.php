@@ -80,6 +80,7 @@ Route::middleware(['admin'])->prefix('admin')->name('admin.')->group(function ()
     Route::delete('colors/{id}', [\App\Http\Controllers\Admin\ColorController::class, 'destroy'])->name('colors.destroy');
     
     Route::get('areas', [\App\Http\Controllers\Admin\AreaController::class, 'index'])->name('areas');
+    Route::get('areas/create', [\App\Http\Controllers\Admin\AreaController::class, 'create'])->name('areas.create');
     Route::post('areas', [\App\Http\Controllers\Admin\AreaController::class, 'store'])->name('areas.store');
     Route::get('areas/{id}', [\App\Http\Controllers\Admin\AreaController::class, 'show'])->name('areas.show');
     Route::get('areas/{id}/edit', [\App\Http\Controllers\Admin\AreaController::class, 'edit'])->name('areas.edit');

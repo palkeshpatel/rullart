@@ -42,7 +42,7 @@
 
                     <!-- Table Container -->
                     <div class="table-container">
-                        @include('admin.masters.partials.sizes-table', ['sizes' => $sizes])
+                        @include('admin.masters.partials.sizes.sizes-table', ['sizes' => $sizes])
                     </div>
 
                     <!-- Pagination -->

@@ -60,7 +60,7 @@
 
                     <!-- Table Container -->
                     <div class="table-container">
-                        @include('admin.masters.partials.countries-table', ['countries' => $countries])
+                        @include('admin.masters.partials.countries.countries-table', ['countries' => $countries])
                     </div>
 
                     <!-- Pagination -->

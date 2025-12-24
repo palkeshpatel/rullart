@@ -38,7 +38,7 @@ class GiftMessageController extends Controller
         if ($request->expectsJson() || $request->ajax()) {
             return response()->json([
                 'success' => true,
-                'html' => view('admin.masters.partials.messages-table', compact('messages'))->render(),
+                'html' => view('admin.masters.partials.messages.messages-table', compact('messages'))->render(),
                 'pagination' => view('admin.partials.pagination', ['items' => $messages])->render(),
             ]);
         }

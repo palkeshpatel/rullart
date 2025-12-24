@@ -33,7 +33,7 @@ class SizeController extends Controller
         if ($request->expectsJson() || $request->ajax()) {
             return response()->json([
                 'success' => true,
-                'html' => view('admin.masters.partials.sizes-table', compact('sizes'))->render(),
+                'html' => view('admin.masters.partials.sizes.sizes-table', compact('sizes'))->render(),
                 'pagination' => view('admin.partials.pagination', ['items' => $sizes])->render(),
             ]);
         }

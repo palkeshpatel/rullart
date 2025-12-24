@@ -60,7 +60,7 @@
 
                     <!-- Table Container -->
                     <div class="table-container">
-                        @include('admin.masters.partials.messages-table', ['messages' => $messages])
+                        @include('admin.masters.partials.messages.messages-table', ['messages' => $messages])
                     </div>
 
                     <!-- Pagination -->
