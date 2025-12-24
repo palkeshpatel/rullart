@@ -25,7 +25,22 @@ class DiscountController extends Controller
             $query->where('enddate', '<=', $request->end_date);
         }
 
-        $discounts = $query->orderBy('id', 'desc')->paginate(25);
+        // Sorting
+        $sortColumn = $request->get('sort', 'id');
+        $sortDirection = $request->get('direction', 'desc');
+        $query->orderBy($sortColumn, $sortDirection);
+
+        $perPage = $request->get('per_page', 25);
+        $discounts = $query->paginate($perPage);
+
+        // Return JSON for AJAX requests
+        if ($request->expectsJson() || $request->ajax()) {
+            return response()->json([
+                'success' => true,
+                'html' => view('admin.masters.partials.discounts-table', compact('discounts'))->render(),
+                'pagination' => view('admin.partials.pagination', ['items' => $discounts])->render(),
+            ]);
+        }
 
         return view('admin.masters.discounts', compact('discounts'));
     }

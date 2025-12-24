@@ -12,11 +12,16 @@ class Country extends Model
     public $timestamps = false;
 
     protected $fillable = [
-        'country',
-        'countryAR',
-        'countrycode',
+        'countryname',
+        'countrynameAR',
+        'isocode',
         'currencycode',
         'currencyrate',
-        'ispublished',
+        'isactive',
+        'shipping_charge',
+        'shipping_days',
+        'shipping_daysAR',
+        'currencysymbol',
+        'free_shipping_over',
     ];
 }

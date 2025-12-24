@@ -77,6 +77,7 @@ Route::middleware(['admin'])->prefix('admin')->name('admin.')->group(function ()
     Route::get('sizes', [\App\Http\Controllers\Admin\SizeController::class, 'index'])->name('sizes');
     Route::get('couponcode', [\App\Http\Controllers\Admin\CouponCodeController::class, 'index'])->name('coupon-code');
     Route::get('discounts', [\App\Http\Controllers\Admin\DiscountController::class, 'index'])->name('discounts');
+    Route::get('courier-company', [\App\Http\Controllers\Admin\CourierCompanyController::class, 'index'])->name('courier-company');
     Route::get('messages', [\App\Http\Controllers\Admin\GiftMessageController::class, 'index'])->name('messages');
 
     // Manage Pages

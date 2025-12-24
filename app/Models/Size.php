@@ -6,21 +6,23 @@ use Illuminate\Database\Eloquent\Model;
 
 class Size extends Model
 {
-    protected $table = 'commonmaster';
-    protected $primaryKey = 'commonid';
+    protected $table = 'filtervalues';
+    protected $primaryKey = 'filtervalueid';
     public $incrementing = true;
     public $timestamps = false;
 
     protected $fillable = [
-        'commonname',
-        'commonvalue',
-        'commonvalueAR',
+        'fkfilterid',
+        'filtervalue',
+        'filtervalueAR',
+        'filtervaluecode',
+        'isactive',
         'displayorder',
     ];
 
-    // Scope to filter by commonname = 'size'
+    // Scope to filter by fkfilterid = 3 (Size from filtermaster)
     public function scopeSizes($query)
     {
-        return $query->where('commonname', 'size');
+        return $query->where('fkfilterid', 3);
     }
 }

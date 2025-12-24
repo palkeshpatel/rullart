@@ -6,21 +6,23 @@ use Illuminate\Database\Eloquent\Model;
 
 class Color extends Model
 {
-    protected $table = 'commonmaster';
-    protected $primaryKey = 'commonid';
+    protected $table = 'filtervalues';
+    protected $primaryKey = 'filtervalueid';
     public $incrementing = true;
     public $timestamps = false;
 
     protected $fillable = [
-        'commonname',
-        'commonvalue',
-        'commonvalueAR',
+        'fkfilterid',
+        'filtervalue',
+        'filtervalueAR',
+        'filtervaluecode',
+        'isactive',
         'displayorder',
     ];
 
-    // Scope to filter by commonname = 'color'
+    // Scope to filter by fkfilterid = 2 (Color from filtermaster)
     public function scopeColors($query)
     {
-        return $query->where('commonname', 'color');
+        return $query->where('fkfilterid', 2);
     }
 }

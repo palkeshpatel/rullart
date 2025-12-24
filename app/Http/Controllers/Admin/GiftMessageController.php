@@ -26,7 +26,22 @@ class GiftMessageController extends Controller
             $query->where('isactive', $request->active);
         }
 
-        $messages = $query->orderBy('displayorder', 'asc')->paginate(25);
+        // Sorting
+        $sortColumn = $request->get('sort', 'displayorder');
+        $sortDirection = $request->get('direction', 'asc');
+        $query->orderBy($sortColumn, $sortDirection);
+
+        $perPage = $request->get('per_page', 25);
+        $messages = $query->paginate($perPage);
+
+        // Return JSON for AJAX requests
+        if ($request->expectsJson() || $request->ajax()) {
+            return response()->json([
+                'success' => true,
+                'html' => view('admin.masters.partials.messages-table', compact('messages'))->render(),
+                'pagination' => view('admin.partials.pagination', ['items' => $messages])->render(),
+            ]);
+        }
 
         return view('admin.masters.messages', compact('messages'));
     }

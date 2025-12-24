@@ -232,12 +232,12 @@
             </li>
 
             <li class="side-nav-item">
-                <a data-bs-toggle="collapse" href="#masters" aria-expanded="{{ request()->routeIs('admin.colors') || request()->routeIs('admin.areas') || request()->routeIs('admin.countries') || request()->routeIs('admin.sizes') || request()->routeIs('admin.coupon-code') || request()->routeIs('admin.discounts') || request()->routeIs('admin.messages') ? 'true' : 'false' }}" aria-controls="masters" class="side-nav-link {{ request()->routeIs('admin.colors') || request()->routeIs('admin.areas') || request()->routeIs('admin.countries') || request()->routeIs('admin.sizes') || request()->routeIs('admin.coupon-code') || request()->routeIs('admin.discounts') || request()->routeIs('admin.messages') ? 'active' : '' }}">
+                <a data-bs-toggle="collapse" href="#masters" aria-expanded="{{ request()->routeIs('admin.colors') || request()->routeIs('admin.areas') || request()->routeIs('admin.countries') || request()->routeIs('admin.sizes') || request()->routeIs('admin.coupon-code') || request()->routeIs('admin.discounts') || request()->routeIs('admin.courier-company') || request()->routeIs('admin.messages') ? 'true' : 'false' }}" aria-controls="masters" class="side-nav-link {{ request()->routeIs('admin.colors') || request()->routeIs('admin.areas') || request()->routeIs('admin.countries') || request()->routeIs('admin.sizes') || request()->routeIs('admin.coupon-code') || request()->routeIs('admin.discounts') || request()->routeIs('admin.courier-company') || request()->routeIs('admin.messages') ? 'active' : '' }}">
                     <span class="menu-icon"><i class="ti ti-list"></i></span>
                     <span class="menu-text">Masters</span>
                     <span class="menu-arrow"></span>
                 </a>
-                <div class="collapse {{ request()->routeIs('admin.colors') || request()->routeIs('admin.areas') || request()->routeIs('admin.countries') || request()->routeIs('admin.sizes') || request()->routeIs('admin.coupon-code') || request()->routeIs('admin.discounts') || request()->routeIs('admin.messages') ? 'show' : '' }}" id="masters">
+                <div class="collapse {{ request()->routeIs('admin.colors') || request()->routeIs('admin.areas') || request()->routeIs('admin.countries') || request()->routeIs('admin.sizes') || request()->routeIs('admin.coupon-code') || request()->routeIs('admin.discounts') || request()->routeIs('admin.courier-company') || request()->routeIs('admin.messages') ? 'show' : '' }}" id="masters">
                     <ul class="sub-menu">
                         <li class="side-nav-item">
                             <a href="{{ route('admin.colors') }}" class="side-nav-link {{ request()->routeIs('admin.colors') ? 'active' : '' }}">
@@ -267,6 +267,11 @@
                         <li class="side-nav-item">
                             <a href="{{ route('admin.discounts') }}" class="side-nav-link {{ request()->routeIs('admin.discounts') ? 'active' : '' }}">
                                 <span class="menu-text">Discount Offer</span>
+                            </a>
+                        </li>
+                        <li class="side-nav-item">
+                            <a href="{{ route('admin.courier-company') }}" class="side-nav-link {{ request()->routeIs('admin.courier-company') ? 'active' : '' }}">
+                                <span class="menu-text">Courier Company</span>
                             </a>
                         </li>
                         <li class="side-nav-item">

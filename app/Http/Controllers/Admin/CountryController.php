@@ -16,18 +16,33 @@ class CountryController extends Controller
         if ($request->has('search') && $request->search) {
             $search = $request->search;
             $query->where(function($q) use ($search) {
-                $q->where('country', 'like', "%{$search}%")
-                  ->orWhere('countryAR', 'like', "%{$search}%")
-                  ->orWhere('countrycode', 'like', "%{$search}%");
+                $q->where('countryname', 'like', "%{$search}%")
+                  ->orWhere('countrynameAR', 'like', "%{$search}%")
+                  ->orWhere('isocode', 'like', "%{$search}%");
             });
         }
 
-        // Filter by published status
-        if ($request->has('published') && $request->published !== '') {
-            $query->where('ispublished', $request->published);
+        // Filter by active status
+        if ($request->has('active') && $request->active !== '') {
+            $query->where('isactive', $request->active);
         }
 
-        $countries = $query->orderBy('countryid', 'asc')->paginate(25);
+        // Sorting
+        $sortColumn = $request->get('sort', 'countryname');
+        $sortDirection = $request->get('direction', 'asc');
+        $query->orderBy($sortColumn, $sortDirection);
+
+        $perPage = $request->get('per_page', 25);
+        $countries = $query->paginate($perPage);
+
+        // Return JSON for AJAX requests
+        if ($request->expectsJson() || $request->ajax()) {
+            return response()->json([
+                'success' => true,
+                'html' => view('admin.masters.partials.countries-table', compact('countries'))->render(),
+                'pagination' => view('admin.partials.pagination', ['items' => $countries])->render(),
+            ]);
+        }
 
         return view('admin.masters.countries', compact('countries'));
     }

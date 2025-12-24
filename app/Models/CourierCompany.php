@@ -4,17 +4,18 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
-class Area extends Model
+class CourierCompany extends Model
 {
-    protected $table = 'areamaster';
-    protected $primaryKey = 'areaid';
+    protected $table = 'courier_company';
+    protected $primaryKey = 'id';
     public $incrementing = true;
     public $timestamps = false;
 
     protected $fillable = [
-        'fkcountryid',
-        'areaname',
-        'areanameAR',
+        'name',
+        'tracking_url',
         'isactive',
+        'created_at',
     ];
 }
+
