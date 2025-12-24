@@ -24,8 +24,18 @@ class ReturnRequestController extends Controller
             });
         }
 
-        $returnRequests = $query->orderBy('submiton', 'desc')->paginate(25);
+        $perPage = $request->get('per_page', 25);
+        $returnRequests = $query->orderBy('submiton', 'desc')->paginate($perPage);
 
-        return view('admin.return-request', compact('returnRequests'));
+        // Return JSON for AJAX requests
+        if ($request->expectsJson() || $request->ajax()) {
+            return response()->json([
+                'success' => true,
+                'html' => view('admin.return-request.partials.table', compact('returnRequests'))->render(),
+                'pagination' => view('admin.partials.pagination', ['items' => $returnRequests])->render(),
+            ]);
+        }
+
+        return view('admin.return-request.index', compact('returnRequests'));
     }
 }

@@ -22,7 +22,8 @@ class CustomerController extends Controller
             });
         }
 
-        $customers = $query->orderBy('createdon', 'desc')->paginate(25);
+        $perPage = $request->get('per_page', 25);
+        $customers = $query->orderBy('createdon', 'desc')->paginate($perPage);
 
         // Return JSON for AJAX requests
         if ($request->expectsJson() || $request->ajax()) {

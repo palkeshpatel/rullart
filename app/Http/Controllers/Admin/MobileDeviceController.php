@@ -23,8 +23,18 @@ class MobileDeviceController extends Controller
             });
         }
 
-        $devices = $query->orderBy('id', 'desc')->paginate(25);
+        $perPage = $request->get('per_page', 25);
+        $devices = $query->orderBy('id', 'desc')->paginate($perPage);
 
-        return view('admin.mobile-device', compact('devices'));
+        // Return JSON for AJAX requests
+        if ($request->expectsJson() || $request->ajax()) {
+            return response()->json([
+                'success' => true,
+                'html' => view('admin.mobile-device.partials.table', compact('devices'))->render(),
+                'pagination' => view('admin.partials.pagination', ['items' => $devices])->render(),
+            ]);
+        }
+
+        return view('admin.mobile-device.index', compact('devices'));
     }
 }

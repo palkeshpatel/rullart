@@ -25,8 +25,18 @@ class WishlistController extends Controller
             });
         }
 
-        $wishlists = $query->orderBy('createdon', 'desc')->paginate(25);
+        $perPage = $request->get('per_page', 25);
+        $wishlists = $query->orderBy('createdon', 'desc')->paginate($perPage);
 
-        return view('admin.wishlist', compact('wishlists'));
+        // Return JSON for AJAX requests
+        if ($request->expectsJson() || $request->ajax()) {
+            return response()->json([
+                'success' => true,
+                'html' => view('admin.wishlist.partials.table', compact('wishlists'))->render(),
+                'pagination' => view('admin.partials.pagination', ['items' => $wishlists])->render(),
+            ]);
+        }
+
+        return view('admin.wishlist.index', compact('wishlists'));
     }
 }

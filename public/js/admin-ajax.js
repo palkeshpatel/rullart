@@ -281,50 +281,69 @@ const AdminAjax = {
         const paginationContainer = container.closest('.card-body')?.querySelector('.pagination-container') || 
                                    document.querySelector('.pagination-container');
         
-        if (paginationContainer) {
-            paginationContainer.addEventListener('click', function(e) {
-                const paginationLink = e.target.closest('.pagination a');
-                if (paginationLink && paginationLink.href && !paginationLink.classList.contains('disabled')) {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    
-                    // Get current form data to preserve filters
-                    const form = document.querySelector('form[data-table-filters]');
-                    const formData = new FormData(form || {});
-                    
-                    // Get per_page value from select
-                    const perPageSelect = document.getElementById('perPageSelect');
-                    if (perPageSelect && perPageSelect.value) {
-                        formData.set('per_page', perPageSelect.value);
-                    }
-                    
-                    // Parse URL to get page number
-                    try {
-                        const url = new URL(paginationLink.href);
-                        const page = url.searchParams.get('page');
-                        if (page) {
-                            formData.set('page', page);
-                        }
-                    } catch (err) {
-                        // If URL parsing fails, try to extract page from href
-                        const match = paginationLink.href.match(/[?&]page=(\d+)/);
-                        if (match) {
-                            formData.set('page', match[1]);
-                        }
-                    }
-                    
-                    // Build params object
-                    const params = {};
-                    formData.forEach((value, key) => {
-                        if (value) params[key] = value;
-                    });
-                    
-                    AdminAjax.loadTable(loadUrl || window.location.href, container, {
-                        params: params,
-                        onSuccess: options.onSuccess
-                    });
+        // Function to handle pagination clicks
+        const handlePaginationClick = function(e) {
+            const paginationLink = e.target.closest('.pagination a, .pagination li a');
+            if (paginationLink && paginationLink.href && !paginationLink.classList.contains('disabled') && !paginationLink.closest('li')?.classList.contains('disabled')) {
+                e.preventDefault();
+                e.stopPropagation();
+                
+                // Get current form data to preserve filters
+                const form = document.querySelector('form[data-table-filters]');
+                const formData = new FormData(form || {});
+                
+                // Get per_page value from select
+                const perPageSelect = document.getElementById('perPageSelect');
+                if (perPageSelect && perPageSelect.value) {
+                    formData.set('per_page', perPageSelect.value);
                 }
-            });
+                
+                // Parse URL to get page number
+                let page = null;
+                try {
+                    const url = new URL(paginationLink.href);
+                    page = url.searchParams.get('page');
+                } catch (err) {
+                    // If URL parsing fails, try to extract page from href
+                    const match = paginationLink.href.match(/[?&]page=(\d+)/);
+                    if (match) {
+                        page = match[1];
+                    }
+                }
+                
+                if (page) {
+                    formData.set('page', page);
+                }
+                
+                // Build params object
+                const params = {};
+                formData.forEach((value, key) => {
+                    if (value) params[key] = value;
+                });
+                
+                // Use base URL without query params to avoid URL changes
+                const baseUrl = loadUrl || window.location.pathname;
+                
+                AdminAjax.loadTable(baseUrl, container, {
+                    params: params,
+                    onSuccess: function(response) {
+                        // Update pagination container
+                        if (response.pagination && paginationContainer) {
+                            paginationContainer.innerHTML = response.pagination;
+                            // Re-attach event listener to new pagination
+                            paginationContainer.removeEventListener('click', handlePaginationClick);
+                            paginationContainer.addEventListener('click', handlePaginationClick);
+                        }
+                        if (options.onSuccess) {
+                            options.onSuccess(response);
+                        }
+                    }
+                });
+            }
+        };
+        
+        if (paginationContainer) {
+            paginationContainer.addEventListener('click', handlePaginationClick);
         }
         
         // Store onSuccess callback for later use

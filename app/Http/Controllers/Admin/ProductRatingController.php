@@ -33,8 +33,18 @@ class ProductRatingController extends Controller
             $query->where('ispublished', $request->published);
         }
 
-        $ratings = $query->orderBy('submiton', 'desc')->paginate(25);
+        $perPage = $request->get('per_page', 25);
+        $ratings = $query->orderBy('submiton', 'desc')->paginate($perPage);
 
-        return view('admin.product-rate', compact('ratings'));
+        // Return JSON for AJAX requests
+        if ($request->expectsJson() || $request->ajax()) {
+            return response()->json([
+                'success' => true,
+                'html' => view('admin.product-rate.partials.table', compact('ratings'))->render(),
+                'pagination' => view('admin.partials.pagination', ['items' => $ratings])->render(),
+            ]);
+        }
+
+        return view('admin.product-rate.index', compact('ratings'));
     }
 }

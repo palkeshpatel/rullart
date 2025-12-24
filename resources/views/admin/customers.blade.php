@@ -46,7 +46,9 @@
                 </div>
 
                 <!-- Pagination -->
-                @include('admin.partials.pagination', ['items' => $customers])
+                <div class="pagination-container">
+                    @include('admin.partials.pagination', ['items' => $customers])
+                </div>
             </div>
         </div>
     </div>
@@ -64,14 +66,42 @@ document.addEventListener('DOMContentLoaded', function() {
         filterSelector: '[data-filter]',
         paginationSelector: '.pagination a',
         loadUrl: '{{ route("admin.customers") }}',
-        containerSelector: '.table-container'
+        containerSelector: '.table-container',
+        onSuccess: function(response) {
+            // Update pagination if provided
+            if (response.pagination) {
+                const paginationContainer = document.querySelector('.pagination-container');
+                if (paginationContainer) {
+                    paginationContainer.innerHTML = response.pagination;
+                }
+            }
+        }
     });
 
     // Per page change handler
     document.getElementById('perPageSelect')?.addEventListener('change', function() {
-        const url = new URL(window.location.href);
-        url.searchParams.set('per_page', this.value);
-        AdminAjax.loadTable(url.toString(), document.querySelector('.table-container'));
+        const form = document.getElementById('customersFilterForm');
+        const formData = new FormData(form);
+        formData.set('per_page', this.value);
+        formData.delete('page'); // Reset to page 1 when changing per_page
+
+        const params = new URLSearchParams();
+        formData.forEach((value, key) => {
+            if (value) params.set(key, value);
+        });
+
+        AdminAjax.loadTable('{{ route("admin.customers") }}', document.querySelector('.table-container'), {
+            params: Object.fromEntries(params),
+            onSuccess: function(response) {
+                // Update pagination if provided
+                if (response.pagination) {
+                    const paginationContainer = document.querySelector('.pagination-container');
+                    if (paginationContainer) {
+                        paginationContainer.innerHTML = response.pagination;
+                    }
+                }
+            }
+        });
     });
 });
 </script>

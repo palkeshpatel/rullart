@@ -107,7 +107,7 @@ try {
 
             // Fetch data from CI database
             $ciData = $ciConnection->query("SELECT * FROM `{$table}`")->fetchAll(PDO::FETCH_ASSOC);
-
+            
             if (empty($ciData)) {
                 echo "  ⚠ No data fetched. Skipping...\n\n";
                 continue;
@@ -126,7 +126,7 @@ try {
                         // Handle invalid datetime values
                         foreach ($row as $key => $value) {
                             if (is_string($value) && (
-                                $value === '0000-00-00 00:00:00' ||
+                                $value === '0000-00-00 00:00:00' || 
                                 $value === '0000-00-00' ||
                                 preg_match('/^\d{4}-\d{2}-\d{2} 00:00:00$/', $value)
                             )) {
