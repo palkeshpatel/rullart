@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Color;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 class ColorController extends Controller
 {
@@ -57,29 +58,58 @@ class ColorController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'filtervalue' => 'required|string|max:255',
+            'filtervalue' => [
+                'required',
+                'string',
+                'max:255',
+                Rule::unique('filtervalues', 'filtervalue')->where(function ($query) {
+                    return $query->where('fkfilterid', 2);
+                })
+            ],
             'filtervalueAR' => 'nullable|string|max:255',
             'filtervaluecode' => 'nullable|string|max:255',
             'isactive' => 'nullable',
             'displayorder' => 'nullable|integer',
+        ], [
+            'filtervalue.unique' => 'This color name already exists. Please choose a different name.',
+            'filtervalue.required' => 'Color name (EN) is required.',
         ]);
 
         $validated['fkfilterid'] = 2; // Color filter ID
         $validated['isactive'] = $request->has('isactive') ? 1 : 0;
         $validated['displayorder'] = $validated['displayorder'] ?? 0;
 
-        $color = Color::create($validated);
+        try {
+            $color = Color::create($validated);
 
-        if ($request->ajax() || $request->expectsJson()) {
-            return response()->json([
-                'success' => true,
-                'message' => 'Color created successfully',
-                'data' => $color
-            ]);
+            if ($request->ajax() || $request->expectsJson()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Color created successfully',
+                    'data' => $color
+                ]);
+            }
+
+            return redirect()->route('admin.colors')
+                ->with('success', 'Color created successfully');
+        } catch (\Illuminate\Database\QueryException $e) {
+            // Handle database constraint violations
+            if ($e->getCode() == 23000) {
+                $errorMessage = 'This color name already exists. Please choose a different name.';
+            } else {
+                $errorMessage = 'An error occurred while saving the color.';
+            }
+
+            if ($request->ajax() || $request->expectsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => $errorMessage,
+                    'errors' => ['filtervalue' => [$errorMessage]]
+                ], 422);
+            }
+
+            return back()->withErrors(['filtervalue' => $errorMessage])->withInput();
         }
-
-        return redirect()->route('admin.colors')
-            ->with('success', 'Color created successfully');
     }
 
     public function show(Request $request, $id)
@@ -117,28 +147,57 @@ class ColorController extends Controller
         $color = Color::colors()->findOrFail($id);
 
         $validated = $request->validate([
-            'filtervalue' => 'required|string|max:255',
+            'filtervalue' => [
+                'required',
+                'string',
+                'max:255',
+                Rule::unique('filtervalues', 'filtervalue')->where(function ($query) {
+                    return $query->where('fkfilterid', 2);
+                })->ignore($id, 'filtervalueid')
+            ],
             'filtervalueAR' => 'nullable|string|max:255',
             'filtervaluecode' => 'nullable|string|max:255',
             'isactive' => 'nullable',
             'displayorder' => 'nullable|integer',
+        ], [
+            'filtervalue.unique' => 'This color name already exists. Please choose a different name.',
+            'filtervalue.required' => 'Color name (EN) is required.',
         ]);
 
         $validated['isactive'] = $request->has('isactive') ? 1 : 0;
         $validated['displayorder'] = $validated['displayorder'] ?? 0;
 
-        $color->update($validated);
+        try {
+            $color->update($validated);
 
-        if ($request->ajax() || $request->expectsJson()) {
-            return response()->json([
-                'success' => true,
-                'message' => 'Color updated successfully',
-                'data' => $color
-            ]);
+            if ($request->ajax() || $request->expectsJson()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Color updated successfully',
+                    'data' => $color
+                ]);
+            }
+
+            return redirect()->route('admin.colors')
+                ->with('success', 'Color updated successfully');
+        } catch (\Illuminate\Database\QueryException $e) {
+            // Handle database constraint violations
+            if ($e->getCode() == 23000) {
+                $errorMessage = 'This color name already exists. Please choose a different name.';
+            } else {
+                $errorMessage = 'An error occurred while updating the color.';
+            }
+
+            if ($request->ajax() || $request->expectsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => $errorMessage,
+                    'errors' => ['filtervalue' => [$errorMessage]]
+                ], 422);
+            }
+
+            return back()->withErrors(['filtervalue' => $errorMessage])->withInput();
         }
-
-        return redirect()->route('admin.colors')
-            ->with('success', 'Color updated successfully');
     }
 
     public function destroy(Request $request, $id)
