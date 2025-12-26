@@ -88,6 +88,7 @@ Route::middleware(['admin'])->prefix('admin')->name('admin.')->group(function ()
     Route::delete('areas/{id}', [\App\Http\Controllers\Admin\AreaController::class, 'destroy'])->name('areas.destroy');
     
     Route::get('sizes', [\App\Http\Controllers\Admin\SizeController::class, 'index'])->name('sizes');
+    Route::get('sizes/create', [\App\Http\Controllers\Admin\SizeController::class, 'create'])->name('sizes.create');
     Route::post('sizes', [\App\Http\Controllers\Admin\SizeController::class, 'store'])->name('sizes.store');
     Route::get('sizes/{id}', [\App\Http\Controllers\Admin\SizeController::class, 'show'])->name('sizes.show');
     Route::get('sizes/{id}/edit', [\App\Http\Controllers\Admin\SizeController::class, 'edit'])->name('sizes.edit');
@@ -103,6 +104,7 @@ Route::middleware(['admin'])->prefix('admin')->name('admin.')->group(function ()
     Route::delete('countries/{id}', [\App\Http\Controllers\Admin\CountryController::class, 'destroy'])->name('countries.destroy');
     
     Route::get('coupon-code', [\App\Http\Controllers\Admin\CouponCodeController::class, 'index'])->name('coupon-code');
+    Route::get('coupon-code/create', [\App\Http\Controllers\Admin\CouponCodeController::class, 'create'])->name('coupon-code.create');
     Route::post('coupon-code', [\App\Http\Controllers\Admin\CouponCodeController::class, 'store'])->name('coupon-code.store');
     Route::get('coupon-code/{id}', [\App\Http\Controllers\Admin\CouponCodeController::class, 'show'])->name('coupon-code.show');
     Route::get('coupon-code/{id}/edit', [\App\Http\Controllers\Admin\CouponCodeController::class, 'edit'])->name('coupon-code.edit');
@@ -110,6 +112,7 @@ Route::middleware(['admin'])->prefix('admin')->name('admin.')->group(function ()
     Route::delete('coupon-code/{id}', [\App\Http\Controllers\Admin\CouponCodeController::class, 'destroy'])->name('coupon-code.destroy');
     
     Route::get('discounts', [\App\Http\Controllers\Admin\DiscountController::class, 'index'])->name('discounts');
+    Route::get('discounts/create', [\App\Http\Controllers\Admin\DiscountController::class, 'create'])->name('discounts.create');
     Route::post('discounts', [\App\Http\Controllers\Admin\DiscountController::class, 'store'])->name('discounts.store');
     Route::get('discounts/{id}', [\App\Http\Controllers\Admin\DiscountController::class, 'show'])->name('discounts.show');
     Route::get('discounts/{id}/edit', [\App\Http\Controllers\Admin\DiscountController::class, 'edit'])->name('discounts.edit');
@@ -117,6 +120,7 @@ Route::middleware(['admin'])->prefix('admin')->name('admin.')->group(function ()
     Route::delete('discounts/{id}', [\App\Http\Controllers\Admin\DiscountController::class, 'destroy'])->name('discounts.destroy');
     
     Route::get('messages', [\App\Http\Controllers\Admin\GiftMessageController::class, 'index'])->name('messages');
+    Route::get('messages/create', [\App\Http\Controllers\Admin\GiftMessageController::class, 'create'])->name('messages.create');
     Route::post('messages', [\App\Http\Controllers\Admin\GiftMessageController::class, 'store'])->name('messages.store');
     Route::get('messages/{id}', [\App\Http\Controllers\Admin\GiftMessageController::class, 'show'])->name('messages.show');
     Route::get('messages/{id}/edit', [\App\Http\Controllers\Admin\GiftMessageController::class, 'edit'])->name('messages.edit');
@@ -124,6 +128,7 @@ Route::middleware(['admin'])->prefix('admin')->name('admin.')->group(function ()
     Route::delete('messages/{id}', [\App\Http\Controllers\Admin\GiftMessageController::class, 'destroy'])->name('messages.destroy');
     
     Route::get('courier-company', [\App\Http\Controllers\Admin\CourierCompanyController::class, 'index'])->name('courier-company');
+    Route::get('courier-company/create', [\App\Http\Controllers\Admin\CourierCompanyController::class, 'create'])->name('courier-company.create');
     Route::post('courier-company', [\App\Http\Controllers\Admin\CourierCompanyController::class, 'store'])->name('courier-company.store');
     Route::get('courier-company/{id}', [\App\Http\Controllers\Admin\CourierCompanyController::class, 'show'])->name('courier-company.show');
     Route::get('courier-company/{id}/edit', [\App\Http\Controllers\Admin\CourierCompanyController::class, 'edit'])->name('courier-company.edit');

@@ -7,7 +7,7 @@
                 </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <form id="couponCodeForm" method="POST" action="{{ $couponCode ? route('admin.coupon-code.update', $couponCode->couponcodeid) : route('admin.coupon-code.store') }}">
+            <form id="couponCodeForm" method="POST" action="{{ $couponCode ? route('admin.coupon-code.update', $couponCode->couponcodeid) : route('admin.coupon-code.store') }}" novalidate>
                 @csrf
                 @if($couponCode)
                     @method('PUT')
@@ -18,12 +18,14 @@
                             <div class="mb-3">
                                 <label class="form-label">Coupon Code <span class="text-danger">*</span></label>
                                 <input type="text" name="couponcode" class="form-control" value="{{ old('couponcode', $couponCode ? $couponCode->couponcode : '') }}" required>
+                                <div class="invalid-feedback"></div>
                             </div>
                         </div>
                         <div class="col-md-6">
                             <div class="mb-3">
                                 <label class="form-label">Coupon Value <span class="text-danger">*</span></label>
                                 <input type="number" step="0.01" name="couponvalue" class="form-control" value="{{ old('couponvalue', $couponCode ? $couponCode->couponvalue : '') }}" required>
+                                <div class="invalid-feedback"></div>
                             </div>
                         </div>
                     </div>

@@ -7,19 +7,19 @@
                 </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <form id="sizeForm" method="POST" action="{{ $size ? route('admin.sizes.update', $size->filtervalueid) : route('admin.sizes.store') }}">
+            <form id="sizeForm" method="POST" action="{{ $size ? route('admin.sizes.update', $size->filtervalueid) : route('admin.sizes.store') }}" novalidate>
                 @csrf
                 @if($size)
                     @method('PUT')
                 @endif
                 <div class="modal-body">
                     <div class="mb-3">
-                        <label class="form-label">Size Name (EN) <span class="text-danger">*</span></label>
+                        <label class="form-label">Size Name(EN) <span class="text-danger">*</span></label>
                         <input type="text" name="filtervalue" class="form-control" value="{{ old('filtervalue', $size ? $size->filtervalue : '') }}" required>
                         <div class="invalid-feedback"></div>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Size Name (AR) <span class="text-danger">*</span></label>
+                        <label class="form-label">Size Name(AR) <span class="text-danger">*</span></label>
                         <input type="text" name="filtervalueAR" class="form-control" value="{{ old('filtervalueAR', $size ? $size->filtervalueAR : '') }}" required>
                         <div class="invalid-feedback"></div>
                     </div>

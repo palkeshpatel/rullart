@@ -43,11 +43,18 @@
                 <td>{{ $courierCompany->created_at ? \Carbon\Carbon::parse($courierCompany->created_at)->format('d-M-Y H:i') : 'N/A' }}</td>
                 <td>
                     <div class="d-flex gap-1">
-                        <a href="javascript:void(0);" class="btn btn-light btn-icon btn-sm rounded-circle" title="View">
+                        <a href="javascript:void(0);" class="btn btn-light btn-icon btn-sm rounded-circle view-courier-btn" 
+                           title="View" data-courier-id="{{ $courierCompany->id }}">
                             <i class="ti ti-eye fs-lg"></i>
                         </a>
-                        <a href="javascript:void(0);" class="btn btn-light btn-icon btn-sm rounded-circle" title="Edit">
+                        <a href="javascript:void(0);" class="btn btn-light btn-icon btn-sm rounded-circle edit-courier-btn" 
+                           title="Edit" data-courier-id="{{ $courierCompany->id }}">
                             <i class="ti ti-edit fs-lg"></i>
+                        </a>
+                        <a href="javascript:void(0);" class="btn btn-light btn-icon btn-sm rounded-circle delete-courier-btn" 
+                           title="Delete" data-courier-id="{{ $courierCompany->id }}" 
+                           data-courier-name="{{ $courierCompany->name }}">
+                            <i class="ti ti-trash fs-lg"></i>
                         </a>
                     </div>
                 </td>

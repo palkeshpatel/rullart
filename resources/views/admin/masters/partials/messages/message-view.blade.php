@@ -1,8 +1,8 @@
-<div class="modal fade" id="sizeViewModal" tabindex="-1" aria-labelledby="sizeViewModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
+<div class="modal fade" id="messageViewModal" tabindex="-1" aria-labelledby="messageViewModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="sizeViewModalLabel">Size Details - {{ $size->filtervalue }}</h5>
+                <h5 class="modal-title" id="messageViewModalLabel">Gift Message Details</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
@@ -10,29 +10,29 @@
                     <div class="col-md-12">
                         <table class="table table-bordered">
                             <tr>
-                                <th style="width: 40%;">Size ID:</th>
-                                <td>{{ $size->filtervalueid }}</td>
+                                <th style="width: 40%;">Message ID:</th>
+                                <td>{{ $message->messageid }}</td>
                             </tr>
                             <tr>
-                                <th>Size Name(EN):</th>
-                                <td>{{ $size->filtervalue }}</td>
+                                <th>Message(EN):</th>
+                                <td>{{ $message->message }}</td>
                             </tr>
                             <tr>
-                                <th>Size Name(AR):</th>
-                                <td>{{ $size->filtervalueAR ?? 'N/A' }}</td>
-                            </tr>
-                            <tr>
-                                <th>Size Code:</th>
-                                <td>{{ $size->filtervaluecode ?? 'N/A' }}</td>
+                                <th>Message(AR):</th>
+                                <td>{{ $message->messageAR ?? 'N/A' }}</td>
                             </tr>
                             <tr>
                                 <th>Display Order:</th>
-                                <td>{{ $size->displayorder ?? 0 }}</td>
+                                <td>{{ $message->displayorder ?? 0 }}</td>
+                            </tr>
+                            <tr>
+                                <th>Display Order(AR):</th>
+                                <td>{{ $message->displayorderAR ?? 0 }}</td>
                             </tr>
                             <tr>
                                 <th>Active:</th>
                                 <td>
-                                    @if($size->isactive)
+                                    @if($message->isactive)
                                         <span class="badge badge-soft-success">Yes</span>
                                     @else
                                         <span class="badge badge-soft-danger">No</span>
@@ -45,8 +45,8 @@
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                <button type="button" class="btn btn-primary edit-size-btn" data-size-id="{{ $size->filtervalueid }}">
-                    <i class="ti ti-edit me-1"></i> Edit Size
+                <button type="button" class="btn btn-primary edit-message-btn" data-message-id="{{ $message->messageid }}">
+                    <i class="ti ti-edit me-1"></i> Edit Message
                 </button>
             </div>
         </div>
