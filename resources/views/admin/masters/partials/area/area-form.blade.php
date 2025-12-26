@@ -7,7 +7,7 @@
                 </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <form id="areaForm" method="POST" action="{{ $area ? route('admin.areas.update', $area->areaid) : route('admin.areas.store') }}">
+            <form id="areaForm" method="POST" action="{{ $area ? route('admin.areas.update', $area->areaid) : route('admin.areas.store') }}" novalidate>
                 @csrf
                 @if($area)
                     @method('PUT')
@@ -26,20 +26,20 @@
                         <div class="invalid-feedback"></div>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Area Name (EN) <span class="text-danger">*</span></label>
+                        <label class="form-label">Area Name(EN) <span class="text-danger">*</span></label>
                         <input type="text" name="areaname" class="form-control" value="{{ old('areaname', $area ? $area->areaname : '') }}" required>
                         <div class="invalid-feedback"></div>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Area Name (AR)</label>
-                        <input type="text" name="areanameAR" class="form-control" value="{{ old('areanameAR', $area ? $area->areanameAR : '') }}">
+                        <label class="form-label">Area Name(AR) <span class="text-danger">*</span></label>
+                        <input type="text" name="areanameAR" class="form-control" value="{{ old('areanameAR', $area ? $area->areanameAR : '') }}" required>
                         <div class="invalid-feedback"></div>
                     </div>
                     <div class="mb-3">
                         <div class="form-check form-switch">
                             <input class="form-check-input" type="checkbox" name="isactive" value="1" id="isactive" {{ old('isactive', $area ? $area->isactive : 1) ? 'checked' : '' }}>
                             <label class="form-check-label" for="isactive">
-                                Active
+                                Is Active?
                             </label>
                         </div>
                     </div>

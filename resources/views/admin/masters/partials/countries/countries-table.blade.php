@@ -8,12 +8,12 @@
             </th>
             <th>
                 <a href="javascript:void(0);" class="text-dark" data-sort="countryname">
-                    Country Name (EN) <i class="fa fa-sort"></i>
+                    Country Name(EN) <i class="fa fa-sort"></i>
                 </a>
             </th>
             <th>
                 <a href="javascript:void(0);" class="text-dark" data-sort="countrynameAR">
-                    Country Name (AR) <i class="fa fa-sort"></i>
+                    Country Name(AR) <i class="fa fa-sort"></i>
                 </a>
             </th>
             <th>
@@ -53,11 +53,18 @@
                 <td>{{ $country->isactive ? 'Yes' : 'No' }}</td>
                 <td>
                     <div class="d-flex gap-1">
-                        <a href="javascript:void(0);" class="btn btn-light btn-icon btn-sm rounded-circle" title="View">
+                        <a href="javascript:void(0);" class="btn btn-light btn-icon btn-sm rounded-circle view-country-btn" 
+                           title="View" data-country-id="{{ $country->countryid }}">
                             <i class="ti ti-eye fs-lg"></i>
                         </a>
-                        <a href="javascript:void(0);" class="btn btn-light btn-icon btn-sm rounded-circle" title="Edit">
+                        <a href="javascript:void(0);" class="btn btn-light btn-icon btn-sm rounded-circle edit-country-btn" 
+                           title="Edit" data-country-id="{{ $country->countryid }}">
                             <i class="ti ti-edit fs-lg"></i>
+                        </a>
+                        <a href="javascript:void(0);" class="btn btn-light btn-icon btn-sm rounded-circle delete-country-btn" 
+                           title="Delete" data-country-id="{{ $country->countryid }}" 
+                           data-country-name="{{ $country->countryname }}">
+                            <i class="ti ti-trash fs-lg"></i>
                         </a>
                     </div>
                 </td>

@@ -6,6 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Models\Area;
 use App\Models\Country;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\Rule;
 
 class AreaController extends Controller
 {
@@ -61,25 +63,55 @@ class AreaController extends Controller
     {
         $validated = $request->validate([
             'fkcountryid' => 'required|integer|exists:countrymaster,countryid',
-            'areaname' => 'required|string|max:255',
+            'areaname' => [
+                'required',
+                'string',
+                'max:255',
+                Rule::unique('areamaster', 'areaname')->where(function ($query) use ($request) {
+                    return $query->where('fkcountryid', $request->fkcountryid);
+                })
+            ],
             'areanameAR' => 'nullable|string|max:255',
             'isactive' => 'nullable',
+        ], [
+            'areaname.unique' => 'This area name already exists for the selected country. Please choose a different name.',
+            'areaname.required' => 'Area Name(EN) is required.',
+            'fkcountryid.required' => 'Country is required.',
         ]);
 
         $validated['isactive'] = $request->has('isactive') ? 1 : 0;
 
-        $area = Area::create($validated);
+        try {
+            $area = Area::create($validated);
 
-        if ($request->ajax() || $request->expectsJson()) {
-            return response()->json([
-                'success' => true,
-                'message' => 'Area created successfully',
-                'data' => $area
-            ]);
+            if ($request->ajax() || $request->expectsJson()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Area created successfully',
+                    'data' => $area
+                ]);
+            }
+
+            return redirect()->route('admin.areas')
+                ->with('success', 'Area created successfully');
+        } catch (\Illuminate\Database\QueryException $e) {
+            // Handle database constraint violations
+            if ($e->getCode() == 23000) {
+                $errorMessage = 'This area name already exists for the selected country. Please choose a different name.';
+            } else {
+                $errorMessage = 'An error occurred while saving the area.';
+            }
+
+            if ($request->ajax() || $request->expectsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => $errorMessage,
+                    'errors' => ['areaname' => [$errorMessage]]
+                ], 422);
+            }
+
+            return back()->withErrors(['areaname' => $errorMessage])->withInput();
         }
-
-        return redirect()->route('admin.areas')
-            ->with('success', 'Area created successfully');
     }
 
     public function show(Request $request, $id)
@@ -117,27 +149,96 @@ class AreaController extends Controller
     {
         $area = Area::findOrFail($id);
 
+        // Fix for PUT requests with FormData - PHP doesn't populate $_POST for PUT
+        // Laravel can't read FormData from PUT requests automatically, so we need to parse it manually
+        if ($request->isMethod('put') && empty($request->all()) && 
+            $request->header('Content-Type') && 
+            str_contains($request->header('Content-Type'), 'multipart/form-data')) {
+            
+            // Parse multipart/form-data manually
+            $content = $request->getContent();
+            $boundary = null;
+            
+            // Extract boundary from Content-Type header
+            if (preg_match('/boundary=([^;]+)/', $request->header('Content-Type'), $matches)) {
+                $boundary = '--' . trim($matches[1]);
+            }
+            
+            if ($boundary && $content) {
+                $parts = explode($boundary, $content);
+                $parsedData = [];
+                
+                foreach ($parts as $part) {
+                    // Match field name and value in multipart format
+                    if (preg_match('/Content-Disposition:\s*form-data;\s*name="([^"]+)"\s*\r?\n\r?\n(.*?)(?=\r?\n--|$)/s', $part, $matches)) {
+                        $fieldName = $matches[1];
+                        $fieldValue = trim($matches[2], "\r\n");
+                        
+                        // Skip _method (it's handled by Laravel's method spoofing)
+                        if ($fieldName !== '_method') {
+                            $parsedData[$fieldName] = $fieldValue;
+                        }
+                    }
+                }
+                
+                // Merge parsed data into request so validation can access it
+                if (!empty($parsedData)) {
+                    $request->merge($parsedData);
+                }
+            }
+        }
+
         $validated = $request->validate([
             'fkcountryid' => 'required|integer|exists:countrymaster,countryid',
-            'areaname' => 'required|string|max:255',
+            'areaname' => [
+                'required',
+                'string',
+                'max:255',
+                Rule::unique('areamaster', 'areaname')->where(function ($query) use ($request) {
+                    return $query->where('fkcountryid', $request->fkcountryid);
+                })->ignore($area->getKey(), $area->getKeyName())
+            ],
             'areanameAR' => 'nullable|string|max:255',
             'isactive' => 'nullable',
+        ], [
+            'areaname.unique' => 'This area name already exists for the selected country. Please choose a different name.',
+            'areaname.required' => 'Area Name(EN) is required.',
+            'fkcountryid.required' => 'Country is required.',
         ]);
 
         $validated['isactive'] = $request->has('isactive') ? 1 : 0;
 
-        $area->update($validated);
+        try {
+            $area->update($validated);
 
-        if ($request->ajax() || $request->expectsJson()) {
-            return response()->json([
-                'success' => true,
-                'message' => 'Area updated successfully',
-                'data' => $area
-            ]);
+            if ($request->ajax() || $request->expectsJson()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Area updated successfully',
+                    'data' => $area
+                ]);
+            }
+
+            return redirect()->route('admin.areas')
+                ->with('success', 'Area updated successfully');
+        } catch (\Illuminate\Database\QueryException $e) {
+            // Handle database constraint violations
+            if ($e->getCode() == 23000) {
+                $errorMessage = 'This area name already exists for the selected country. Please choose a different name.';
+            } else {
+                $errorMessage = 'An error occurred while updating the area.';
+            }
+
+            if ($request->ajax() || $request->expectsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => $errorMessage,
+                    'errors' => ['areaname' => [$errorMessage]]
+                ], 422);
+            }
+
+            return back()->withErrors(['areaname' => $errorMessage])->withInput();
         }
-
-        return redirect()->route('admin.areas')
-            ->with('success', 'Area updated successfully');
     }
 
     public function destroy(Request $request, $id)

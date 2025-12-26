@@ -95,6 +95,7 @@ Route::middleware(['admin'])->prefix('admin')->name('admin.')->group(function ()
     Route::delete('sizes/{id}', [\App\Http\Controllers\Admin\SizeController::class, 'destroy'])->name('sizes.destroy');
     
     Route::get('countries', [\App\Http\Controllers\Admin\CountryController::class, 'index'])->name('countries');
+    Route::get('countries/create', [\App\Http\Controllers\Admin\CountryController::class, 'create'])->name('countries.create');
     Route::post('countries', [\App\Http\Controllers\Admin\CountryController::class, 'store'])->name('countries.store');
     Route::get('countries/{id}', [\App\Http\Controllers\Admin\CountryController::class, 'show'])->name('countries.show');
     Route::get('countries/{id}/edit', [\App\Http\Controllers\Admin\CountryController::class, 'edit'])->name('countries.edit');

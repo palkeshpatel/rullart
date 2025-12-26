@@ -18,11 +18,11 @@
                                 <td>{{ $area->country ? $area->country->countryname : 'N/A' }}</td>
                             </tr>
                             <tr>
-                                <th>Area Name (EN):</th>
+                                <th>Area Name(EN):</th>
                                 <td>{{ $area->areaname }}</td>
                             </tr>
                             <tr>
-                                <th>Area Name (AR):</th>
+                                <th>Area Name(AR):</th>
                                 <td>{{ $area->areanameAR ?? 'N/A' }}</td>
                             </tr>
                             <tr>

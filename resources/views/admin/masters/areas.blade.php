@@ -32,7 +32,8 @@
                                             @endphp
                                             <option value="25" {{ $currentPerPage == 25 ? 'selected' : '' }}>25</option>
                                             <option value="50" {{ $currentPerPage == 50 ? 'selected' : '' }}>50</option>
-                                            <option value="100" {{ $currentPerPage == 100 ? 'selected' : '' }}>100</option>
+                                            <option value="100" {{ $currentPerPage == 100 ? 'selected' : '' }}>100
+                                            </option>
                                         </select>
                                     </label>
                                 </div>
@@ -57,346 +58,699 @@
     <!-- Modal Container -->
     <div id="areaModalContainer"></div>
     <div id="areaViewModalContainer"></div>
+@endsection
 
+
+@section('scripts')
     <script>
+        // Wait for jQuery to be available (Vite loads scripts asynchronously)
         (function() {
-            document.addEventListener('DOMContentLoaded', function() {
-                AdminAjax.initDataTable({
-                    tableSelector: '#areasTable',
-                    searchSelector: '[data-search]',
-                    filterSelector: '[data-filter]',
-                    paginationSelector: '.pagination a',
-                    loadUrl: '{{ route('admin.areas') }}',
-                    containerSelector: '.table-container',
-                    onSuccess: function(response) {
-                        if (response.pagination) {
-                            document.querySelector('.pagination-container').innerHTML = response.pagination;
-                        }
-                    }
-                });
+            function initAreasScript() {
+                if (typeof jQuery === 'undefined' || typeof jQuery.fn.validate === 'undefined') {
+                    setTimeout(initAreasScript, 50);
+                    return;
+                }
 
-                // Handle per page change
-                document.getElementById('perPageSelect')?.addEventListener('change', function() {
-                    const params = new URLSearchParams(window.location.search);
-                    params.set('per_page', this.value);
-                    params.delete('page');
-                    
-                    AdminAjax.loadTable('{{ route('admin.areas') }}', document.querySelector('.table-container'), {
-                        params: Object.fromEntries(params),
-                        onSuccess: function(response) {
-                            if (response.pagination) {
-                                const paginationContainer = document.querySelector('.pagination-container');
-                                if (paginationContainer) {
-                                    paginationContainer.innerHTML = response.pagination;
-                                }
-                            }
-                        }
-                    });
-                });
+                const $ = jQuery;
 
-                // Initialize Area modals
-                initAreaModals();
-            });
+                $(document).ready(function() {
 
-            function initAreaModals() {
-                document.addEventListener('click', function(e) {
-                    const addBtn = e.target.closest('.add-area-btn');
-                    if (addBtn) {
+                    console.log('✅ Document ready');
+
+                    // Load table from URL parameters on page load
+                    loadTableFromURL();
+
+                    /* -----------------------------------
+                     HARD BLOCK native submit (AJAX forms)
+                    ----------------------------------- */
+                    $(document).off('submit', '#areaForm');
+                    $(document).on('submit', '#areaForm', function(e) {
+                        console.log('🚫 Native submit blocked');
                         e.preventDefault();
+                        return false;
+                    });
+
+                    /* -----------------------------------
+                     ADD AREA BUTTON (OPEN MODAL ONLY)
+                    ----------------------------------- */
+                    $(document).on('click', '.add-area-btn', function(e) {
+                        e.preventDefault();
+                        console.log('➕ Add Area clicked (open modal)');
                         openAreaFormModal();
-                    }
+                    });
 
-                    const viewBtn = e.target.closest('.view-area-btn');
-                    if (viewBtn) {
+                    /* -----------------------------------
+                     EDIT AREA BUTTON
+                    ----------------------------------- */
+                    $(document).on('click', '.edit-area-btn', function(e) {
                         e.preventDefault();
-                        const areaId = viewBtn.dataset.areaId;
-                        openAreaViewModal(areaId);
-                    }
-
-                    const editBtn = e.target.closest('.edit-area-btn');
-                    if (editBtn) {
-                        e.preventDefault();
-                        const areaId = editBtn.dataset.areaId;
+                        const areaId = $(this).data('area-id');
+                        console.log('✏️ Edit Area clicked, ID:', areaId);
                         openAreaFormModal(areaId);
-                    }
+                    });
 
-                    const deleteBtn = e.target.closest('.delete-area-btn');
-                    if (deleteBtn) {
+                    /* -----------------------------------
+                     VIEW AREA BUTTON
+                    ----------------------------------- */
+                    $(document).on('click', '.view-area-btn', function(e) {
                         e.preventDefault();
-                        const areaId = deleteBtn.dataset.areaId;
-                        const areaName = deleteBtn.dataset.areaName;
+                        const areaId = $(this).data('area-id');
+                        console.log('👁️ View Area clicked, ID:', areaId);
+                        openAreaViewModal(areaId);
+                    });
+
+                    /* -----------------------------------
+                     DELETE AREA BUTTON
+                    ----------------------------------- */
+                    $(document).on('click', '.delete-area-btn', function(e) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        const areaId = $(this).data('area-id');
+                        const areaName = $(this).data('area-name') || 'this area';
+                        console.log('🗑️ Delete Area clicked, ID:', areaId);
                         confirmDeleteArea(areaId, areaName);
+                    });
+
+                    /* -----------------------------------
+                     OPEN VIEW MODAL
+                    ----------------------------------- */
+                    function openAreaViewModal(areaId) {
+                        console.log('📦 Opening area view modal, ID:', areaId);
+
+                        cleanupModals();
+
+                        const url = '{{ route('admin.areas.show', ':id') }}'.replace(':id', areaId);
+
+                        $('#areaViewModalContainer').html(loaderHtml());
+
+                        const loadingModal = new bootstrap.Modal($('#areaModal')[0], {
+                            backdrop: 'static',
+                            keyboard: false
+                        });
+
+                        loadingModal.show();
+
+                        AdminAjax.get(url).then(response => {
+                            console.log('📥 View HTML loaded');
+
+                            loadingModal.hide();
+                            cleanupModals();
+
+                            $('#areaViewModalContainer').html(response.html);
+
+                            const modalEl = document.getElementById('areaViewModal');
+                            const modal = new bootstrap.Modal(modalEl);
+                            modal.show();
+
+                            // Handle edit button click from view modal
+                            $(modalEl).find('.edit-area-btn').on('click', function(e) {
+                                e.preventDefault();
+                                const editAreaId = $(this).data('area-id');
+                                modal.hide();
+                                cleanupModals();
+                                // Open edit modal
+                                setTimeout(() => {
+                                    openAreaFormModal(editAreaId);
+                                }, 300);
+                            });
+
+                            // Cleanup on close
+                            modalEl.addEventListener('hidden.bs.modal', function() {
+                                cleanupModals();
+                            }, {
+                                once: true
+                            });
+
+                        }).catch(err => {
+                            console.error('❌ Failed to load view', err);
+                            loadingModal.hide();
+                            cleanupModals();
+                            showToastInModal(null, 'Failed to load area details.', 'error');
+                        });
                     }
-                });
-            }
 
-            function openAreaFormModal(areaId = null) {
-                const existingModal = document.getElementById('areaModal');
-                if (existingModal) {
-                    const existingBsModal = bootstrap.Modal.getInstance(existingModal);
-                    if (existingBsModal) existingBsModal.dispose();
-                }
-                
-                const existingBackdrop = document.querySelector('.modal-backdrop');
-                if (existingBackdrop) {
-                    existingBackdrop.remove();
-                    document.body.classList.remove('modal-open');
-                    document.body.style.overflow = '';
-                    document.body.style.paddingRight = '';
-                }
+                    /* -----------------------------------
+                     OPEN FORM MODAL
+                    ----------------------------------- */
+                    function openAreaFormModal(areaId = null) {
 
-                const modalContainer = document.getElementById('areaModalContainer');
-                const url = areaId 
-                    ? '{{ route("admin.areas.edit", ":id") }}'.replace(':id', areaId) 
-                    : '{{ route("admin.areas.create") }}';
-                
-                modalContainer.innerHTML = '';
-                modalContainer.innerHTML = '<div class="modal fade" id="areaModal" tabindex="-1"><div class="modal-dialog"><div class="modal-content"><div class="modal-body"><div class="text-center p-4"><div class="spinner-border" role="status"><span class="visually-hidden">Loading...</span></div></div></div></div></div></div>';
-                
-                const loadingModalEl = document.getElementById('areaModal');
-                const loadingModal = new bootstrap.Modal(loadingModalEl, { backdrop: 'static', keyboard: false });
-                loadingModal.show();
+                        console.log('📦 Opening area form modal, ID:', areaId);
 
-                AdminAjax.get(url)
-                    .then(response => {
-                        if (response.html) {
+                        cleanupModals();
+
+                        const url = areaId ?
+                            '{{ route('admin.areas.edit', ':id') }}'.replace(':id', areaId) :
+                            '{{ route('admin.areas.create') }}';
+
+                        $('#areaModalContainer').html(loaderHtml());
+
+                        const loadingModal = new bootstrap.Modal($('#areaModal')[0], {
+                            backdrop: 'static',
+                            keyboard: false
+                        });
+
+                        loadingModal.show();
+
+                        AdminAjax.get(url).then(response => {
+
+                            console.log('📥 Form HTML loaded');
+
                             loadingModal.hide();
-                            loadingModal.dispose();
-                            modalContainer.innerHTML = '';
-                            modalContainer.innerHTML = response.html;
-                            
-                            const modal = document.getElementById('areaModal');
-                            const bsModal = new bootstrap.Modal(modal);
-                            
-                            modal.addEventListener('hidden.bs.modal', function() {
-                                bsModal.dispose();
-                                modalContainer.innerHTML = '';
-                                const backdrop = document.querySelector('.modal-backdrop');
-                                if (backdrop) backdrop.remove();
-                                document.body.classList.remove('modal-open');
-                                document.body.style.overflow = '';
-                                document.body.style.paddingRight = '';
-                            }, { once: true });
-                            
-                            bsModal.show();
-                            
-                            const form = document.getElementById('areaForm');
-                            if (form) {
-                                form.addEventListener('submit', function(e) {
-                                    e.preventDefault();
-                                    submitAreaForm(form, areaId, bsModal);
-                                });
-                            }
-                        }
-                    })
-                    .catch(error => {
-                        loadingModal.hide();
-                        loadingModal.dispose();
-                        modalContainer.innerHTML = '';
-                        const backdrop = document.querySelector('.modal-backdrop');
-                        if (backdrop) backdrop.remove();
-                        document.body.classList.remove('modal-open');
-                        document.body.style.overflow = '';
-                        document.body.style.paddingRight = '';
-                        console.error('Error loading area form:', error);
-                        AdminAjax.showError('Failed to load area form.');
-                    });
-            }
+                            cleanupModals();
 
-            function openAreaViewModal(areaId) {
-                const existingModal = document.getElementById('areaViewModal');
-                if (existingModal) {
-                    const existingBsModal = bootstrap.Modal.getInstance(existingModal);
-                    if (existingBsModal) existingBsModal.dispose();
-                }
-                
-                const existingBackdrop = document.querySelector('.modal-backdrop');
-                if (existingBackdrop) {
-                    existingBackdrop.remove();
-                    document.body.classList.remove('modal-open');
-                    document.body.style.overflow = '';
-                    document.body.style.paddingRight = '';
-                }
+                            $('#areaModalContainer').html(response.html);
 
-                const modalContainer = document.getElementById('areaViewModalContainer');
-                modalContainer.innerHTML = '';
-                modalContainer.innerHTML = '<div class="modal fade" id="areaViewModal" tabindex="-1"><div class="modal-dialog"><div class="modal-content"><div class="modal-body"><div class="text-center p-4"><div class="spinner-border" role="status"><span class="visually-hidden">Loading...</span></div></div></div></div></div></div>';
-                
-                const loadingModalEl = document.getElementById('areaViewModal');
-                const loadingModal = new bootstrap.Modal(loadingModalEl, { backdrop: 'static', keyboard: false });
-                loadingModal.show();
+                            const modalEl = document.getElementById('areaModal');
+                            const modal = new bootstrap.Modal(modalEl);
+                            modal.show();
 
-                AdminAjax.get('{{ route("admin.areas.show", ":id") }}'.replace(':id', areaId))
-                    .then(response => {
-                        if (response.html) {
+                            // IMPORTANT
+                            setupAreaValidation(areaId, modal);
+
+                        }).catch(err => {
+                            console.error('❌ Failed to load form', err);
                             loadingModal.hide();
-                            loadingModal.dispose();
-                            modalContainer.innerHTML = '';
-                            modalContainer.innerHTML = response.html;
-                            
-                            const modal = document.getElementById('areaViewModal');
-                            const bsModal = new bootstrap.Modal(modal);
-                            
-                            modal.addEventListener('hidden.bs.modal', function() {
-                                bsModal.dispose();
-                                modalContainer.innerHTML = '';
-                                const backdrop = document.querySelector('.modal-backdrop');
-                                if (backdrop) backdrop.remove();
-                                document.body.classList.remove('modal-open');
-                                document.body.style.overflow = '';
-                                document.body.style.paddingRight = '';
-                            }, { once: true });
-                            
-                            bsModal.show();
-                            
-                            const editBtn = modal.querySelector('.edit-area-btn');
-                            if (editBtn) {
-                                editBtn.addEventListener('click', function() {
-                                    const editAreaId = editBtn.dataset.areaId;
-                                    modal.addEventListener('hidden.bs.modal', function() {
-                                        bsModal.dispose();
-                                        modalContainer.innerHTML = '';
-                                        const backdrop = document.querySelector('.modal-backdrop');
-                                        if (backdrop) backdrop.remove();
-                                        document.body.classList.remove('modal-open');
-                                        document.body.style.overflow = '';
-                                        document.body.style.paddingRight = '';
-                                        setTimeout(function() {
-                                            openAreaFormModal(editAreaId);
-                                        }, 100);
-                                    }, { once: true });
-                                    bsModal.hide();
-                                });
-                            }
+                            cleanupModals();
+                        });
+                    }
+
+                    /* -----------------------------------
+                     VALIDATION SETUP
+                    ----------------------------------- */
+                    function setupAreaValidation(areaId, modal) {
+
+                        const $form = $('#areaForm');
+
+                        console.log('🧪 setupAreaValidation called');
+                        console.log('Form exists:', $form.length);
+
+                        if (!$form.length) {
+                            console.warn('❌ #areaForm not found');
+                            return;
                         }
-                    })
-                    .catch(error => {
-                        loadingModal.hide();
-                        loadingModal.dispose();
-                        modalContainer.innerHTML = '';
-                        const backdrop = document.querySelector('.modal-backdrop');
-                        if (backdrop) backdrop.remove();
-                        document.body.classList.remove('modal-open');
-                        document.body.style.overflow = '';
-                        document.body.style.paddingRight = '';
-                        console.error('Error loading area:', error);
-                        AdminAjax.showError('Failed to load area details.');
-                    });
-            }
 
-            function submitAreaForm(form, areaId, modal) {
-                const formData = new FormData(form);
-                const url = form.action;
-                const method = form.querySelector('input[name="_method"]')?.value || 'POST';
+                        if ($form.data('validator')) {
+                            console.warn('⚠️ Validator already exists');
+                            return;
+                        }
 
-                const submitBtn = form.querySelector('button[type="submit"]');
-                const originalText = submitBtn.innerHTML;
-                submitBtn.disabled = true;
-                submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Saving...';
+                        console.log('✅ Initializing jQuery Validation');
 
-                AdminAjax.request(url, method, formData)
-                    .then(response => {
-                        AdminAjax.showSuccess(response.message || 'Area saved successfully');
-                        modal.hide();
-                        AdminAjax.loadTable('{{ route("admin.areas") }}', document.querySelector('.table-container'), {
-                            params: {},
-                            onSuccess: function(response) {
-                                if (response.pagination) {
-                                    document.querySelector('.pagination-container').innerHTML = response.pagination;
+                        $form.validate({
+                            rules: {
+                                fkcountryid: {
+                                    required: true
+                                },
+                                areaname: {
+                                    required: true
+                                },
+                                areanameAR: {
+                                    required: true
                                 }
+                            },
+                            messages: {
+                                fkcountryid: 'Country is required',
+                                areaname: 'Area Name(EN) is required',
+                                areanameAR: 'Area Name(AR) is required'
+                            },
+                            errorElement: 'div',
+                            errorClass: 'invalid-feedback',
+                            highlight(el) {
+                                console.log('❌ Invalid:', el.name);
+                                $(el).addClass('is-invalid');
+                            },
+                            unhighlight(el) {
+                                console.log('✅ Valid:', el.name);
+                                $(el).removeClass('is-invalid').addClass('is-valid');
+                            },
+                            errorPlacement(error, element) {
+                                error.insertAfter(element);
+                            },
+                            invalidHandler(event, validator) {
+                                console.warn('🚫 Validation failed');
+                                console.log('Errors:', validator.errorList);
+                            },
+                            submitHandler(form) {
+                                console.log('🚀 Validation passed → submitAreaForm()');
+                                submitAreaForm(form, areaId, modal);
                             }
                         });
-                    })
-                    .catch(error => {
-                        console.error('Error saving area:', error);
-                        AdminAjax.showError(error.message || 'Failed to save area.');
-                        submitBtn.disabled = false;
-                        submitBtn.innerHTML = originalText;
-                    });
-            }
+                    }
 
-            function confirmDeleteArea(areaId, areaName) {
-                const existingModal = document.getElementById('deleteConfirmModal');
-                if (existingModal) {
-                    const existingBsModal = bootstrap.Modal.getInstance(existingModal);
-                    if (existingBsModal) existingBsModal.dispose();
-                    existingModal.remove();
-                }
+                    /* -----------------------------------
+                     SUBMIT FORM (AJAX)
+                    ----------------------------------- */
+                    function submitAreaForm(form, areaId, modal) {
 
-                const modalHtml = `
-                    <div class="modal fade" id="deleteConfirmModal" tabindex="-1">
-                        <div class="modal-dialog">
-                            <div class="modal-content">
-                                <div class="modal-header">
-                                    <h5 class="modal-title">Confirm Delete</h5>
-                                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                                </div>
-                                <div class="modal-body">
-                                    <p>Are you sure you want to delete "<strong id="deleteItemName"></strong>"?</p>
-                                    <p class="text-danger mb-0">This action cannot be undone.</p>
-                                </div>
-                                <div class="modal-footer">
-                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                                    <button type="button" class="btn btn-danger" id="confirmDeleteBtn">Delete</button>
+                        console.log('📤 submitAreaForm called');
+
+                        const formData = new FormData(form);
+                        const url = form.action;
+                        const method = form.querySelector('[name="_method"]')?.value || 'POST';
+
+                        const submitBtn = form.querySelector('button[type="submit"]');
+                        const originalText = submitBtn.innerHTML;
+                        submitBtn.setAttribute('data-original-text', originalText);
+                        submitBtn.disabled = true;
+                        submitBtn.innerHTML =
+                            '<span class="spinner-border spinner-border-sm me-1"></span> Saving...';
+
+                        AdminAjax.request(url, method, formData)
+                            .then(res => {
+                                console.log('✅ AJAX success:', res);
+                                // Show success toast before closing modal
+                                showToastInModal(modal, res.message || 'Area saved successfully',
+                                    'success');
+
+                                // Close modal after a short delay to show success message
+                                setTimeout(() => {
+                                    modal.hide();
+                                }, 1500);
+
+                                // Reload table with current page preserved
+                                reloadAreasTable();
+                            })
+                            .catch(err => {
+                                console.error('❌ AJAX error:', err);
+
+                                // Get error message from server response
+                                let errorMessage = 'Failed to save area.';
+
+                                if (err.message) {
+                                    errorMessage = err.message;
+                                } else if (err.errors) {
+                                    // Handle validation errors
+                                    const firstError = Object.values(err.errors)[0];
+                                    if (Array.isArray(firstError)) {
+                                        errorMessage = firstError[0];
+                                    } else {
+                                        errorMessage = firstError;
+                                    }
+                                }
+
+                                // Show red error toast outside modal (top-right corner)
+                                showToastInModal(modal, errorMessage, 'error');
+
+                                // Clear any previous validation states (keep form clean - no field errors shown)
+                                const $form = $('#areaForm');
+                                $form.find('.is-invalid').removeClass('is-invalid');
+                                $form.find('.is-valid').removeClass('is-valid');
+                                $form.find('[id$="-error"]').remove();
+                                $form.find('.invalid-feedback').html('').removeClass('d-block').hide();
+
+                                submitBtn.disabled = false;
+                                submitBtn.innerHTML = submitBtn.getAttribute('data-original-text') ||
+                                    originalText;
+                            });
+                    }
+
+                    /* -----------------------------------
+                     CONFIRM DELETE AREA
+                    ----------------------------------- */
+                    function confirmDeleteArea(areaId, areaName) {
+                        // Remove existing delete modal if any
+                        $('#deleteAreaModal').remove();
+                        $('.modal-backdrop').remove();
+
+                        const modalHtml = `
+                            <div class="modal fade" id="deleteAreaModal" tabindex="-1">
+                                <div class="modal-dialog">
+                                    <div class="modal-content">
+                                        <div class="modal-header">
+                                            <h5 class="modal-title">Confirm Delete</h5>
+                                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                        </div>
+                                        <div class="modal-body">
+                                            <p>Are you sure you want to delete "<strong>${areaName}</strong>"?</p>
+                                            <p class="text-danger mb-0">This action cannot be undone.</p>
+                                        </div>
+                                        <div class="modal-footer">
+                                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                            <button type="button" class="btn btn-danger" id="confirmDeleteAreaBtn">Delete</button>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                    </div>
-                `;
-                document.body.insertAdjacentHTML('beforeend', modalHtml);
+                        `;
 
-                document.getElementById('deleteItemName').textContent = areaName;
-                const modalEl = document.getElementById('deleteConfirmModal');
-                const modal = new bootstrap.Modal(modalEl);
+                        $('body').append(modalHtml);
 
-                modalEl.addEventListener('hidden.bs.modal', function() {
-                    modal.dispose();
-                    modalEl.remove();
-                    const backdrop = document.querySelector('.modal-backdrop');
-                    if (backdrop) backdrop.remove();
-                    document.body.classList.remove('modal-open');
-                    document.body.style.overflow = '';
-                    document.body.style.paddingRight = '';
-                }, { once: true });
+                        const modalEl = document.getElementById('deleteAreaModal');
+                        const modal = new bootstrap.Modal(modalEl);
 
-                const deleteBtn = document.getElementById('confirmDeleteBtn');
-                deleteBtn.disabled = false;
-                deleteBtn.innerHTML = 'Delete';
+                        modalEl.addEventListener('hidden.bs.modal', function() {
+                            modalEl.remove();
+                            cleanupModals();
+                        }, {
+                            once: true
+                        });
 
-                deleteBtn.onclick = function() {
-                    deleteArea(areaId, modal, deleteBtn);
-                };
+                        const deleteBtn = document.getElementById('confirmDeleteAreaBtn');
+                        deleteBtn.onclick = function() {
+                            deleteArea(areaId, modal, deleteBtn);
+                        };
 
-                modal.show();
-            }
+                        modal.show();
+                    }
 
-            function deleteArea(areaId, modal, deleteBtn) {
-                const originalText = deleteBtn.innerHTML;
-                deleteBtn.disabled = true;
-                deleteBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Deleting...';
+                    /* -----------------------------------
+                     DELETE AREA
+                    ----------------------------------- */
+                    function deleteArea(areaId, modal, deleteBtn) {
+                        const originalText = deleteBtn.innerHTML;
+                        deleteBtn.disabled = true;
+                        deleteBtn.innerHTML =
+                            '<span class="spinner-border spinner-border-sm me-1"></span> Deleting...';
 
-                AdminAjax.request('{{ route("admin.areas.destroy", ":id") }}'.replace(':id', areaId), 'DELETE')
-                    .then(response => {
-                        AdminAjax.showSuccess(response.message || 'Area deleted successfully');
-                        deleteBtn.disabled = false;
-                        deleteBtn.innerHTML = originalText;
-                        modal.hide();
-                        AdminAjax.loadTable('{{ route("admin.areas") }}', document.querySelector('.table-container'), {
-                            params: {},
+                        const url = '{{ route('admin.areas.destroy', ':id') }}'.replace(':id', areaId);
+
+                        AdminAjax.request(url, 'DELETE')
+                            .then(response => {
+                                console.log('✅ Area deleted successfully');
+                                showToastInModal(null, response.message || 'Area deleted successfully', 'success');
+                                modal.hide();
+
+                                // Reload table with current page preserved
+                                reloadAreasTable();
+                            })
+                            .catch(error => {
+                                console.error('❌ Error deleting area:', error);
+                                showToastInModal(null, error.message || 'Failed to delete area.', 'error');
+                                deleteBtn.disabled = false;
+                                deleteBtn.innerHTML = originalText;
+                            });
+                    }
+
+                    /* -----------------------------------
+                     LOAD TABLE FROM URL ON PAGE LOAD
+                    ----------------------------------- */
+                    function loadTableFromURL() {
+                        const urlParams = new URLSearchParams(window.location.search);
+                        const page = urlParams.get('page');
+                        const perPage = urlParams.get('per_page');
+                        const search = urlParams.get('search');
+
+                        // Only load via AJAX if URL has parameters (otherwise use server-rendered content)
+                        if (page || perPage || search) {
+                            const params = {};
+                            if (page) params.page = page;
+                            if (perPage) params.per_page = perPage;
+                            if (search) params.search = search;
+
+                            // Update per page select if URL has per_page
+                            if (perPage && $('#perPageSelect').length) {
+                                $('#perPageSelect').val(perPage);
+                            }
+
+                            // Update search input if URL has search
+                            if (search && $('[data-search]').length) {
+                                $('[data-search]').val(search);
+                            }
+
+                            console.log('📄 Loading table from URL params:', params);
+
+                            AdminAjax.loadTable('{{ route('admin.areas') }}', $('.table-container')[0], {
+                                params: params,
+                                onSuccess: function(response) {
+                                    if (response.pagination) {
+                                        $('.pagination-container').html(response.pagination);
+                                    }
+                                    // Re-bind event handlers for dynamically loaded content
+                                    bindPaginationHandlers();
+                                }
+                            });
+                        } else {
+                            // No URL params, just bind handlers for existing content
+                            bindPaginationHandlers();
+                        }
+                    }
+
+                    /* -----------------------------------
+                     RELOAD AREAS TABLE (PRESERVE PAGE)
+                    ----------------------------------- */
+                    function reloadAreasTable() {
+                        // Get current page from URL or pagination
+                        const urlParams = new URLSearchParams(window.location.search);
+                        const currentPage = urlParams.get('page') || 1;
+                        const currentPerPage = urlParams.get('per_page') || $('#perPageSelect').val() || 25;
+                        const currentSearch = urlParams.get('search') || $('[data-search]').val() || '';
+
+                        const params = {
+                            page: currentPage,
+                            per_page: currentPerPage
+                        };
+
+                        if (currentSearch) {
+                            params.search = currentSearch;
+                        }
+
+                        console.log('🔄 Reloading table with params:', params);
+
+                        AdminAjax.loadTable('{{ route('admin.areas') }}', $('.table-container')[0], {
+                            params: params,
                             onSuccess: function(response) {
                                 if (response.pagination) {
-                                    document.querySelector('.pagination-container').innerHTML = response.pagination;
+                                    $('.pagination-container').html(response.pagination);
+                                }
+                                // Re-bind event handlers for dynamically loaded content
+                                bindPaginationHandlers();
+                            }
+                        });
+                    }
+
+                    /* -----------------------------------
+                     BIND PAGINATION HANDLERS (AJAX)
+                    ----------------------------------- */
+                    function bindPaginationHandlers() {
+                        // Remove existing handlers to prevent duplicates
+                        $(document).off('click', '.pagination a');
+
+                        // Bind pagination links to use AJAX
+                        $(document).on('click', '.pagination a', function(e) {
+                            e.preventDefault();
+                            e.stopPropagation();
+
+                            const url = $(this).attr('href');
+                            if (!url || url === '#' || url === 'javascript:void(0)') {
+                                return;
+                            }
+
+                            console.log('📄 Pagination clicked:', url);
+
+                            // Extract page number from URL
+                            const urlObj = new URL(url, window.location.origin);
+                            const page = urlObj.searchParams.get('page') || 1;
+                            const perPage = urlObj.searchParams.get('per_page') || $('#perPageSelect').val() || 25;
+                            const search = urlObj.searchParams.get('search') || $('[data-search]').val() || '';
+
+                            const params = {
+                                page: page,
+                                per_page: perPage
+                            };
+
+                            if (search) {
+                                params.search = search;
+                            }
+
+                            // Update URL without reload
+                            const newUrl = new URL(window.location.pathname, window.location.origin);
+                            Object.keys(params).forEach(key => {
+                                if (params[key]) {
+                                    newUrl.searchParams.set(key, params[key]);
+                                }
+                            });
+                            window.history.pushState({}, '', newUrl.toString());
+
+                            // Load table via AJAX
+                            AdminAjax.loadTable('{{ route('admin.areas') }}', $('.table-container')[0], {
+                                params: params,
+                                onSuccess: function(response) {
+                                    if (response.pagination) {
+                                        $('.pagination-container').html(response.pagination);
+                                    }
+                                }
+                            });
+                        });
+                    }
+
+                    /* -----------------------------------
+                     PER PAGE SELECT HANDLER
+                    ----------------------------------- */
+                    $(document).on('change', '#perPageSelect', function(e) {
+                        e.preventDefault();
+                        const perPage = $(this).val();
+                        const currentPage = new URLSearchParams(window.location.search).get('page') ||
+                            1;
+                        const currentSearch = $('[data-search]').val() || '';
+
+                        const params = {
+                            page: 1, // Reset to page 1 when changing per page
+                            per_page: perPage
+                        };
+
+                        if (currentSearch) {
+                            params.search = currentSearch;
+                        }
+
+                        // Update URL without reload
+                        const newUrl = new URL(window.location.pathname, window.location.origin);
+                        Object.keys(params).forEach(key => {
+                            if (params[key]) {
+                                newUrl.searchParams.set(key, params[key]);
+                            }
+                        });
+                        window.history.pushState({}, '', newUrl.toString());
+
+                        // Load table via AJAX
+                        AdminAjax.loadTable('{{ route('admin.areas') }}', $('.table-container')[0], {
+                            params: params,
+                            onSuccess: function(response) {
+                                if (response.pagination) {
+                                    $('.pagination-container').html(response.pagination);
                                 }
                             }
                         });
-                    })
-                    .catch(error => {
-                        console.error('Error deleting area:', error);
-                        AdminAjax.showError(error.message || 'Failed to delete area.');
-                        deleteBtn.disabled = false;
-                        deleteBtn.innerHTML = originalText;
                     });
+
+                    /* -----------------------------------
+                     SEARCH HANDLER
+                    ----------------------------------- */
+                    let searchTimeout;
+                    $(document).on('input', '[data-search]', function(e) {
+                        clearTimeout(searchTimeout);
+                        const searchInput = $(this);
+
+                        searchTimeout = setTimeout(function() {
+                            const searchValue = searchInput.val();
+                            const currentPage = new URLSearchParams(window.location.search).get(
+                                'page') || 1;
+                            const currentPerPage = $('#perPageSelect').val() || 25;
+
+                            const params = {
+                                page: 1, // Reset to page 1 when searching
+                                per_page: currentPerPage
+                            };
+
+                            if (searchValue) {
+                                params.search = searchValue;
+                            }
+
+                            // Update URL without reload
+                            const newUrl = new URL(window.location.pathname, window.location
+                                .origin);
+                            Object.keys(params).forEach(key => {
+                                if (params[key]) {
+                                    newUrl.searchParams.set(key, params[key]);
+                                }
+                            });
+                            window.history.pushState({}, '', newUrl.toString());
+
+                            // Load table via AJAX
+                            AdminAjax.loadTable('{{ route('admin.areas') }}', $(
+                                '.table-container')[0], {
+                                params: params,
+                                onSuccess: function(response) {
+                                    if (response.pagination) {
+                                        $('.pagination-container').html(response
+                                            .pagination);
+                                    }
+                                }
+                            });
+                        }, 500); // Debounce search
+                    });
+
+                    /* -----------------------------------
+                     INITIALIZE PAGINATION HANDLERS
+                    ----------------------------------- */
+                    bindPaginationHandlers();
+
+                    /* -----------------------------------
+                     SHOW TOAST (OUTSIDE MODAL - TOP RIGHT)
+                    ----------------------------------- */
+                    function showToastInModal(modal, message, type = 'error') {
+                        // Create or get toast container at top-right corner of page
+                        let toastContainer = $('#global-toast-container');
+
+                        if (!toastContainer.length) {
+                            toastContainer = $(
+                                '<div id="global-toast-container" class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 9999;"></div>'
+                            );
+                            $('body').append(toastContainer);
+                        }
+
+                        // Remove any existing toasts of the same type to avoid stacking
+                        toastContainer.find('.toast').each(function() {
+                            const bsToast = bootstrap.Toast.getInstance(this);
+                            if (bsToast) {
+                                bsToast.hide();
+                            }
+                        });
+
+                        // Create toast
+                        const toastBg = type === 'error' ? 'bg-danger' : 'bg-success';
+                        const toastId = 'toast-' + Date.now();
+                        const toast = $(`
+                            <div id="${toastId}" class="toast ${toastBg} text-white border-0" role="alert" aria-live="assertive" aria-atomic="true">
+                                <div class="d-flex">
+                                    <div class="toast-body">
+                                        <i class="ti ti-${type === 'error' ? 'alert-circle' : 'check-circle'} me-2"></i>
+                                        ${message}
+                                    </div>
+                                    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+                                </div>
+                            </div>
+                        `);
+
+                        toastContainer.append(toast);
+
+                        // Initialize and show toast
+                        const bsToast = new bootstrap.Toast(toast[0], {
+                            autohide: true,
+                            delay: 5000
+                        });
+                        bsToast.show();
+
+                        // Remove toast element after it's hidden
+                        toast.on('hidden.bs.toast', function() {
+                            $(this).remove();
+                            // Remove container if empty
+                            if (toastContainer.find('.toast').length === 0) {
+                                toastContainer.remove();
+                            }
+                        });
+                    }
+
+                    /* -----------------------------------
+                     HELPERS
+                    ----------------------------------- */
+                    function cleanupModals() {
+                        console.log('🧹 Cleaning modals');
+                        $('.modal-backdrop').remove();
+                        $('body').removeClass('modal-open').css({
+                            overflow: '',
+                            paddingRight: ''
+                        });
+                        $('#areaModal').remove();
+                    }
+
+                    function loaderHtml() {
+                        return `
+        <div class="modal fade" id="areaModal">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-body text-center p-4">
+                        <div class="spinner-border"></div>
+                    </div>
+                </div>
+            </div>
+        </div>`;
+                    }
+
+                });
             }
+
+            // Start initialization
+            initAreasScript();
         })();
     </script>
 @endsection

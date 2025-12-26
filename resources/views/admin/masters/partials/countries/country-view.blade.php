@@ -14,11 +14,11 @@
                                 <td>{{ $country->countryid }}</td>
                             </tr>
                             <tr>
-                                <th>Country Name (EN):</th>
+                                <th>Country Name(EN):</th>
                                 <td>{{ $country->countryname }}</td>
                             </tr>
                             <tr>
-                                <th>Country Name (AR):</th>
+                                <th>Country Name(AR):</th>
                                 <td>{{ $country->countrynameAR ?? 'N/A' }}</td>
                             </tr>
                             <tr>
@@ -46,11 +46,11 @@
                                 <td>{{ number_format($country->free_shipping_over ?? 0, 3) }}</td>
                             </tr>
                             <tr>
-                                <th>Shipping Days:</th>
+                                <th>Shipping Days(EN):</th>
                                 <td>{{ $country->shipping_days ?? 'N/A' }}</td>
                             </tr>
                             <tr>
-                                <th>Shipping Days (AR):</th>
+                                <th>Shipping Days(AR):</th>
                                 <td>{{ $country->shipping_daysAR ?? 'N/A' }}</td>
                             </tr>
                             <tr>
