@@ -97,6 +97,38 @@
                     });
 
                     /* -----------------------------------
+                     EDIT COLOR BUTTON
+                    ----------------------------------- */
+                    $(document).on('click', '.edit-color-btn', function(e) {
+                        e.preventDefault();
+                        const colorId = $(this).data('color-id');
+                        console.log('✏️ Edit Color clicked, ID:', colorId);
+                        openColorFormModal(colorId);
+                    });
+
+                    /* -----------------------------------
+                     VIEW COLOR BUTTON
+                    ----------------------------------- */
+                    $(document).on('click', '.view-color-btn', function(e) {
+                        e.preventDefault();
+                        const colorId = $(this).data('color-id');
+                        console.log('👁️ View Color clicked, ID:', colorId);
+                        // TODO: Implement view modal if needed
+                    });
+
+                    /* -----------------------------------
+                     DELETE COLOR BUTTON
+                    ----------------------------------- */
+                    $(document).on('click', '.delete-color-btn', function(e) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        const colorId = $(this).data('color-id');
+                        const colorName = $(this).data('color-name') || 'this color';
+                        console.log('🗑️ Delete Color clicked, ID:', colorId);
+                        confirmDeleteColor(colorId, colorName);
+                    });
+
+                    /* -----------------------------------
                      OPEN FORM MODAL
                     ----------------------------------- */
                     function openColorFormModal(colorId = null) {
@@ -229,17 +261,8 @@
                                     modal.hide();
                                 }, 1500);
 
-                                // Reload table
-                                AdminAjax.loadTable('{{ route('admin.colors') }}', $('.table-container')[
-                                    0], {
-                                    params: {},
-                                    onSuccess: function(response) {
-                                        if (response.pagination) {
-                                            $('.pagination-container').html(response
-                                                .pagination);
-                                        }
-                                    }
-                                });
+                                // Reload table with current page preserved
+                                reloadColorsTable();
                             })
                             .catch(err => {
                                 console.error('❌ AJAX error:', err);
@@ -259,33 +282,15 @@
                                     }
                                 }
 
-                                // Show red error toast inside modal
+                                // Show red error toast outside modal (top-right corner)
                                 showToastInModal(modal, errorMessage, 'error');
 
-                                // Show field errors if validation errors exist
-                                if (err.errors) {
-                                    const $form = $('#colorForm');
-                                    // Clear previous errors
-                                    $form.find('.is-invalid').removeClass('is-invalid');
-                                    $form.find('.invalid-feedback').html('').removeClass('d-block').hide();
-
-                                    Object.keys(err.errors).forEach(fieldName => {
-                                        const field = $form.find(`[name="${fieldName}"]`);
-                                        if (field.length) {
-                                            field.addClass('is-invalid');
-                                            const feedbackDiv = field.closest('.mb-3').find(
-                                                '.invalid-feedback');
-                                            if (feedbackDiv.length) {
-                                                const errorMsg = Array.isArray(err.errors[
-                                                        fieldName]) ?
-                                                    err.errors[fieldName][0] :
-                                                    err.errors[fieldName];
-                                                feedbackDiv.html(errorMsg).addClass('d-block')
-                                                    .show();
-                                            }
-                                        }
-                                    });
-                                }
+                                // Clear any previous validation states (keep form clean - no field errors shown)
+                                const $form = $('#colorForm');
+                                $form.find('.is-invalid').removeClass('is-invalid');
+                                $form.find('.is-valid').removeClass('is-valid');
+                                $form.find('[id$="-error"]').remove();
+                                $form.find('.invalid-feedback').html('').removeClass('d-block').hide();
 
                                 submitBtn.disabled = false;
                                 submitBtn.innerHTML = originalText;
@@ -293,36 +298,292 @@
                     }
 
                     /* -----------------------------------
-                     SHOW TOAST IN MODAL
+                     CONFIRM DELETE COLOR
+                    ----------------------------------- */
+                    function confirmDeleteColor(colorId, colorName) {
+                        // Remove existing delete modal if any
+                        $('#deleteColorModal').remove();
+                        $('.modal-backdrop').remove();
+
+                        const modalHtml = `
+                            <div class="modal fade" id="deleteColorModal" tabindex="-1">
+                                <div class="modal-dialog">
+                                    <div class="modal-content">
+                                        <div class="modal-header">
+                                            <h5 class="modal-title">Confirm Delete</h5>
+                                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                        </div>
+                                        <div class="modal-body">
+                                            <p>Are you sure you want to delete "<strong>${colorName}</strong>"?</p>
+                                            <p class="text-danger mb-0">This action cannot be undone.</p>
+                                        </div>
+                                        <div class="modal-footer">
+                                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                            <button type="button" class="btn btn-danger" id="confirmDeleteColorBtn">Delete</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+
+                        $('body').append(modalHtml);
+
+                        const modalEl = document.getElementById('deleteColorModal');
+                        const modal = new bootstrap.Modal(modalEl);
+
+                        modalEl.addEventListener('hidden.bs.modal', function() {
+                            modalEl.remove();
+                            cleanupModals();
+                        }, {
+                            once: true
+                        });
+
+                        const deleteBtn = document.getElementById('confirmDeleteColorBtn');
+                        deleteBtn.onclick = function() {
+                            deleteColor(colorId, modal, deleteBtn);
+                        };
+
+                        modal.show();
+                    }
+
+                    /* -----------------------------------
+                     DELETE COLOR
+                    ----------------------------------- */
+                    function deleteColor(colorId, modal, deleteBtn) {
+                        const originalText = deleteBtn.innerHTML;
+                        deleteBtn.disabled = true;
+                        deleteBtn.innerHTML =
+                            '<span class="spinner-border spinner-border-sm me-1"></span> Deleting...';
+
+                        const url = '{{ route('admin.colors.destroy', ':id') }}'.replace(':id', colorId);
+
+                        AdminAjax.request(url, 'DELETE')
+                            .then(response => {
+                                console.log('✅ Color deleted successfully');
+                                AdminAjax.showSuccess(response.message || 'Color deleted successfully');
+                                modal.hide();
+
+                                // Reload table with current page preserved
+                                reloadColorsTable();
+                            })
+                            .catch(error => {
+                                console.error('❌ Error deleting color:', error);
+                                AdminAjax.showError(error.message || 'Failed to delete color.');
+                                deleteBtn.disabled = false;
+                                deleteBtn.innerHTML = originalText;
+                            });
+                    }
+
+                    /* -----------------------------------
+                     RELOAD COLORS TABLE (PRESERVE PAGE)
+                    ----------------------------------- */
+                    function reloadColorsTable() {
+                        // Get current page from URL or pagination
+                        const urlParams = new URLSearchParams(window.location.search);
+                        const currentPage = urlParams.get('page') || 1;
+                        const currentPerPage = urlParams.get('per_page') || $('#perPageSelect').val() || 25;
+                        const currentSearch = urlParams.get('search') || $('[data-search]').val() || '';
+
+                        const params = {
+                            page: currentPage,
+                            per_page: currentPerPage
+                        };
+
+                        if (currentSearch) {
+                            params.search = currentSearch;
+                        }
+
+                        console.log('🔄 Reloading table with params:', params);
+
+                        AdminAjax.loadTable('{{ route('admin.colors') }}', $('.table-container')[0], {
+                            params: params,
+                            onSuccess: function(response) {
+                                if (response.pagination) {
+                                    $('.pagination-container').html(response.pagination);
+                                }
+                                // Re-bind event handlers for dynamically loaded content
+                                bindPaginationHandlers();
+                            }
+                        });
+                    }
+
+                    /* -----------------------------------
+                     BIND PAGINATION HANDLERS (AJAX)
+                    ----------------------------------- */
+                    function bindPaginationHandlers() {
+                        // Remove existing handlers to prevent duplicates
+                        $(document).off('click', '.pagination a');
+
+                        // Bind pagination links to use AJAX
+                        $(document).on('click', '.pagination a', function(e) {
+                            e.preventDefault();
+                            e.stopPropagation();
+
+                            const url = $(this).attr('href');
+                            if (!url || url === '#' || url === 'javascript:void(0)') {
+                                return;
+                            }
+
+                            console.log('📄 Pagination clicked:', url);
+
+                            // Extract page number from URL
+                            const urlObj = new URL(url, window.location.origin);
+                            const page = urlObj.searchParams.get('page') || 1;
+                            const perPage = urlObj.searchParams.get('per_page') || $('#perPageSelect')
+                                .val() || 25;
+                            const search = urlObj.searchParams.get('search') || $('[data-search]')
+                                .val() || '';
+
+                            const params = {
+                                page: page,
+                                per_page: perPage
+                            };
+
+                            if (search) {
+                                params.search = search;
+                            }
+
+                            // Update URL without reload
+                            const newUrl = new URL(window.location.pathname, window.location.origin);
+                            Object.keys(params).forEach(key => {
+                                if (params[key]) {
+                                    newUrl.searchParams.set(key, params[key]);
+                                }
+                            });
+                            window.history.pushState({}, '', newUrl.toString());
+
+                            // Load table via AJAX
+                            AdminAjax.loadTable('{{ route('admin.colors') }}', $('.table-container')[
+                                0], {
+                                params: params,
+                                onSuccess: function(response) {
+                                    if (response.pagination) {
+                                        $('.pagination-container').html(response
+                                            .pagination);
+                                    }
+                                }
+                            });
+                        });
+                    }
+
+                    /* -----------------------------------
+                     PER PAGE SELECT HANDLER
+                    ----------------------------------- */
+                    $(document).on('change', '#perPageSelect', function(e) {
+                        e.preventDefault();
+                        const perPage = $(this).val();
+                        const currentPage = new URLSearchParams(window.location.search).get('page') ||
+                            1;
+                        const currentSearch = $('[data-search]').val() || '';
+
+                        const params = {
+                            page: 1, // Reset to page 1 when changing per page
+                            per_page: perPage
+                        };
+
+                        if (currentSearch) {
+                            params.search = currentSearch;
+                        }
+
+                        // Update URL without reload
+                        const newUrl = new URL(window.location.pathname, window.location.origin);
+                        Object.keys(params).forEach(key => {
+                            if (params[key]) {
+                                newUrl.searchParams.set(key, params[key]);
+                            }
+                        });
+                        window.history.pushState({}, '', newUrl.toString());
+
+                        // Load table via AJAX
+                        AdminAjax.loadTable('{{ route('admin.colors') }}', $('.table-container')[0], {
+                            params: params,
+                            onSuccess: function(response) {
+                                if (response.pagination) {
+                                    $('.pagination-container').html(response.pagination);
+                                }
+                            }
+                        });
+                    });
+
+                    /* -----------------------------------
+                     SEARCH HANDLER
+                    ----------------------------------- */
+                    let searchTimeout;
+                    $(document).on('input', '[data-search]', function(e) {
+                        clearTimeout(searchTimeout);
+                        const searchInput = $(this);
+
+                        searchTimeout = setTimeout(function() {
+                            const searchValue = searchInput.val();
+                            const currentPage = new URLSearchParams(window.location.search).get(
+                                'page') || 1;
+                            const currentPerPage = $('#perPageSelect').val() || 25;
+
+                            const params = {
+                                page: 1, // Reset to page 1 when searching
+                                per_page: currentPerPage
+                            };
+
+                            if (searchValue) {
+                                params.search = searchValue;
+                            }
+
+                            // Update URL without reload
+                            const newUrl = new URL(window.location.pathname, window.location
+                                .origin);
+                            Object.keys(params).forEach(key => {
+                                if (params[key]) {
+                                    newUrl.searchParams.set(key, params[key]);
+                                }
+                            });
+                            window.history.pushState({}, '', newUrl.toString());
+
+                            // Load table via AJAX
+                            AdminAjax.loadTable('{{ route('admin.colors') }}', $(
+                                '.table-container')[0], {
+                                params: params,
+                                onSuccess: function(response) {
+                                    if (response.pagination) {
+                                        $('.pagination-container').html(response
+                                            .pagination);
+                                    }
+                                }
+                            });
+                        }, 500); // Debounce search
+                    });
+
+                    /* -----------------------------------
+                     INITIALIZE PAGINATION HANDLERS
+                    ----------------------------------- */
+                    bindPaginationHandlers();
+
+                    /* -----------------------------------
+                     SHOW TOAST (OUTSIDE MODAL - TOP RIGHT)
                     ----------------------------------- */
                     function showToastInModal(modal, message, type = 'error') {
-                        // Get modal element - handle both Bootstrap Modal instance and DOM element
-                        let modalElement;
-                        if (modal && modal._element) {
-                            modalElement = modal._element;
-                        } else if (typeof modal === 'string') {
-                            modalElement = document.getElementById(modal);
-                        } else if (modal && modal.nodeType) {
-                            modalElement = modal;
-                        } else {
-                            modalElement = document.getElementById('colorModal');
+                        // Create or get toast container at top-right corner of page
+                        let toastContainer = $('#global-toast-container');
+
+                        if (!toastContainer.length) {
+                            toastContainer = $(
+                                '<div id="global-toast-container" class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 9999;"></div>'
+                            );
+                            $('body').append(toastContainer);
                         }
 
-                        if (!modalElement) {
-                            console.error('❌ Modal element not found');
-                            return;
-                        }
+                        // Remove any existing toasts of the same type to avoid stacking
+                        toastContainer.find('.toast').each(function() {
+                            const bsToast = bootstrap.Toast.getInstance(this);
+                            if (bsToast) {
+                                bsToast.hide();
+                            }
+                        });
 
-                        const $modal = $(modalElement);
-
-                        // Remove existing toasts in modal
-                        $modal.find('.toast-container').remove();
-
-                        // Create toast container inside modal - position it at the top of modal-body
-                        const toastContainer = $('<div class="toast-container position-relative mb-2"></div>');
+                        // Create toast
                         const toastBg = type === 'error' ? 'bg-danger' : 'bg-success';
+                        const toastId = 'toast-' + Date.now();
                         const toast = $(`
-                            <div class="toast ${toastBg} text-white border-0 show" role="alert" aria-live="assertive" aria-atomic="true">
+                            <div id="${toastId}" class="toast ${toastBg} text-white border-0" role="alert" aria-live="assertive" aria-atomic="true">
                                 <div class="d-flex">
                                     <div class="toast-body">
                                         <i class="ti ti-${type === 'error' ? 'alert-circle' : 'check-circle'} me-2"></i>
@@ -335,15 +596,6 @@
 
                         toastContainer.append(toast);
 
-                        // Insert toast at the top of modal-body
-                        const $modalBody = $modal.find('.modal-body');
-                        if ($modalBody.length) {
-                            $modalBody.prepend(toastContainer);
-                        } else {
-                            // Fallback: prepend to modal-content
-                            $modal.find('.modal-content').prepend(toastContainer);
-                        }
-
                         // Initialize and show toast
                         const bsToast = new bootstrap.Toast(toast[0], {
                             autohide: true,
@@ -353,7 +605,11 @@
 
                         // Remove toast element after it's hidden
                         toast.on('hidden.bs.toast', function() {
-                            $(this).closest('.toast-container').remove();
+                            $(this).remove();
+                            // Remove container if empty
+                            if (toastContainer.find('.toast').length === 0) {
+                                toastContainer.remove();
+                            }
                         });
                     }
 
