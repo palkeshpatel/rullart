@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Color;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rule;
 
 class ColorController extends Controller
@@ -16,9 +17,9 @@ class ColorController extends Controller
         // Search functionality
         if ($request->has('search') && $request->search) {
             $search = $request->search;
-            $query->where(function($q) use ($search) {
+            $query->where(function ($q) use ($search) {
                 $q->where('filtervalue', 'like', "%{$search}%")
-                  ->orWhere('filtervalueAR', 'like', "%{$search}%");
+                    ->orWhere('filtervalueAR', 'like', "%{$search}%");
             });
         }
 
@@ -77,6 +78,7 @@ class ColorController extends Controller
 
         $validated['fkfilterid'] = 2; // Color filter ID
         $validated['isactive'] = $request->has('isactive') ? 1 : 0;
+        $validated['filtervaluecode'] = $validated['filtervaluecode'] ?? '';
         $validated['displayorder'] = $validated['displayorder'] ?? 0;
 
         try {
@@ -146,6 +148,47 @@ class ColorController extends Controller
     {
         $color = Color::colors()->findOrFail($id);
 
+        // Fix for PUT requests with FormData - PHP doesn't populate $_POST for PUT
+        // Laravel can't read FormData from PUT requests automatically, so we need to parse it manually
+        if (
+            $request->isMethod('put') && empty($request->all()) &&
+            $request->header('Content-Type') &&
+            str_contains($request->header('Content-Type'), 'multipart/form-data')
+        ) {
+
+            // Parse multipart/form-data manually
+            $content = $request->getContent();
+            $boundary = null;
+
+            // Extract boundary from Content-Type header
+            if (preg_match('/boundary=([^;]+)/', $request->header('Content-Type'), $matches)) {
+                $boundary = '--' . trim($matches[1]);
+            }
+
+            if ($boundary && $content) {
+                $parts = explode($boundary, $content);
+                $parsedData = [];
+
+                foreach ($parts as $part) {
+                    // Match field name and value in multipart format
+                    if (preg_match('/Content-Disposition:\s*form-data;\s*name="([^"]+)"\s*\r?\n\r?\n(.*?)(?=\r?\n--|$)/s', $part, $matches)) {
+                        $fieldName = $matches[1];
+                        $fieldValue = trim($matches[2], "\r\n");
+
+                        // Skip _method (it's handled by Laravel's method spoofing)
+                        if ($fieldName !== '_method') {
+                            $parsedData[$fieldName] = $fieldValue;
+                        }
+                    }
+                }
+
+                // Merge parsed data into request so validation can access it
+                if (!empty($parsedData)) {
+                    $request->merge($parsedData);
+                }
+            }
+        }
+
         $validated = $request->validate([
             'filtervalue' => [
                 'required',
@@ -153,7 +196,7 @@ class ColorController extends Controller
                 'max:255',
                 Rule::unique('filtervalues', 'filtervalue')->where(function ($query) {
                     return $query->where('fkfilterid', 2);
-                })->ignore($id, 'filtervalueid')
+                })->ignore($color->getKey(), $color->getKeyName())
             ],
             'filtervalueAR' => 'nullable|string|max:255',
             'filtervaluecode' => 'nullable|string|max:255',

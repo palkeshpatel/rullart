@@ -3,7 +3,7 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title" id="colorModalLabel">
-                    {{ $color ? 'Edit Color' : 'Add Color' }}
+                    {{ $color ? 'Edit Filter' : 'Add Filter' }}
                 </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
@@ -16,27 +16,15 @@
                 @endif
                 <div class="modal-body">
                     <div class="mb-3">
-                        <label class="form-label">Color Name (EN) <span class="text-danger">*</span></label>
+                        <label class="form-label">Color(EN) <span class="text-danger">*</span></label>
                         <input type="text" name="filtervalue" class="form-control"
                             value="{{ old('filtervalue', $color ? $color->filtervalue : '') }}" required>
                         <div class="invalid-feedback"></div>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Color Name (AR) <span class="text-danger">*</span></label>
+                        <label class="form-label">Color (AR) <span class="text-danger">*</span></label>
                         <input type="text" name="filtervalueAR" class="form-control"
                             value="{{ old('filtervalueAR', $color ? $color->filtervalueAR : '') }}" required>
-                        <div class="invalid-feedback"></div>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Color Code</label>
-                        <input type="text" name="filtervaluecode" class="form-control"
-                            value="{{ old('filtervaluecode', $color ? $color->filtervaluecode : '') }}">
-                        <div class="invalid-feedback"></div>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Display Order</label>
-                        <input type="number" name="displayorder" class="form-control"
-                            value="{{ old('displayorder', $color ? $color->displayorder : 0) }}" min="0">
                         <div class="invalid-feedback"></div>
                     </div>
                     <div class="mb-3">

@@ -77,6 +77,9 @@
 
                     console.log('✅ Document ready');
 
+                    // Load table from URL parameters on page load
+                    loadTableFromURL();
+
                     /* -----------------------------------
                      HARD BLOCK native submit (AJAX forms)
                     ----------------------------------- */
@@ -113,8 +116,66 @@
                         e.preventDefault();
                         const colorId = $(this).data('color-id');
                         console.log('👁️ View Color clicked, ID:', colorId);
-                        // TODO: Implement view modal if needed
+                        openColorViewModal(colorId);
                     });
+
+                    /* -----------------------------------
+                     OPEN VIEW MODAL
+                    ----------------------------------- */
+                    function openColorViewModal(colorId) {
+                        console.log('📦 Opening color view modal, ID:', colorId);
+
+                        cleanupModals();
+
+                        const url = '{{ route('admin.colors.show', ':id') }}'.replace(':id', colorId);
+
+                        $('#colorViewModalContainer').html(loaderHtml());
+
+                        const loadingModal = new bootstrap.Modal($('#colorModal')[0], {
+                            backdrop: 'static',
+                            keyboard: false
+                        });
+
+                        loadingModal.show();
+
+                        AdminAjax.get(url).then(response => {
+                            console.log('📥 View HTML loaded');
+
+                            loadingModal.hide();
+                            cleanupModals();
+
+                            $('#colorViewModalContainer').html(response.html);
+
+                            const modalEl = document.getElementById('colorViewModal');
+                            const modal = new bootstrap.Modal(modalEl);
+                            modal.show();
+
+                            // Handle edit button click from view modal
+                            $(modalEl).find('.edit-color-btn').on('click', function(e) {
+                                e.preventDefault();
+                                const editColorId = $(this).data('color-id');
+                                modal.hide();
+                                cleanupModals();
+                                // Open edit modal
+                                setTimeout(() => {
+                                    openColorFormModal(editColorId);
+                                }, 300);
+                            });
+
+                            // Cleanup on close
+                            modalEl.addEventListener('hidden.bs.modal', function() {
+                                cleanupModals();
+                            }, {
+                                once: true
+                            });
+
+                        }).catch(err => {
+                            console.error('❌ Failed to load view', err);
+                            loadingModal.hide();
+                            cleanupModals();
+                            AdminAjax.showError('Failed to load color details.');
+                        });
+                    }
 
                     /* -----------------------------------
                      DELETE COLOR BUTTON
@@ -239,12 +300,65 @@
 
                         console.log('📤 submitColorForm called');
 
+                        // Debug: Log form values before creating FormData
+                        const filtervalueInput = form.querySelector('[name="filtervalue"]');
+                        const filtervalueARInput = form.querySelector('[name="filtervalueAR"]');
+                        console.log('🔍 Form values before submit:');
+                        console.log('  filtervalue:', filtervalueInput ? filtervalueInput.value : 'NOT FOUND');
+                        console.log('  filtervalueAR:', filtervalueARInput ? filtervalueARInput.value :
+                            'NOT FOUND');
+
+                        // Ensure values are not empty
+                        if (!filtervalueInput || !filtervalueInput.value || filtervalueInput.value.trim() ===
+                            '') {
+                            console.error('❌ filtervalue is empty!');
+                            showToastInModal(modal, 'Color name (EN) is required.', 'error');
+                            const submitBtn = form.querySelector('button[type="submit"]');
+                            if (submitBtn) {
+                                submitBtn.disabled = false;
+                                submitBtn.innerHTML = submitBtn.getAttribute('data-original-text') || 'Update';
+                            }
+                            return;
+                        }
+
+                        if (!filtervalueARInput || !filtervalueARInput.value || filtervalueARInput.value
+                            .trim() === '') {
+                            console.error('❌ filtervalueAR is empty!');
+                            showToastInModal(modal, 'Color name (AR) is required.', 'error');
+                            const submitBtn = form.querySelector('button[type="submit"]');
+                            if (submitBtn) {
+                                submitBtn.disabled = false;
+                                submitBtn.innerHTML = submitBtn.getAttribute('data-original-text') || 'Update';
+                            }
+                            return;
+                        }
+
+                        // Create FormData and ensure all required fields are included
                         const formData = new FormData(form);
+
+                        // Explicitly add values if they're missing (safety check)
+                        if (!formData.has('filtervalue') || !formData.get('filtervalue')) {
+                            formData.set('filtervalue', filtervalueInput.value.trim());
+                            console.log('⚠️ Added filtervalue to FormData:', filtervalueInput.value.trim());
+                        }
+                        if (!formData.has('filtervalueAR') || !formData.get('filtervalueAR')) {
+                            formData.set('filtervalueAR', filtervalueARInput.value.trim());
+                            console.log('⚠️ Added filtervalueAR to FormData:', filtervalueARInput.value.trim());
+                        }
+
+                        // Debug: Log FormData contents
+                        console.log('📦 FormData contents:');
+                        for (let pair of formData.entries()) {
+                            console.log('  ', pair[0] + ': ' + pair[1]);
+                        }
+
                         const url = form.action;
                         const method = form.querySelector('[name="_method"]')?.value || 'POST';
 
                         const submitBtn = form.querySelector('button[type="submit"]');
                         const originalText = submitBtn.innerHTML;
+                        // Store original text as data attribute for recovery
+                        submitBtn.setAttribute('data-original-text', originalText);
                         submitBtn.disabled = true;
                         submitBtn.innerHTML =
                             '<span class="spinner-border spinner-border-sm me-1"></span> Saving...';
@@ -293,7 +407,8 @@
                                 $form.find('.invalid-feedback').html('').removeClass('d-block').hide();
 
                                 submitBtn.disabled = false;
-                                submitBtn.innerHTML = originalText;
+                                submitBtn.innerHTML = submitBtn.getAttribute('data-original-text') ||
+                                    originalText;
                             });
                     }
 
@@ -307,24 +422,24 @@
 
                         const modalHtml = `
                             <div class="modal fade" id="deleteColorModal" tabindex="-1">
-                                <div class="modal-dialog">
-                                    <div class="modal-content">
-                                        <div class="modal-header">
-                                            <h5 class="modal-title">Confirm Delete</h5>
-                                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                                        </div>
-                                        <div class="modal-body">
+                        <div class="modal-dialog">
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                    <h5 class="modal-title">Confirm Delete</h5>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                </div>
+                                <div class="modal-body">
                                             <p>Are you sure you want to delete "<strong>${colorName}</strong>"?</p>
-                                            <p class="text-danger mb-0">This action cannot be undone.</p>
-                                        </div>
-                                        <div class="modal-footer">
-                                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                    <p class="text-danger mb-0">This action cannot be undone.</p>
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
                                             <button type="button" class="btn btn-danger" id="confirmDeleteColorBtn">Delete</button>
                                         </div>
                                     </div>
-                                </div>
-                            </div>
-                        `;
+                        </div>
+                    </div>
+                `;
 
                         $('body').append(modalHtml);
 
@@ -372,6 +487,50 @@
                                 deleteBtn.disabled = false;
                                 deleteBtn.innerHTML = originalText;
                             });
+                    }
+
+                    /* -----------------------------------
+                     LOAD TABLE FROM URL ON PAGE LOAD
+                    ----------------------------------- */
+                    function loadTableFromURL() {
+                        const urlParams = new URLSearchParams(window.location.search);
+                        const page = urlParams.get('page');
+                        const perPage = urlParams.get('per_page');
+                        const search = urlParams.get('search');
+
+                        // Only load via AJAX if URL has parameters (otherwise use server-rendered content)
+                        if (page || perPage || search) {
+                            const params = {};
+                            if (page) params.page = page;
+                            if (perPage) params.per_page = perPage;
+                            if (search) params.search = search;
+
+                            // Update per page select if URL has per_page
+                            if (perPage && $('#perPageSelect').length) {
+                                $('#perPageSelect').val(perPage);
+                            }
+
+                            // Update search input if URL has search
+                            if (search && $('[data-search]').length) {
+                                $('[data-search]').val(search);
+                            }
+
+                            console.log('📄 Loading table from URL params:', params);
+
+                            AdminAjax.loadTable('{{ route('admin.colors') }}', $('.table-container')[0], {
+                                params: params,
+                                onSuccess: function(response) {
+                                    if (response.pagination) {
+                                        $('.pagination-container').html(response.pagination);
+                                    }
+                                    // Re-bind event handlers for dynamically loaded content
+                                    bindPaginationHandlers();
+                                }
+                            });
+                        } else {
+                            // No URL params, just bind handlers for existing content
+                            bindPaginationHandlers();
+                        }
                     }
 
                     /* -----------------------------------
