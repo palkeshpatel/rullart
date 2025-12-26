@@ -7,35 +7,42 @@
                 </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <form id="colorForm" method="POST" action="{{ $color ? route('admin.colors.update', $color->filtervalueid) : route('admin.colors.store') }}">
+            <form id="colorForm" method="POST"
+                action="{{ $color ? route('admin.colors.update', $color->filtervalueid) : route('admin.colors.store') }}"
+                novalidate>
                 @csrf
-                @if($color)
+                @if ($color)
                     @method('PUT')
                 @endif
                 <div class="modal-body">
                     <div class="mb-3">
                         <label class="form-label">Color Name (EN) <span class="text-danger">*</span></label>
-                        <input type="text" name="filtervalue" class="form-control" value="{{ old('filtervalue', $color ? $color->filtervalue : '') }}" required>
+                        <input type="text" name="filtervalue" class="form-control"
+                            value="{{ old('filtervalue', $color ? $color->filtervalue : '') }}" required>
                         <div class="invalid-feedback"></div>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Color Name (AR)</label>
-                        <input type="text" name="filtervalueAR" class="form-control" value="{{ old('filtervalueAR', $color ? $color->filtervalueAR : '') }}">
+                        <label class="form-label">Color Name (AR) <span class="text-danger">*</span></label>
+                        <input type="text" name="filtervalueAR" class="form-control"
+                            value="{{ old('filtervalueAR', $color ? $color->filtervalueAR : '') }}" required>
                         <div class="invalid-feedback"></div>
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Color Code</label>
-                        <input type="text" name="filtervaluecode" class="form-control" value="{{ old('filtervaluecode', $color ? $color->filtervaluecode : '') }}">
+                        <input type="text" name="filtervaluecode" class="form-control"
+                            value="{{ old('filtervaluecode', $color ? $color->filtervaluecode : '') }}">
                         <div class="invalid-feedback"></div>
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Display Order</label>
-                        <input type="number" name="displayorder" class="form-control" value="{{ old('displayorder', $color ? $color->displayorder : 0) }}" min="0">
+                        <input type="number" name="displayorder" class="form-control"
+                            value="{{ old('displayorder', $color ? $color->displayorder : 0) }}" min="0">
                         <div class="invalid-feedback"></div>
                     </div>
                     <div class="mb-3">
                         <div class="form-check form-switch">
-                            <input class="form-check-input" type="checkbox" name="isactive" value="1" id="isactive" {{ old('isactive', $color ? $color->isactive : 1) ? 'checked' : '' }}>
+                            <input class="form-check-input" type="checkbox" name="isactive" value="1"
+                                id="isactive" {{ old('isactive', $color ? $color->isactive : 1) ? 'checked' : '' }}>
                             <label class="form-check-label" for="isactive">
                                 Active
                             </label>
@@ -52,4 +59,3 @@
         </div>
     </div>
 </div>
-

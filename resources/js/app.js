@@ -13,6 +13,9 @@ import $ from 'jquery'
 
 window.jQuery = window.$ = $
 
+// Import jQuery Validation Plugin
+import 'jquery-validation'
+
 import bootstrap from 'bootstrap/dist/js/bootstrap.min.js'
 
 window.bootstrap = bootstrap;

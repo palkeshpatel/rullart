@@ -1,14 +1,23 @@
 import { defineConfig } from 'vite';
 import laravel from 'laravel-vite-plugin';
+import { existsSync } from 'fs';
+import { resolve } from 'path';
+
+// Filter out non-existent files
+function filterExistingFiles(files) {
+    return files.filter(file => {
+        const filePath = resolve(__dirname, file);
+        return existsSync(filePath);
+    });
+}
 
 export default defineConfig({
     plugins: [
         laravel({
-            input: [
+            input: filterExistingFiles([
                 //js
                 'resources/js/config.js',
                 'resources/js/app.js',
-                'resources/js/pages/dashboard.js',
                 'resources/js/pages/apps-calendar.js',
                 'resources/js/pages/apps-chat.js',
                 'resources/js/pages/custom-table.js',
@@ -98,7 +107,6 @@ export default defineConfig({
                 'resources/js/pages/misc-animation.js',
                 'resources/js/maps/world.js',
                 'resources/js/pages/dashboard-2.js',
-                'resources/js/pages/dashboard-3.js',                                
                 'resources/js/pages/auth-password.js',
                 'resources/js/pages/auth-two-factor.js',
                 'resources/js/pages/landing.js',
@@ -152,7 +160,7 @@ export default defineConfig({
                 'node_modules/datatables.net-fixedheader-bs5/css/fixedHeader.bootstrap5.min.css',
                 'node_modules/spinkit/spinkit.min.css',
                 'node_modules/ladda/dist/ladda-themeless.min.css'                
-            ],
+            ]),
             refresh: true,
         }),
     ],
