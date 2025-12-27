@@ -1,17 +1,17 @@
-@extends('layouts.vertical', ['title' => 'Update Welcome Text'])
+@extends('layouts.vertical', ['title' => 'Update About Us'])
 
 @section('content')
-    @include('layouts.partials/page-title', ['title' => 'Welcome Text'])
+    @include('layouts.partials/page-title', ['title' => 'About Us'])
 
     <div class="row">
         <div class="col-12">
             <div class="card">
                 <div class="card-header">
-                    <h4 class="card-title mb-0">Welcome Text</h4>
+                    <h4 class="card-title mb-0">About Us</h4>
                 </div>
                 <div class="card-body">
-                    <form id="homePageForm" method="POST" 
-                        action="{{ route('admin.pages.home.update') }}" 
+                    <form id="pageForm" method="POST" 
+                        action="{{ route('admin.pages.aboutus.update') }}" 
                         novalidate enctype="multipart/form-data">
                         @csrf
                         @method('PUT')
@@ -21,7 +21,7 @@
                                 <div class="mb-3">
                                     <label class="form-label">Page Title <span class="text-danger">*</span></label>
                                     <input type="text" name="pagetitle" class="form-control" 
-                                        value="{{ old('pagetitle', $page->pagetitle ?? 'Welcome Text') }}" required>
+                                        value="{{ old('pagetitle', $page->pagetitle ?? 'About Us') }}" required>
                                     <div class="invalid-feedback"></div>
                                 </div>
                             </div>
@@ -112,27 +112,27 @@
     <script>
         // Wait for jQuery to be available
         (function() {
-            function initHomePageScript() {
+            function initPageScript() {
                 if (typeof jQuery === 'undefined' || typeof jQuery.fn.validate === 'undefined') {
-                    setTimeout(initHomePageScript, 50);
+                    setTimeout(initPageScript, 50);
                     return;
                 }
 
                 const $ = jQuery;
 
                 $(document).ready(function() {
-                    console.log('✅ Document ready for Home Page');
+                    console.log('✅ Document ready for About Us Page');
 
                     // Block native submit
-                    $(document).off('submit', '#homePageForm');
-                    $(document).on('submit', '#homePageForm', function(e) {
+                    $(document).off('submit', '#pageForm');
+                    $(document).on('submit', '#pageForm', function(e) {
                         console.log('🚫 Native submit blocked');
                         e.preventDefault();
                         return false;
                     });
 
                     // Setup validation
-                    const $form = $('#homePageForm');
+                    const $form = $('#pageForm');
 
                     $form.validate({
                         rules: {
@@ -155,18 +155,14 @@
                             error.insertAfter(element);
                         },
                         submitHandler(form) {
-                            console.log('🚀 Validation passed → submitHomePageForm()');
-                            submitHomePageForm(form);
+                            console.log('🚀 Validation passed → submitPageForm()');
+                            submitPageForm(form);
                         }
                     });
 
-                    /* -----------------------------------
-                     SUBMIT FORM (AJAX)
-                    ----------------------------------- */
-                    function submitHomePageForm(form) {
-                        console.log('📤 submitHomePageForm called');
+                    function submitPageForm(form) {
+                        console.log('📤 submitPageForm called');
 
-                        // Update Quill editor content before submitting
                         if (window.detailsQuill) {
                             const detailsContent = window.detailsQuill.root.innerHTML;
                             document.getElementById('details').value = detailsContent;
@@ -191,15 +187,12 @@
                             .then(res => {
                                 console.log('✅ AJAX success:', res);
                                 showToast(res.message || 'Page updated successfully', 'success');
-
                                 submitBtn.disabled = false;
                                 submitBtn.innerHTML = submitBtn.getAttribute('data-original-text') || originalText;
                             })
                             .catch(err => {
                                 console.error('❌ AJAX error:', err);
-
                                 let errorMessage = 'Failed to update page.';
-
                                 if (err.message) {
                                     errorMessage = err.message;
                                 } else if (err.errors) {
@@ -210,37 +203,28 @@
                                         errorMessage = firstError;
                                     }
                                 }
-
                                 showToast(errorMessage, 'error');
-
                                 $form.find('.is-invalid').removeClass('is-invalid');
                                 $form.find('.is-valid').removeClass('is-valid');
                                 $form.find('[id$="-error"]').remove();
                                 $form.find('.invalid-feedback').html('').removeClass('d-block').hide();
-
                                 submitBtn.disabled = false;
                                 submitBtn.innerHTML = submitBtn.getAttribute('data-original-text') || originalText;
                             });
                     }
 
-                    /* -----------------------------------
-                     SHOW TOAST (TOP RIGHT)
-                    ----------------------------------- */
                     function showToast(message, type = 'error') {
                         let toastContainer = $('#global-toast-container');
-
                         if (!toastContainer.length) {
                             toastContainer = $('<div id="global-toast-container" class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 9999;"></div>');
                             $('body').append(toastContainer);
                         }
-
                         toastContainer.find('.toast').each(function() {
                             const bsToast = bootstrap.Toast.getInstance(this);
                             if (bsToast) {
                                 bsToast.hide();
                             }
                         });
-
                         const toastBg = type === 'error' ? 'bg-danger' : 'bg-success';
                         const toastId = 'toast-' + Date.now();
                         const toast = $(`
@@ -254,15 +238,12 @@
                                 </div>
                             </div>
                         `);
-
                         toastContainer.append(toast);
-
                         const bsToast = new bootstrap.Toast(toast[0], {
                             autohide: true,
                             delay: 5000
                         });
                         bsToast.show();
-
                         toast.on('hidden.bs.toast', function() {
                             $(this).remove();
                             if (toastContainer.find('.toast').length === 0) {
@@ -272,9 +253,7 @@
                     }
                 });
             }
-
-            // Start initialization
-            initHomePageScript();
+            initPageScript();
         })();
     </script>
 @endsection

@@ -20,14 +20,35 @@ class PageController extends Controller
         if (!$page) {
             $page = new Page();
             $page->pagename = $pagename;
-            $page->pagetitle = ucfirst(str_replace('-', ' ', $pagename));
+            
+            // Set default titles based on pagename
+            $defaultTitles = [
+                'home' => 'Welcome Text',
+                'aboutus' => 'About Us',
+                'corporate-gift' => 'Corporate Gifts',
+                'franchises' => 'Franchise',
+                'contactus' => 'Contact Us',
+                'shipping' => 'Shipping',
+                'newsletter' => 'Newsletter',
+                'terms' => 'Terms & Conditions',
+            ];
+            
+            $page->pagetitle = $defaultTitles[$pagename] ?? ucfirst(str_replace('-', ' ', $pagename));
             $page->pagetitleAR = '';
             $page->details = '';
             $page->detailsAR = '';
             $page->published = 1;
         }
 
-        return view('admin.pages.' . str_replace('-', '_', $pagename), compact('page'));
+        // Map pagename to view name
+        $viewMap = [
+            'corporate-gift' => 'corporate-gift',
+            'terms' => 'terms',
+        ];
+        
+        $viewName = $viewMap[$pagename] ?? str_replace('-', '_', $pagename);
+        
+        return view('admin.pages.' . $viewName, compact('page'));
     }
 
     /**
@@ -118,7 +139,21 @@ class PageController extends Controller
             ]);
         }
 
-        return redirect()->route('admin.pages.' . $pagename)
+        // Map pagename to route name
+        $routeMap = [
+            'corporate-gift' => 'pages.corporate-gift',
+            'aboutus' => 'pages.aboutus',
+            'franchises' => 'pages.franchises',
+            'contactus' => 'pages.contactus',
+            'shipping' => 'pages.shipping',
+            'newsletter' => 'pages.newsletter',
+            'terms' => 'pages.terms',
+            'home' => 'pages.home',
+        ];
+        
+        $routeName = $routeMap[$pagename] ?? 'pages.home';
+        
+        return redirect()->route($routeName)
             ->with('success', 'Page updated successfully');
     }
 }

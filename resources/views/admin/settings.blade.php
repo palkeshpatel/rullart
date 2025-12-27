@@ -1,103 +1,88 @@
-@extends('layouts.vertical', ['title' => 'Update Welcome Text'])
+@extends('layouts.vertical', ['title' => 'Settings'])
 
 @section('content')
-    @include('layouts.partials/page-title', ['title' => 'Welcome Text'])
+    @include('layouts.partials/page-title', ['title' => 'Settings'])
 
     <div class="row">
         <div class="col-12">
             <div class="card">
                 <div class="card-header">
-                    <h4 class="card-title mb-0">Welcome Text</h4>
+                    <h4 class="card-title mb-0">Settings</h4>
                 </div>
                 <div class="card-body">
-                    <form id="homePageForm" method="POST" 
-                        action="{{ route('admin.pages.home.update') }}" 
+                    <form id="settingsForm" method="POST" 
+                        action="{{ route('admin.settings.update') }}" 
                         novalidate enctype="multipart/form-data">
                         @csrf
                         @method('PUT')
                         
                         <div class="row">
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label class="form-label">Page Title <span class="text-danger">*</span></label>
-                                    <input type="text" name="pagetitle" class="form-control" 
-                                        value="{{ old('pagetitle', $page->pagetitle ?? 'Welcome Text') }}" required>
+                            @forelse($settings as $setting)
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">
+                                        {{ $setting->name }}
+                                        @if($setting->isrequired)
+                                            <span class="text-danger">*</span>
+                                        @endif
+                                    </label>
+                                    
+                                    @if($setting->inputtype == 'textarea')
+                                        <textarea name="{{ $setting->name }}" 
+                                            class="form-control" 
+                                            rows="3"
+                                            {{ $setting->isrequired ? 'required' : '' }}>{{ old($setting->name, $setting->details) }}</textarea>
+                                    @elseif($setting->inputtype == 'number')
+                                        <input type="number" 
+                                            name="{{ $setting->name }}" 
+                                            class="form-control" 
+                                            value="{{ old($setting->name, $setting->details) }}"
+                                            {{ $setting->isrequired ? 'required' : '' }}>
+                                    @elseif($setting->inputtype == 'email')
+                                        <input type="email" 
+                                            name="{{ $setting->name }}" 
+                                            class="form-control" 
+                                            value="{{ old($setting->name, $setting->details) }}"
+                                            {{ $setting->isrequired ? 'required' : '' }}>
+                                    @elseif($setting->inputtype == 'url')
+                                        <input type="url" 
+                                            name="{{ $setting->name }}" 
+                                            class="form-control" 
+                                            value="{{ old($setting->name, $setting->details) }}"
+                                            {{ $setting->isrequired ? 'required' : '' }}>
+                                    @elseif($setting->inputtype == 'checkbox')
+                                        <div class="form-check form-switch">
+                                            <input class="form-check-input" 
+                                                type="checkbox" 
+                                                name="{{ $setting->name }}" 
+                                                value="Yes" 
+                                                id="{{ $setting->name }}"
+                                                {{ old($setting->name, $setting->details) == '1' || old($setting->name, $setting->details) == 'Yes' ? 'checked' : '' }}>
+                                            <label class="form-check-label" for="{{ $setting->name }}">
+                                                Enabled
+                                            </label>
+                                        </div>
+                                    @else
+                                        <input type="text" 
+                                            name="{{ $setting->name }}" 
+                                            class="form-control" 
+                                            value="{{ old($setting->name, $setting->details) }}"
+                                            {{ $setting->isrequired ? 'required' : '' }}>
+                                    @endif
+                                    
                                     <div class="invalid-feedback"></div>
                                 </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label class="form-label">Page Title (AR)</label>
-                                    <input type="text" name="pagetitleAR" class="form-control" 
-                                        value="{{ old('pagetitleAR', $page->pagetitleAR ?? '') }}">
-                                    <div class="invalid-feedback"></div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label class="form-label">Details</label>
-                                    <div id="details-editor" style="height: 300px;">
-                                        {!! old('details', $page->details ?? '') !!}
+                            @empty
+                                <div class="col-12">
+                                    <div class="alert alert-info">
+                                        No settings found. Settings will be created automatically when you save.
                                     </div>
-                                    <textarea name="details" id="details" class="form-control d-none" style="display: none;">{{ old('details', $page->details ?? '') }}</textarea>
-                                    <div class="invalid-feedback"></div>
                                 </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label class="form-label">Details (AR)</label>
-                                    <div id="detailsAR-editor" style="height: 300px;">
-                                        {!! old('detailsAR', $page->detailsAR ?? '') !!}
-                                    </div>
-                                    <textarea name="detailsAR" id="detailsAR" class="form-control d-none" style="display: none;">{{ old('detailsAR', $page->detailsAR ?? '') }}</textarea>
-                                    <div class="invalid-feedback"></div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="row">
-                            <div class="col-md-4">
-                                <div class="mb-3">
-                                    <label class="form-label">Meta Title</label>
-                                    <input type="text" name="metatitle" class="form-control" 
-                                        value="{{ old('metatitle', $page->metatitle ?? '') }}">
-                                    <div class="invalid-feedback"></div>
-                                </div>
-                            </div>
-                            <div class="col-md-4">
-                                <div class="mb-3">
-                                    <label class="form-label">Meta Keyword</label>
-                                    <input type="text" name="metakeyword" class="form-control" 
-                                        value="{{ old('metakeyword', $page->metakeyword ?? '') }}">
-                                    <div class="invalid-feedback"></div>
-                                </div>
-                            </div>
-                            <div class="col-md-4">
-                                <div class="mb-3">
-                                    <label class="form-label">Meta Description</label>
-                                    <input type="text" name="metadescription" class="form-control" 
-                                        value="{{ old('metadescription', $page->metadescription ?? '') }}">
-                                    <div class="invalid-feedback"></div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="mb-3">
-                            <div class="form-check form-switch">
-                                <input class="form-check-input" type="checkbox" name="published" value="1" 
-                                    id="published" {{ old('published', $page->published ?? 1) ? 'checked' : '' }}>
-                                <label class="form-check-label" for="published">
-                                    Published
-                                </label>
-                            </div>
+                            @endforelse
                         </div>
 
                         <div class="mb-3">
                             <button type="submit" class="btn btn-primary">
-                                <i class="ti ti-device-floppy me-1"></i> Update
+                                <i class="ti ti-device-floppy me-1"></i> Update Settings
                             </button>
                         </div>
                     </form>
@@ -108,41 +93,32 @@
 @endsection
 
 @section('scripts')
-    @vite(['node_modules/quill/dist/quill.core.css', 'node_modules/quill/dist/quill.snow.css', 'resources/js/pages/home-page-editor.js'])
     <script>
         // Wait for jQuery to be available
         (function() {
-            function initHomePageScript() {
+            function initSettingsScript() {
                 if (typeof jQuery === 'undefined' || typeof jQuery.fn.validate === 'undefined') {
-                    setTimeout(initHomePageScript, 50);
+                    setTimeout(initSettingsScript, 50);
                     return;
                 }
 
                 const $ = jQuery;
 
                 $(document).ready(function() {
-                    console.log('✅ Document ready for Home Page');
+                    console.log('✅ Document ready for Settings');
 
                     // Block native submit
-                    $(document).off('submit', '#homePageForm');
-                    $(document).on('submit', '#homePageForm', function(e) {
+                    $(document).off('submit', '#settingsForm');
+                    $(document).on('submit', '#settingsForm', function(e) {
                         console.log('🚫 Native submit blocked');
                         e.preventDefault();
                         return false;
                     });
 
                     // Setup validation
-                    const $form = $('#homePageForm');
+                    const $form = $('#settingsForm');
 
                     $form.validate({
-                        rules: {
-                            pagetitle: {
-                                required: true
-                            }
-                        },
-                        messages: {
-                            pagetitle: 'Page Title (EN) is required'
-                        },
                         errorElement: 'div',
                         errorClass: 'invalid-feedback',
                         highlight(el) {
@@ -155,29 +131,26 @@
                             error.insertAfter(element);
                         },
                         submitHandler(form) {
-                            console.log('🚀 Validation passed → submitHomePageForm()');
-                            submitHomePageForm(form);
+                            console.log('🚀 Validation passed → submitSettingsForm()');
+                            submitSettingsForm(form);
                         }
                     });
 
                     /* -----------------------------------
                      SUBMIT FORM (AJAX)
                     ----------------------------------- */
-                    function submitHomePageForm(form) {
-                        console.log('📤 submitHomePageForm called');
-
-                        // Update Quill editor content before submitting
-                        if (window.detailsQuill) {
-                            const detailsContent = window.detailsQuill.root.innerHTML;
-                            document.getElementById('details').value = detailsContent;
-                        }
-
-                        if (window.detailsARQuill) {
-                            const detailsARContent = window.detailsARQuill.root.innerHTML;
-                            document.getElementById('detailsAR').value = detailsARContent;
-                        }
+                    function submitSettingsForm(form) {
+                        console.log('📤 submitSettingsForm called');
 
                         const formData = new FormData(form);
+                        
+                        // Handle unchecked checkboxes - add "No" value for checkboxes that aren't checked
+                        $(form).find('input[type="checkbox"]').each(function() {
+                            if (!$(this).is(':checked')) {
+                                formData.append($(this).attr('name'), 'No');
+                            }
+                        });
+                        
                         const url = form.action;
                         const method = form.querySelector('[name="_method"]')?.value || 'POST';
 
@@ -190,7 +163,7 @@
                         AdminAjax.request(url, method, formData)
                             .then(res => {
                                 console.log('✅ AJAX success:', res);
-                                showToast(res.message || 'Page updated successfully', 'success');
+                                showToast(res.message || 'Settings updated successfully', 'success');
 
                                 submitBtn.disabled = false;
                                 submitBtn.innerHTML = submitBtn.getAttribute('data-original-text') || originalText;
@@ -198,7 +171,7 @@
                             .catch(err => {
                                 console.error('❌ AJAX error:', err);
 
-                                let errorMessage = 'Failed to update page.';
+                                let errorMessage = 'Failed to update settings.';
 
                                 if (err.message) {
                                     errorMessage = err.message;
@@ -274,7 +247,7 @@
             }
 
             // Start initialization
-            initHomePageScript();
+            initSettingsScript();
         })();
     </script>
 @endsection

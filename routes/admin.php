@@ -145,30 +145,22 @@ Route::middleware(['admin'])->prefix('admin')->name('admin.')->group(function ()
     Route::delete('homegallery/{id}', [\App\Http\Controllers\Admin\HomeGalleryController::class, 'destroy'])->name('home-gallery.destroy');
     Route::get('pages/home', [\App\Http\Controllers\Admin\PageController::class, 'edit'])->defaults('pagename', 'home')->name('pages.home');
     Route::put('pages/home', [\App\Http\Controllers\Admin\PageController::class, 'update'])->defaults('pagename', 'home')->name('pages.home.update');
-    Route::get('pages/aboutus', function () {
-        return view('admin.pages.aboutus');
-    })->name('pages.aboutus');
-    Route::get('pages/corporate-gift', function () {
-        return view('admin.pages.corporate-gift');
-    })->name('pages.corporate-gift');
-    Route::get('pages/franchises', function () {
-        return view('admin.pages.franchises');
-    })->name('pages.franchises');
-    Route::get('pages/contactus', function () {
-        return view('admin.pages.contactus');
-    })->name('pages.contactus');
-    Route::get('pages/shipping', function () {
-        return view('admin.pages.shipping');
-    })->name('pages.shipping');
-    Route::get('pages/terms', function () {
-        return view('admin.pages.terms');
-    })->name('pages.terms');
-    Route::get('pages/newsletter', function () {
-        return view('admin.pages.newsletter');
-    })->name('pages.newsletter');
+    Route::get('pages/aboutus', [\App\Http\Controllers\Admin\PageController::class, 'edit'])->defaults('pagename', 'aboutus')->name('pages.aboutus');
+    Route::put('pages/aboutus', [\App\Http\Controllers\Admin\PageController::class, 'update'])->defaults('pagename', 'aboutus')->name('pages.aboutus.update');
+    Route::get('pages/corporate-gift', [\App\Http\Controllers\Admin\PageController::class, 'edit'])->defaults('pagename', 'corporate-gift')->name('pages.corporate-gift');
+    Route::put('pages/corporate-gift', [\App\Http\Controllers\Admin\PageController::class, 'update'])->defaults('pagename', 'corporate-gift')->name('pages.corporate-gift.update');
+    Route::get('pages/franchises', [\App\Http\Controllers\Admin\PageController::class, 'edit'])->defaults('pagename', 'franchises')->name('pages.franchises');
+    Route::put('pages/franchises', [\App\Http\Controllers\Admin\PageController::class, 'update'])->defaults('pagename', 'franchises')->name('pages.franchises.update');
+    Route::get('pages/contactus', [\App\Http\Controllers\Admin\PageController::class, 'edit'])->defaults('pagename', 'contactus')->name('pages.contactus');
+    Route::put('pages/contactus', [\App\Http\Controllers\Admin\PageController::class, 'update'])->defaults('pagename', 'contactus')->name('pages.contactus.update');
+    Route::get('pages/shipping', [\App\Http\Controllers\Admin\PageController::class, 'edit'])->defaults('pagename', 'shipping')->name('pages.shipping');
+    Route::put('pages/shipping', [\App\Http\Controllers\Admin\PageController::class, 'update'])->defaults('pagename', 'shipping')->name('pages.shipping.update');
+    Route::get('pages/terms', [\App\Http\Controllers\Admin\PageController::class, 'edit'])->defaults('pagename', 'terms')->name('pages.terms');
+    Route::put('pages/terms', [\App\Http\Controllers\Admin\PageController::class, 'update'])->defaults('pagename', 'terms')->name('pages.terms.update');
+    Route::get('pages/newsletter', [\App\Http\Controllers\Admin\PageController::class, 'edit'])->defaults('pagename', 'newsletter')->name('pages.newsletter');
+    Route::put('pages/newsletter', [\App\Http\Controllers\Admin\PageController::class, 'update'])->defaults('pagename', 'newsletter')->name('pages.newsletter.update');
 
     // Settings
-    Route::get('settings', function () {
-        return view('admin.settings');
-    })->name('settings');
+    Route::get('settings', [\App\Http\Controllers\Admin\SettingsController::class, 'index'])->name('settings');
+    Route::put('settings', [\App\Http\Controllers\Admin\SettingsController::class, 'update'])->name('settings.update');
 });

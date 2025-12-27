@@ -1,17 +1,17 @@
-@extends('layouts.vertical', ['title' => 'Update Welcome Text'])
+@extends('layouts.vertical', ['title' => 'Update Corporate Gifts'])
 
 @section('content')
-    @include('layouts.partials/page-title', ['title' => 'Welcome Text'])
+    @include('layouts.partials/page-title', ['title' => 'Corporate Gifts'])
 
     <div class="row">
         <div class="col-12">
             <div class="card">
                 <div class="card-header">
-                    <h4 class="card-title mb-0">Welcome Text</h4>
+                    <h4 class="card-title mb-0">Corporate Gifts</h4>
                 </div>
                 <div class="card-body">
-                    <form id="homePageForm" method="POST" 
-                        action="{{ route('admin.pages.home.update') }}" 
+                    <form id="pageForm" method="POST" 
+                        action="{{ route('admin.pages.corporate-gift.update') }}" 
                         novalidate enctype="multipart/form-data">
                         @csrf
                         @method('PUT')
@@ -21,7 +21,7 @@
                                 <div class="mb-3">
                                     <label class="form-label">Page Title <span class="text-danger">*</span></label>
                                     <input type="text" name="pagetitle" class="form-control" 
-                                        value="{{ old('pagetitle', $page->pagetitle ?? 'Welcome Text') }}" required>
+                                        value="{{ old('pagetitle', $page->pagetitle ?? 'Corporate Gifts') }}" required>
                                     <div class="invalid-feedback"></div>
                                 </div>
                             </div>
@@ -110,171 +110,86 @@
 @section('scripts')
     @vite(['node_modules/quill/dist/quill.core.css', 'node_modules/quill/dist/quill.snow.css', 'resources/js/pages/home-page-editor.js'])
     <script>
-        // Wait for jQuery to be available
         (function() {
-            function initHomePageScript() {
+            function initPageScript() {
                 if (typeof jQuery === 'undefined' || typeof jQuery.fn.validate === 'undefined') {
-                    setTimeout(initHomePageScript, 50);
+                    setTimeout(initPageScript, 50);
                     return;
                 }
-
                 const $ = jQuery;
-
                 $(document).ready(function() {
-                    console.log('✅ Document ready for Home Page');
-
-                    // Block native submit
-                    $(document).off('submit', '#homePageForm');
-                    $(document).on('submit', '#homePageForm', function(e) {
-                        console.log('🚫 Native submit blocked');
+                    console.log('✅ Document ready for Corporate Gifts Page');
+                    $(document).off('submit', '#pageForm');
+                    $(document).on('submit', '#pageForm', function(e) {
                         e.preventDefault();
                         return false;
                     });
-
-                    // Setup validation
-                    const $form = $('#homePageForm');
-
+                    const $form = $('#pageForm');
                     $form.validate({
-                        rules: {
-                            pagetitle: {
-                                required: true
-                            }
-                        },
-                        messages: {
-                            pagetitle: 'Page Title (EN) is required'
-                        },
+                        rules: { pagetitle: { required: true } },
+                        messages: { pagetitle: 'Page Title (EN) is required' },
                         errorElement: 'div',
                         errorClass: 'invalid-feedback',
-                        highlight(el) {
-                            $(el).addClass('is-invalid');
-                        },
-                        unhighlight(el) {
-                            $(el).removeClass('is-invalid').addClass('is-valid');
-                        },
-                        errorPlacement(error, element) {
-                            error.insertAfter(element);
-                        },
-                        submitHandler(form) {
-                            console.log('🚀 Validation passed → submitHomePageForm()');
-                            submitHomePageForm(form);
-                        }
+                        highlight(el) { $(el).addClass('is-invalid'); },
+                        unhighlight(el) { $(el).removeClass('is-invalid').addClass('is-valid'); },
+                        errorPlacement(error, element) { error.insertAfter(element); },
+                        submitHandler(form) { submitPageForm(form); }
                     });
-
-                    /* -----------------------------------
-                     SUBMIT FORM (AJAX)
-                    ----------------------------------- */
-                    function submitHomePageForm(form) {
-                        console.log('📤 submitHomePageForm called');
-
-                        // Update Quill editor content before submitting
+                    function submitPageForm(form) {
                         if (window.detailsQuill) {
-                            const detailsContent = window.detailsQuill.root.innerHTML;
-                            document.getElementById('details').value = detailsContent;
+                            document.getElementById('details').value = window.detailsQuill.root.innerHTML;
                         }
-
                         if (window.detailsARQuill) {
-                            const detailsARContent = window.detailsARQuill.root.innerHTML;
-                            document.getElementById('detailsAR').value = detailsARContent;
+                            document.getElementById('detailsAR').value = window.detailsARQuill.root.innerHTML;
                         }
-
                         const formData = new FormData(form);
                         const url = form.action;
                         const method = form.querySelector('[name="_method"]')?.value || 'POST';
-
                         const submitBtn = form.querySelector('button[type="submit"]');
                         const originalText = submitBtn.innerHTML;
-                        submitBtn.setAttribute('data-original-text', originalText);
                         submitBtn.disabled = true;
                         submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Saving...';
-
                         AdminAjax.request(url, method, formData)
                             .then(res => {
-                                console.log('✅ AJAX success:', res);
                                 showToast(res.message || 'Page updated successfully', 'success');
-
                                 submitBtn.disabled = false;
-                                submitBtn.innerHTML = submitBtn.getAttribute('data-original-text') || originalText;
+                                submitBtn.innerHTML = originalText;
                             })
                             .catch(err => {
-                                console.error('❌ AJAX error:', err);
-
                                 let errorMessage = 'Failed to update page.';
-
-                                if (err.message) {
-                                    errorMessage = err.message;
-                                } else if (err.errors) {
+                                if (err.message) errorMessage = err.message;
+                                else if (err.errors) {
                                     const firstError = Object.values(err.errors)[0];
-                                    if (Array.isArray(firstError)) {
-                                        errorMessage = firstError[0];
-                                    } else {
-                                        errorMessage = firstError;
-                                    }
+                                    errorMessage = Array.isArray(firstError) ? firstError[0] : firstError;
                                 }
-
                                 showToast(errorMessage, 'error');
-
-                                $form.find('.is-invalid').removeClass('is-invalid');
-                                $form.find('.is-valid').removeClass('is-valid');
-                                $form.find('[id$="-error"]').remove();
-                                $form.find('.invalid-feedback').html('').removeClass('d-block').hide();
-
                                 submitBtn.disabled = false;
-                                submitBtn.innerHTML = submitBtn.getAttribute('data-original-text') || originalText;
+                                submitBtn.innerHTML = originalText;
                             });
                     }
-
-                    /* -----------------------------------
-                     SHOW TOAST (TOP RIGHT)
-                    ----------------------------------- */
                     function showToast(message, type = 'error') {
                         let toastContainer = $('#global-toast-container');
-
                         if (!toastContainer.length) {
                             toastContainer = $('<div id="global-toast-container" class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 9999;"></div>');
                             $('body').append(toastContainer);
                         }
-
                         toastContainer.find('.toast').each(function() {
                             const bsToast = bootstrap.Toast.getInstance(this);
-                            if (bsToast) {
-                                bsToast.hide();
-                            }
+                            if (bsToast) bsToast.hide();
                         });
-
                         const toastBg = type === 'error' ? 'bg-danger' : 'bg-success';
-                        const toastId = 'toast-' + Date.now();
-                        const toast = $(`
-                            <div id="${toastId}" class="toast ${toastBg} text-white border-0" role="alert" aria-live="assertive" aria-atomic="true">
-                                <div class="d-flex">
-                                    <div class="toast-body">
-                                        <i class="ti ti-${type === 'error' ? 'alert-circle' : 'check-circle'} me-2"></i>
-                                        ${message}
-                                    </div>
-                                    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
-                                </div>
-                            </div>
-                        `);
-
+                        const toast = $(`<div class="toast ${toastBg} text-white border-0" role="alert"><div class="d-flex"><div class="toast-body"><i class="ti ti-${type === 'error' ? 'alert-circle' : 'check-circle'} me-2"></i>${message}</div><button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button></div></div>`);
                         toastContainer.append(toast);
-
-                        const bsToast = new bootstrap.Toast(toast[0], {
-                            autohide: true,
-                            delay: 5000
-                        });
+                        const bsToast = new bootstrap.Toast(toast[0], { autohide: true, delay: 5000 });
                         bsToast.show();
-
                         toast.on('hidden.bs.toast', function() {
                             $(this).remove();
-                            if (toastContainer.find('.toast').length === 0) {
-                                toastContainer.remove();
-                            }
+                            if (toastContainer.find('.toast').length === 0) toastContainer.remove();
                         });
                     }
                 });
             }
-
-            // Start initialization
-            initHomePageScript();
+            initPageScript();
         })();
     </script>
 @endsection
