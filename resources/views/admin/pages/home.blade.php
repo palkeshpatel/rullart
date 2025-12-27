@@ -39,14 +39,20 @@
                             <div class="col-md-6">
                                 <div class="mb-3">
                                     <label class="form-label">Details</label>
-                                    <textarea name="details" id="details" class="form-control" rows="10">{{ old('details', $page->details ?? '') }}</textarea>
+                                    <div id="details-editor" style="height: 300px;">
+                                        {!! old('details', $page->details ?? '') !!}
+                                    </div>
+                                    <textarea name="details" id="details" class="form-control d-none" style="display: none;">{{ old('details', $page->details ?? '') }}</textarea>
                                     <div class="invalid-feedback"></div>
                                 </div>
                             </div>
                             <div class="col-md-6">
                                 <div class="mb-3">
                                     <label class="form-label">Details (AR)</label>
-                                    <textarea name="detailsAR" id="detailsAR" class="form-control" rows="10">{{ old('detailsAR', $page->detailsAR ?? '') }}</textarea>
+                                    <div id="detailsAR-editor" style="height: 300px;">
+                                        {!! old('detailsAR', $page->detailsAR ?? '') !!}
+                                    </div>
+                                    <textarea name="detailsAR" id="detailsAR" class="form-control d-none" style="display: none;">{{ old('detailsAR', $page->detailsAR ?? '') }}</textarea>
                                     <div class="invalid-feedback"></div>
                                 </div>
                             </div>
@@ -75,7 +81,7 @@
 @endsection
 
 @section('scripts')
-    <script src="https://cdn.ckeditor.com/4.22.1/standard/ckeditor.js"></script>
+    @vite(['node_modules/quill/dist/quill.core.css', 'node_modules/quill/dist/quill.snow.css', 'resources/js/pages/home-page-editor.js'])
     <script>
         // Wait for jQuery to be available
         (function() {
@@ -89,37 +95,6 @@
 
                 $(document).ready(function() {
                     console.log('✅ Document ready for Home Page');
-
-                    // Initialize CKEditor
-                    if (typeof CKEDITOR !== 'undefined') {
-                        CKEDITOR.replace('details', {
-                            height: 300,
-                            toolbar: [
-                                { name: 'document', items: ['Source'] },
-                                { name: 'basicstyles', items: ['Bold', 'Italic', 'Underline', 'Strike'] },
-                                { name: 'paragraph', items: ['NumberedList', 'BulletedList', '-', 'Blockquote'] },
-                                { name: 'links', items: ['Link', 'Unlink'] },
-                                { name: 'insert', items: ['Image', 'Table'] },
-                                { name: 'styles', items: ['Format', 'Font', 'FontSize'] },
-                                { name: 'colors', items: ['TextColor', 'BGColor'] },
-                                { name: 'tools', items: ['Maximize'] }
-                            ]
-                        });
-
-                        CKEDITOR.replace('detailsAR', {
-                            height: 300,
-                            toolbar: [
-                                { name: 'document', items: ['Source'] },
-                                { name: 'basicstyles', items: ['Bold', 'Italic', 'Underline', 'Strike'] },
-                                { name: 'paragraph', items: ['NumberedList', 'BulletedList', '-', 'Blockquote'] },
-                                { name: 'links', items: ['Link', 'Unlink'] },
-                                { name: 'insert', items: ['Image', 'Table'] },
-                                { name: 'styles', items: ['Format', 'Font', 'FontSize'] },
-                                { name: 'colors', items: ['TextColor', 'BGColor'] },
-                                { name: 'tools', items: ['Maximize'] }
-                            ]
-                        });
-                    }
 
                     // Block native submit
                     $(document).off('submit', '#homePageForm');
@@ -164,9 +139,15 @@
                     function submitHomePageForm(form) {
                         console.log('📤 submitHomePageForm called');
 
-                        // Update CKEditor content before submitting
-                        for (var instance in CKEDITOR.instances) {
-                            CKEDITOR.instances[instance].updateElement();
+                        // Update Quill editor content before submitting
+                        if (window.detailsQuill) {
+                            const detailsContent = window.detailsQuill.root.innerHTML;
+                            document.getElementById('details').value = detailsContent;
+                        }
+
+                        if (window.detailsARQuill) {
+                            const detailsARContent = window.detailsARQuill.root.innerHTML;
+                            document.getElementById('detailsAR').value = detailsARContent;
                         }
 
                         const formData = new FormData(form);

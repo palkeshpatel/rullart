@@ -8,7 +8,7 @@ class HomeGallery extends Model
 {
     protected $table = 'homegallery';
     protected $primaryKey = 'homegalleryid';
-    public $incrementing = true;
+    public $incrementing = false; // Set to false since we're manually setting the ID
     public $timestamps = false;
 
     protected $fillable = [

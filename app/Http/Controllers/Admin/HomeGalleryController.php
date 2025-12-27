@@ -68,57 +68,90 @@ class HomeGalleryController extends Controller
             'titleAR' => 'nullable|string|max:500',
             'descr' => 'nullable|string|max:5000',
             'descrAR' => 'nullable|string|max:1500',
-            'link' => 'nullable|url|max:500',
+            'link' => 'nullable|string|max:500',
             'photo' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
             'photo_mobile' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
             'photo_ar' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
             'photo_mobile_ar' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
-            'videourl' => 'nullable|url|max:500',
+            'videourl' => 'nullable|string|max:500',
             'displayorder' => 'nullable|integer|min:0',
             'ispublished' => 'nullable',
         ], [
             'title.required' => 'Title(EN) is required.',
-            'link.url' => 'Please enter a valid URL.',
-            'videourl.url' => 'Please enter a valid video URL.',
             'photo.image' => 'Photo must be an image file.',
             'photo_mobile.image' => 'Mobile photo must be an image file.',
         ]);
+
+        // Validate URLs only if they are provided and not empty
+        if (!empty($validated['link']) && !filter_var($validated['link'], FILTER_VALIDATE_URL)) {
+            if ($request->ajax() || $request->expectsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Please enter a valid URL for the link field.',
+                    'errors' => ['link' => ['Please enter a valid URL.']]
+                ], 422);
+            }
+            return back()->withErrors(['link' => 'Please enter a valid URL.'])->withInput();
+        }
+
+        if (!empty($validated['videourl']) && !filter_var($validated['videourl'], FILTER_VALIDATE_URL)) {
+            if ($request->ajax() || $request->expectsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Please enter a valid URL for the video URL field.',
+                    'errors' => ['videourl' => ['Please enter a valid video URL.']]
+                ], 422);
+            }
+            return back()->withErrors(['videourl' => 'Please enter a valid video URL.'])->withInput();
+        }
 
         $validated['ispublished'] = $request->has('ispublished') ? 1 : 0;
         $validated['displayorder'] = $validated['displayorder'] ?? 0;
         $validated['updateddate'] = now()->format('Y-m-d');
         $validated['updatedby'] = auth()->id() ?? 1;
 
+        // Create uploads directory if it doesn't exist
+        $uploadPath = public_path('uploads/homegallery');
+        if (!file_exists($uploadPath)) {
+            mkdir($uploadPath, 0755, true);
+        }
+
         // Handle file uploads
         if ($request->hasFile('photo')) {
             $photo = $request->file('photo');
             $photoName = time() . '_' . $photo->getClientOriginalName();
-            $photo->move(public_path('uploads/homegallery'), $photoName);
+            $photo->move($uploadPath, $photoName);
             $validated['photo'] = $photoName;
         }
 
         if ($request->hasFile('photo_mobile')) {
             $photoMobile = $request->file('photo_mobile');
             $photoMobileName = time() . '_mobile_' . $photoMobile->getClientOriginalName();
-            $photoMobile->move(public_path('uploads/homegallery'), $photoMobileName);
+            $photoMobile->move($uploadPath, $photoMobileName);
             $validated['photo_mobile'] = $photoMobileName;
         }
 
         if ($request->hasFile('photo_ar')) {
             $photoAr = $request->file('photo_ar');
             $photoArName = time() . '_ar_' . $photoAr->getClientOriginalName();
-            $photoAr->move(public_path('uploads/homegallery'), $photoArName);
+            $photoAr->move($uploadPath, $photoArName);
             $validated['photo_ar'] = $photoArName;
         }
 
         if ($request->hasFile('photo_mobile_ar')) {
             $photoMobileAr = $request->file('photo_mobile_ar');
             $photoMobileArName = time() . '_mobile_ar_' . $photoMobileAr->getClientOriginalName();
-            $photoMobileAr->move(public_path('uploads/homegallery'), $photoMobileArName);
+            $photoMobileAr->move($uploadPath, $photoMobileArName);
             $validated['photo_mobile_ar'] = $photoMobileArName;
         }
 
         try {
+            // Get the next ID if auto-increment is not working
+            if (!isset($validated['homegalleryid'])) {
+                $maxId = HomeGallery::max('homegalleryid') ?? 0;
+                $validated['homegalleryid'] = $maxId + 1;
+            }
+
             $homeGallery = HomeGallery::create($validated);
 
             if ($request->ajax() || $request->expectsJson()) {
@@ -132,13 +165,44 @@ class HomeGalleryController extends Controller
             return redirect()->route('admin.home-gallery')
                 ->with('success', 'Photo added successfully');
         } catch (\Illuminate\Database\QueryException $e) {
+            // Log the actual error for debugging
+            Log::error('HomeGallery Store Error: ' . $e->getMessage());
+            Log::error('HomeGallery Store Error Trace: ' . $e->getTraceAsString());
+
             $errorMessage = 'An error occurred while saving the photo.';
+            
+            // Provide more specific error messages
+            if ($e->getCode() == 23000) {
+                $errorMessage = 'A photo with this title already exists or there was a database constraint violation.';
+            } elseif (str_contains($e->getMessage(), 'SQLSTATE[23000]')) {
+                $errorMessage = 'Database error: Duplicate entry or constraint violation.';
+            } elseif (str_contains($e->getMessage(), 'SQLSTATE[HY000]')) {
+                $errorMessage = 'Database connection error. Please try again.';
+            }
 
             if ($request->ajax() || $request->expectsJson()) {
                 return response()->json([
                     'success' => false,
                     'message' => $errorMessage,
-                    'errors' => ['title' => [$errorMessage]]
+                    'errors' => ['title' => [$errorMessage]],
+                    'debug' => config('app.debug') ? $e->getMessage() : null
+                ], 422);
+            }
+
+            return back()->withErrors(['title' => $errorMessage])->withInput();
+        } catch (\Exception $e) {
+            // Catch any other exceptions
+            Log::error('HomeGallery Store Exception: ' . $e->getMessage());
+            Log::error('HomeGallery Store Exception Trace: ' . $e->getTraceAsString());
+
+            $errorMessage = 'An unexpected error occurred while saving the photo.';
+
+            if ($request->ajax() || $request->expectsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => $errorMessage,
+                    'errors' => ['title' => [$errorMessage]],
+                    'debug' => config('app.debug') ? $e->getMessage() : null
                 ], 422);
             }
 
@@ -214,30 +278,51 @@ class HomeGalleryController extends Controller
             }
         }
 
-        $validated = $request->validate([
-            'title' => 'required|string|max:250',
-            'titleAR' => 'nullable|string|max:500',
-            'descr' => 'nullable|string|max:5000',
-            'descrAR' => 'nullable|string|max:1500',
-            'link' => 'nullable|url|max:500',
-            'photo' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
-            'photo_mobile' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
-            'photo_ar' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
-            'photo_mobile_ar' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
-            'videourl' => 'nullable|url|max:500',
-            'displayorder' => 'nullable|integer|min:0',
-            'ispublished' => 'nullable',
-        ], [
-            'title.required' => 'Title(EN) is required.',
-            'link.url' => 'Please enter a valid URL.',
-            'videourl.url' => 'Please enter a valid video URL.',
-            'photo.image' => 'Photo must be an image file.',
-            'photo_mobile.image' => 'Mobile photo must be an image file.',
-        ]);
+            $validated = $request->validate([
+                'title' => 'required|string|max:250',
+                'titleAR' => 'nullable|string|max:500',
+                'descr' => 'nullable|string|max:5000',
+                'descrAR' => 'nullable|string|max:1500',
+                'link' => 'nullable|string|max:500',
+                'photo' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+                'photo_mobile' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+                'photo_ar' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+                'photo_mobile_ar' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+                'videourl' => 'nullable|string|max:500',
+                'displayorder' => 'nullable|integer|min:0',
+                'ispublished' => 'nullable',
+            ], [
+                'title.required' => 'Title(EN) is required.',
+                'photo.image' => 'Photo must be an image file.',
+                'photo_mobile.image' => 'Mobile photo must be an image file.',
+            ]);
 
-        $validated['ispublished'] = $request->has('ispublished') ? 1 : 0;
-        $validated['updateddate'] = now()->format('Y-m-d');
-        $validated['updatedby'] = auth()->id() ?? 1;
+            // Validate URLs only if they are provided and not empty
+            if (!empty($validated['link']) && !filter_var($validated['link'], FILTER_VALIDATE_URL)) {
+                if ($request->ajax() || $request->expectsJson()) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Please enter a valid URL for the link field.',
+                        'errors' => ['link' => ['Please enter a valid URL.']]
+                    ], 422);
+                }
+                return back()->withErrors(['link' => 'Please enter a valid URL.'])->withInput();
+            }
+
+            if (!empty($validated['videourl']) && !filter_var($validated['videourl'], FILTER_VALIDATE_URL)) {
+                if ($request->ajax() || $request->expectsJson()) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Please enter a valid URL for the video URL field.',
+                        'errors' => ['videourl' => ['Please enter a valid video URL.']]
+                    ], 422);
+                }
+                return back()->withErrors(['videourl' => 'Please enter a valid video URL.'])->withInput();
+            }
+
+            $validated['ispublished'] = $request->has('ispublished') ? 1 : 0;
+            $validated['updateddate'] = now()->format('Y-m-d');
+            $validated['updatedby'] = auth()->id() ?? 1;
 
         // Handle file uploads (only if new files are uploaded)
         if ($request->hasFile('photo')) {
