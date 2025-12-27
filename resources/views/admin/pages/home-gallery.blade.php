@@ -1,16 +1,34 @@
-@extends('layouts.vertical', ['title' => 'Courier Company List'])
+@extends('layouts.vertical', ['title' => 'Home Gallery List'])
 
 @section('content')
-    @include('layouts.partials/page-title', ['title' => 'Courier Company List'])
+    @include('layouts.partials/page-title', ['title' => 'Home Gallery List'])
 
     <div class="row">
         <div class="col-12">
-            <!-- Courier Company Table Card -->
+            <!-- Filters Section -->
+            <form method="GET" action="{{ route('admin.home-gallery') }}" data-table-filters id="homeGalleryFilterForm">
+                <div class="card mb-3">
+                    <div class="card-body">
+                        <div class="row align-items-end">
+                            <div class="col-md-3">
+                                <label class="form-label mb-1">Published:</label>
+                                <select name="published" class="form-select form-select-sm" data-filter>
+                                    <option value="">All</option>
+                                    <option value="1" {{ request('published') == '1' ? 'selected' : '' }}>Published</option>
+                                    <option value="0" {{ request('published') == '0' ? 'selected' : '' }}>Unpublished</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </form>
+
+            <!-- Home Gallery Table Card -->
             <div class="card">
                 <div class="card-header justify-content-between align-items-center border-dashed">
-                    <h4 class="card-title mb-0">Courier Company List</h4>
-                    <a href="javascript:void(0);" class="btn btn-success btn-sm add-courier-btn">
-                        <i class="ti ti-plus me-1"></i> Add Courier Company
+                    <h4 class="card-title mb-0">Home Gallery List</h4>
+                    <a href="javascript:void(0);" class="btn btn-success btn-sm add-home-gallery-btn">
+                        <i class="ti ti-plus me-1"></i> Add Photo
                     </a>
                 </div>
                 <div class="card-body">
@@ -20,7 +38,7 @@
                             <div class="d-flex gap-2 justify-content-between align-items-center">
                                 <div class="app-search app-search-sm" style="max-width: 300px;">
                                     <input type="text" name="search" class="form-control form-control-sm" data-search
-                                        placeholder="Search courier companies..." value="{{ request('search') }}">
+                                        placeholder="Search gallery..." value="{{ request('search') }}">
                                     <i data-lucide="search" class="app-search-icon text-muted"></i>
                                 </div>
                                 <div class="d-flex align-items-center">
@@ -42,12 +60,12 @@
 
                     <!-- Table Container -->
                     <div class="table-container">
-                        @include('admin.masters.partials.courier.courier-company-table', ['courierCompanies' => $courierCompanies])
+                        @include('admin.pages.partials.home-gallery.home-gallery-table', ['homeGalleries' => $homeGalleries])
                     </div>
 
                     <!-- Pagination -->
                     <div class="pagination-container">
-                        @include('admin.partials.pagination', ['items' => $courierCompanies])
+                        @include('admin.partials.pagination', ['items' => $homeGalleries])
                     </div>
                 </div>
             </div>
@@ -55,94 +73,90 @@
     </div>
 
     <!-- Modal Container -->
-    <div id="courierCompanyModalContainer"></div>
-    <div id="courierCompanyViewModalContainer"></div>
+    <div id="homeGalleryModalContainer"></div>
+    <div id="homeGalleryViewModalContainer"></div>
 @endsection
-
 
 @section('scripts')
     <script>
         // Wait for jQuery to be available (Vite loads scripts asynchronously)
         (function() {
-            function initCourierCompanyScript() {
+            function initHomeGalleryScript() {
                 if (typeof jQuery === 'undefined' || typeof jQuery.fn.validate === 'undefined') {
-                    setTimeout(initCourierCompanyScript, 50);
+                    setTimeout(initHomeGalleryScript, 50);
                     return;
                 }
 
                 const $ = jQuery;
 
                 $(document).ready(function() {
-
-                    console.log('✅ Document ready for Courier Company');
-
-                    // Load table from URL parameters on page load
+                    console.log('✅ Document ready for Home Gallery');
                     loadTableFromURL();
 
                     /* -----------------------------------
                      HARD BLOCK native submit (AJAX forms)
                     ----------------------------------- */
-                    $(document).off('submit', '#courierCompanyForm');
-                    $(document).on('submit', '#courierCompanyForm', function(e) {
+                    $(document).off('submit', '#homeGalleryForm');
+                    $(document).on('submit', '#homeGalleryForm', function(e) {
                         console.log('🚫 Native submit blocked');
                         e.preventDefault();
                         return false;
                     });
 
                     /* -----------------------------------
-                     ADD COURIER BUTTON (OPEN MODAL ONLY)
+                     ADD HOME GALLERY BUTTON
                     ----------------------------------- */
-                    $(document).on('click', '.add-courier-btn', function(e) {
+                    $(document).on('click', '.add-home-gallery-btn', function(e) {
                         e.preventDefault();
-                        console.log('➕ Add Courier Company clicked (open modal)');
-                        openCourierFormModal();
+                        console.log('➕ Add Photo clicked');
+                        openHomeGalleryFormModal();
                     });
 
                     /* -----------------------------------
-                     EDIT COURIER BUTTON
+                     EDIT HOME GALLERY BUTTON
                     ----------------------------------- */
-                    $(document).on('click', '.edit-courier-btn', function(e) {
+                    $(document).on('click', '.edit-home-gallery-btn', function(e) {
                         e.preventDefault();
-                        const courierId = $(this).data('courier-id');
-                        console.log('✏️ Edit Courier Company clicked, ID:', courierId);
-                        openCourierFormModal(courierId);
+                        const homeGalleryId = $(this).data('home-gallery-id');
+                        console.log('✏️ Edit Photo clicked, ID:', homeGalleryId);
+                        openHomeGalleryFormModal(homeGalleryId);
                     });
 
                     /* -----------------------------------
-                     VIEW COURIER BUTTON
+                     VIEW HOME GALLERY BUTTON
                     ----------------------------------- */
-                    $(document).on('click', '.view-courier-btn', function(e) {
+                    $(document).on('click', '.view-home-gallery-btn', function(e) {
                         e.preventDefault();
-                        const courierId = $(this).data('courier-id');
-                        console.log('👁️ View Courier Company clicked, ID:', courierId);
-                        openCourierViewModal(courierId);
+                        const homeGalleryId = $(this).data('home-gallery-id');
+                        console.log('👁️ View Photo clicked, ID:', homeGalleryId);
+                        openHomeGalleryViewModal(homeGalleryId);
                     });
 
                     /* -----------------------------------
-                     DELETE COURIER BUTTON
+                     DELETE HOME GALLERY BUTTON
                     ----------------------------------- */
-                    $(document).on('click', '.delete-courier-btn', function(e) {
+                    $(document).on('click', '.delete-home-gallery-btn', function(e) {
                         e.preventDefault();
                         e.stopPropagation();
-                        const courierId = $(this).data('courier-id');
-                        const courierName = $(this).data('courier-name') || 'this courier company';
-                        console.log('🗑️ Delete Courier Company clicked, ID:', courierId);
-                        confirmDeleteCourier(courierId, courierName);
+                        const homeGalleryId = $(this).data('home-gallery-id');
+                        const homeGalleryTitle = $(this).data('home-gallery-title') || 'this photo';
+                        console.log('🗑️ Delete Photo clicked, ID:', homeGalleryId);
+                        confirmDeleteHomeGallery(homeGalleryId, homeGalleryTitle);
                     });
 
                     /* -----------------------------------
                      OPEN VIEW MODAL
                     ----------------------------------- */
-                    function openCourierViewModal(courierId) {
-                        console.log('📦 Opening courier view modal, ID:', courierId);
+                    function openHomeGalleryViewModal(homeGalleryId) {
+                        console.log('📦 Opening home gallery view modal, ID:', homeGalleryId);
 
                         cleanupModals();
 
-                        const url = '{{ route('admin.courier-company.show', ':id') }}'.replace(':id', courierId);
+                        const url = '{{ route('admin.home-gallery.show', ':id') }}'.replace(':id', homeGalleryId);
 
-                        $('#courierCompanyViewModalContainer').html(loaderHtml());
+                        $('#homeGalleryViewModalContainer').html(loaderHtml());
 
-                        const loadingModal = new bootstrap.Modal($('#courierCompanyModal')[0], {
+                        const loadingModal = new bootstrap.Modal($('#homeGalleryModal')[0], {
                             backdrop: 'static',
                             keyboard: false
                         });
@@ -155,55 +169,51 @@
                             loadingModal.hide();
                             cleanupModals();
 
-                            $('#courierCompanyViewModalContainer').html(response.html);
+                            $('#homeGalleryViewModalContainer').html(response.html);
 
-                            const modalEl = document.getElementById('courierCompanyViewModal');
+                            const modalEl = document.getElementById('homeGalleryViewModal');
                             const modal = new bootstrap.Modal(modalEl);
                             modal.show();
 
                             // Handle edit button click from view modal
-                            $(modalEl).find('.edit-courier-btn').on('click', function(e) {
+                            $(modalEl).find('.edit-home-gallery-btn').on('click', function(e) {
                                 e.preventDefault();
-                                const editCourierId = $(this).data('courier-id');
+                                const editHomeGalleryId = $(this).data('home-gallery-id');
                                 modal.hide();
                                 cleanupModals();
-                                // Open edit modal
                                 setTimeout(() => {
-                                    openCourierFormModal(editCourierId);
+                                    openHomeGalleryFormModal(editHomeGalleryId);
                                 }, 300);
                             });
 
                             // Cleanup on close
                             modalEl.addEventListener('hidden.bs.modal', function() {
                                 cleanupModals();
-                            }, {
-                                once: true
-                            });
+                            }, { once: true });
 
                         }).catch(err => {
                             console.error('❌ Failed to load view', err);
                             loadingModal.hide();
                             cleanupModals();
-                            showToastInModal(null, 'Failed to load courier company details.', 'error');
+                            showToastInModal(null, 'Failed to load photo details.', 'error');
                         });
                     }
 
                     /* -----------------------------------
                      OPEN FORM MODAL
                     ----------------------------------- */
-                    function openCourierFormModal(courierId = null) {
-
-                        console.log('📦 Opening courier form modal, ID:', courierId);
+                    function openHomeGalleryFormModal(homeGalleryId = null) {
+                        console.log('📦 Opening home gallery form modal, ID:', homeGalleryId);
 
                         cleanupModals();
 
-                        const url = courierId ?
-                            '{{ route('admin.courier-company.edit', ':id') }}'.replace(':id', courierId) :
-                            '{{ route('admin.courier-company.create') }}';
+                        const url = homeGalleryId ?
+                            '{{ route('admin.home-gallery.edit', ':id') }}'.replace(':id', homeGalleryId) :
+                            '{{ route('admin.home-gallery.create') }}';
 
-                        $('#courierCompanyModalContainer').html(loaderHtml());
+                        $('#homeGalleryModalContainer').html(loaderHtml());
 
-                        const loadingModal = new bootstrap.Modal($('#courierCompanyModal')[0], {
+                        const loadingModal = new bootstrap.Modal($('#homeGalleryModal')[0], {
                             backdrop: 'static',
                             keyboard: false
                         });
@@ -211,20 +221,19 @@
                         loadingModal.show();
 
                         AdminAjax.get(url).then(response => {
-
                             console.log('📥 Form HTML loaded');
 
                             loadingModal.hide();
                             cleanupModals();
 
-                            $('#courierCompanyModalContainer').html(response.html);
+                            $('#homeGalleryModalContainer').html(response.html);
 
-                            const modalEl = document.getElementById('courierCompanyModal');
+                            const modalEl = document.getElementById('homeGalleryModal');
                             const modal = new bootstrap.Modal(modalEl);
                             modal.show();
 
                             // IMPORTANT
-                            setupCourierValidation(courierId, modal);
+                            setupHomeGalleryValidation(homeGalleryId, modal);
 
                         }).catch(err => {
                             console.error('❌ Failed to load form', err);
@@ -236,15 +245,14 @@
                     /* -----------------------------------
                      VALIDATION SETUP
                     ----------------------------------- */
-                    function setupCourierValidation(courierId, modal) {
+                    function setupHomeGalleryValidation(homeGalleryId, modal) {
+                        const $form = $('#homeGalleryForm');
 
-                        const $form = $('#courierCompanyForm');
-
-                        console.log('🧪 setupCourierValidation called');
+                        console.log('🧪 setupHomeGalleryValidation called');
                         console.log('Form exists:', $form.length);
 
                         if (!$form.length) {
-                            console.warn('❌ #courierCompanyForm not found');
+                            console.warn('❌ #homeGalleryForm not found');
                             return;
                         }
 
@@ -257,16 +265,28 @@
 
                         $form.validate({
                             rules: {
-                                name: {
+                                title: {
                                     required: true
                                 },
-                                tracking_url: {
+                                link: {
                                     url: true
+                                },
+                                videourl: {
+                                    url: true
+                                },
+                                displayorder: {
+                                    number: true,
+                                    min: 0
                                 }
                             },
                             messages: {
-                                name: 'Courier Company Name is required',
-                                tracking_url: 'Please enter a valid URL'
+                                title: 'Title(EN) is required',
+                                link: 'Please enter a valid URL',
+                                videourl: 'Please enter a valid video URL',
+                                displayorder: {
+                                    number: 'Display Order must be a number',
+                                    min: 'Display Order cannot be negative'
+                                }
                             },
                             errorElement: 'div',
                             errorClass: 'invalid-feedback',
@@ -286,8 +306,8 @@
                                 console.log('Errors:', validator.errorList);
                             },
                             submitHandler(form) {
-                                console.log('🚀 Validation passed → submitCourierForm()');
-                                submitCourierForm(form, courierId, modal);
+                                console.log('🚀 Validation passed → submitHomeGalleryForm()');
+                                submitHomeGalleryForm(form, homeGalleryId, modal);
                             }
                         });
                     }
@@ -295,9 +315,8 @@
                     /* -----------------------------------
                      SUBMIT FORM (AJAX)
                     ----------------------------------- */
-                    function submitCourierForm(form, courierId, modal) {
-
-                        console.log('📤 submitCourierForm called');
+                    function submitHomeGalleryForm(form, homeGalleryId, modal) {
+                        console.log('📤 submitHomeGalleryForm called');
 
                         const formData = new FormData(form);
                         const url = form.action;
@@ -307,34 +326,27 @@
                         const originalText = submitBtn.innerHTML;
                         submitBtn.setAttribute('data-original-text', originalText);
                         submitBtn.disabled = true;
-                        submitBtn.innerHTML =
-                            '<span class="spinner-border spinner-border-sm me-1"></span> Saving...';
+                        submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Saving...';
 
                         AdminAjax.request(url, method, formData)
                             .then(res => {
                                 console.log('✅ AJAX success:', res);
-                                // Show success toast before closing modal
-                                showToastInModal(modal, res.message || 'Courier company saved successfully',
-                                    'success');
+                                showToastInModal(modal, res.message || 'Photo saved successfully', 'success');
 
-                                // Close modal after a short delay to show success message
                                 setTimeout(() => {
                                     modal.hide();
                                 }, 1500);
 
-                                // Reload table with current page preserved
-                                reloadCourierCompaniesTable();
+                                reloadHomeGalleryTable();
                             })
                             .catch(err => {
                                 console.error('❌ AJAX error:', err);
 
-                                // Get error message from server response
-                                let errorMessage = 'Failed to save courier company.';
+                                let errorMessage = 'Failed to save photo.';
 
                                 if (err.message) {
                                     errorMessage = err.message;
                                 } else if (err.errors) {
-                                    // Handle validation errors
                                     const firstError = Object.values(err.errors)[0];
                                     if (Array.isArray(firstError)) {
                                         errorMessage = firstError[0];
@@ -343,32 +355,28 @@
                                     }
                                 }
 
-                                // Show red error toast outside modal (top-right corner)
                                 showToastInModal(modal, errorMessage, 'error');
 
-                                // Clear any previous validation states (keep form clean - no field errors shown)
-                                const $form = $('#courierCompanyForm');
+                                const $form = $('#homeGalleryForm');
                                 $form.find('.is-invalid').removeClass('is-invalid');
                                 $form.find('.is-valid').removeClass('is-valid');
                                 $form.find('[id$="-error"]').remove();
                                 $form.find('.invalid-feedback').html('').removeClass('d-block').hide();
 
                                 submitBtn.disabled = false;
-                                submitBtn.innerHTML = submitBtn.getAttribute('data-original-text') ||
-                                    originalText;
+                                submitBtn.innerHTML = submitBtn.getAttribute('data-original-text') || originalText;
                             });
                     }
 
                     /* -----------------------------------
-                     CONFIRM DELETE COURIER
+                     CONFIRM DELETE HOME GALLERY
                     ----------------------------------- */
-                    function confirmDeleteCourier(courierId, courierName) {
-                        // Remove existing delete modal if any
-                        $('#deleteCourierModal').remove();
+                    function confirmDeleteHomeGallery(homeGalleryId, homeGalleryTitle) {
+                        $('#deleteHomeGalleryModal').remove();
                         $('.modal-backdrop').remove();
 
                         const modalHtml = `
-                            <div class="modal fade" id="deleteCourierModal" tabindex="-1">
+                            <div class="modal fade" id="deleteHomeGalleryModal" tabindex="-1">
                                 <div class="modal-dialog">
                                     <div class="modal-content">
                                         <div class="modal-header">
@@ -376,12 +384,12 @@
                                             <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                                         </div>
                                         <div class="modal-body">
-                                            <p>Are you sure you want to delete "<strong>${courierName}</strong>"?</p>
+                                            <p>Are you sure you want to delete "<strong>${homeGalleryTitle}</strong>"?</p>
                                             <p class="text-danger mb-0">This action cannot be undone.</p>
                                         </div>
                                         <div class="modal-footer">
                                             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                                            <button type="button" class="btn btn-danger" id="confirmDeleteCourierBtn">Delete</button>
+                                            <button type="button" class="btn btn-danger" id="confirmDeleteHomeGalleryBtn">Delete</button>
                                         </div>
                                     </div>
                                 </div>
@@ -390,47 +398,43 @@
 
                         $('body').append(modalHtml);
 
-                        const modalEl = document.getElementById('deleteCourierModal');
+                        const modalEl = document.getElementById('deleteHomeGalleryModal');
                         const modal = new bootstrap.Modal(modalEl);
 
                         modalEl.addEventListener('hidden.bs.modal', function() {
                             modalEl.remove();
                             cleanupModals();
-                        }, {
-                            once: true
-                        });
+                        }, { once: true });
 
-                        const deleteBtn = document.getElementById('confirmDeleteCourierBtn');
+                        const deleteBtn = document.getElementById('confirmDeleteHomeGalleryBtn');
                         deleteBtn.onclick = function() {
-                            deleteCourier(courierId, modal, deleteBtn);
+                            deleteHomeGallery(homeGalleryId, modal, deleteBtn);
                         };
 
                         modal.show();
                     }
 
                     /* -----------------------------------
-                     DELETE COURIER
+                     DELETE HOME GALLERY
                     ----------------------------------- */
-                    function deleteCourier(courierId, modal, deleteBtn) {
+                    function deleteHomeGallery(homeGalleryId, modal, deleteBtn) {
                         const originalText = deleteBtn.innerHTML;
                         deleteBtn.disabled = true;
-                        deleteBtn.innerHTML =
-                            '<span class="spinner-border spinner-border-sm me-1"></span> Deleting...';
+                        deleteBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Deleting...';
 
-                        const url = '{{ route('admin.courier-company.destroy', ':id') }}'.replace(':id', courierId);
+                        const url = '{{ route('admin.home-gallery.destroy', ':id') }}'.replace(':id', homeGalleryId);
 
                         AdminAjax.request(url, 'DELETE')
                             .then(response => {
-                                console.log('✅ Courier company deleted successfully');
-                                showToastInModal(null, response.message || 'Courier company deleted successfully', 'success');
+                                console.log('✅ Photo deleted successfully');
+                                showToastInModal(null, response.message || 'Photo deleted successfully', 'success');
                                 modal.hide();
 
-                                // Reload table with current page preserved
-                                reloadCourierCompaniesTable();
+                                reloadHomeGalleryTable();
                             })
                             .catch(error => {
-                                console.error('❌ Error deleting courier company:', error);
-                                showToastInModal(null, error.message || 'Failed to delete courier company.', 'error');
+                                console.error('❌ Error deleting photo:', error);
+                                showToastInModal(null, error.message || 'Failed to delete photo.', 'error');
                                 deleteBtn.disabled = false;
                                 deleteBtn.innerHTML = originalText;
                             });
@@ -444,51 +448,52 @@
                         const page = urlParams.get('page');
                         const perPage = urlParams.get('per_page');
                         const search = urlParams.get('search');
+                        const published = urlParams.get('published');
 
-                        // Only load via AJAX if URL has parameters (otherwise use server-rendered content)
-                        if (page || perPage || search) {
+                        if (page || perPage || search || published) {
                             const params = {};
                             if (page) params.page = page;
                             if (perPage) params.per_page = perPage;
                             if (search) params.search = search;
+                            if (published) params.published = published;
 
-                            // Update per page select if URL has per_page
                             if (perPage && $('#perPageSelect').length) {
                                 $('#perPageSelect').val(perPage);
                             }
 
-                            // Update search input if URL has search
                             if (search && $('[data-search]').length) {
                                 $('[data-search]').val(search);
                             }
 
+                            if (published && $('[data-filter][name="published"]').length) {
+                                $('[data-filter][name="published"]').val(published);
+                            }
+
                             console.log('📄 Loading table from URL params:', params);
 
-                            AdminAjax.loadTable('{{ route('admin.courier-company') }}', $('.table-container')[0], {
+                            AdminAjax.loadTable('{{ route('admin.home-gallery') }}', $('.table-container')[0], {
                                 params: params,
-                    onSuccess: function(response) {
-                        if (response.pagination) {
+                                onSuccess: function(response) {
+                                    if (response.pagination) {
                                         $('.pagination-container').html(response.pagination);
                                     }
-                                    // Re-bind event handlers for dynamically loaded content
                                     bindPaginationHandlers();
                                 }
                             });
                         } else {
-                            // No URL params, just bind handlers for existing content
                             bindPaginationHandlers();
                         }
                     }
 
                     /* -----------------------------------
-                     RELOAD COURIER COMPANIES TABLE (PRESERVE PAGE)
+                     RELOAD HOME GALLERY TABLE
                     ----------------------------------- */
-                    function reloadCourierCompaniesTable() {
-                        // Get current page from URL or pagination
+                    function reloadHomeGalleryTable() {
                         const urlParams = new URLSearchParams(window.location.search);
                         const currentPage = urlParams.get('page') || 1;
                         const currentPerPage = urlParams.get('per_page') || $('#perPageSelect').val() || 25;
                         const currentSearch = urlParams.get('search') || $('[data-search]').val() || '';
+                        const currentPublishedFilter = $('[data-filter][name="published"]').val() || '';
 
                         const params = {
                             page: currentPage,
@@ -498,16 +503,18 @@
                         if (currentSearch) {
                             params.search = currentSearch;
                         }
+                        if (currentPublishedFilter) {
+                            params.published = currentPublishedFilter;
+                        }
 
                         console.log('🔄 Reloading table with params:', params);
 
-                        AdminAjax.loadTable('{{ route('admin.courier-company') }}', $('.table-container')[0], {
+                        AdminAjax.loadTable('{{ route('admin.home-gallery') }}', $('.table-container')[0], {
                             params: params,
                             onSuccess: function(response) {
                                 if (response.pagination) {
                                     $('.pagination-container').html(response.pagination);
                                 }
-                                // Re-bind event handlers for dynamically loaded content
                                 bindPaginationHandlers();
                             }
                         });
@@ -517,10 +524,8 @@
                      BIND PAGINATION HANDLERS (AJAX)
                     ----------------------------------- */
                     function bindPaginationHandlers() {
-                        // Remove existing handlers to prevent duplicates
                         $(document).off('click', '.pagination a');
 
-                        // Bind pagination links to use AJAX
                         $(document).on('click', '.pagination a', function(e) {
                             e.preventDefault();
                             e.stopPropagation();
@@ -531,12 +536,12 @@
                             }
 
                             console.log('📄 Pagination clicked:', url);
-                    
-                            // Extract page number from URL
+
                             const urlObj = new URL(url, window.location.origin);
                             const page = urlObj.searchParams.get('page') || 1;
                             const perPage = urlObj.searchParams.get('per_page') || $('#perPageSelect').val() || 25;
                             const search = urlObj.searchParams.get('search') || $('[data-search]').val() || '';
+                            const published = urlObj.searchParams.get('published') || $('[data-filter][name="published"]').val() || '';
 
                             const params = {
                                 page: page,
@@ -546,8 +551,10 @@
                             if (search) {
                                 params.search = search;
                             }
+                            if (published) {
+                                params.published = published;
+                            }
 
-                            // Update URL without reload
                             const newUrl = new URL(window.location.pathname, window.location.origin);
                             Object.keys(params).forEach(key => {
                                 if (params[key]) {
@@ -556,13 +563,12 @@
                             });
                             window.history.pushState({}, '', newUrl.toString());
 
-                            // Load table via AJAX
-                            AdminAjax.loadTable('{{ route('admin.courier-company') }}', $('.table-container')[0], {
+                            AdminAjax.loadTable('{{ route('admin.home-gallery') }}', $('.table-container')[0], {
                                 params: params,
                                 onSuccess: function(response) {
                                     if (response.pagination) {
                                         $('.pagination-container').html(response.pagination);
-                    }
+                                    }
                                 }
                             });
                         });
@@ -574,33 +580,33 @@
                     $(document).on('change', '#perPageSelect', function(e) {
                         e.preventDefault();
                         const perPage = $(this).val();
-                        const currentPage = new URLSearchParams(window.location.search).get('page') ||
-                            1;
                         const currentSearch = $('[data-search]').val() || '';
+                        const currentPublishedFilter = $('[data-filter][name="published"]').val() || '';
 
                         const params = {
-                            page: 1, // Reset to page 1 when changing per page
+                            page: 1,
                             per_page: perPage
                         };
 
                         if (currentSearch) {
                             params.search = currentSearch;
                         }
+                        if (currentPublishedFilter) {
+                            params.published = currentPublishedFilter;
+                        }
 
-                        // Update URL without reload
                         const newUrl = new URL(window.location.pathname, window.location.origin);
                         Object.keys(params).forEach(key => {
                             if (params[key]) {
                                 newUrl.searchParams.set(key, params[key]);
                             }
-                    });
+                        });
                         window.history.pushState({}, '', newUrl.toString());
 
-                        // Load table via AJAX
-                        AdminAjax.loadTable('{{ route('admin.courier-company') }}', $('.table-container')[0], {
+                        AdminAjax.loadTable('{{ route('admin.home-gallery') }}', $('.table-container')[0], {
                             params: params,
-                        onSuccess: function(response) {
-                            if (response.pagination) {
+                            onSuccess: function(response) {
+                                if (response.pagination) {
                                     $('.pagination-container').html(response.pagination);
                                 }
                             }
@@ -617,22 +623,22 @@
 
                         searchTimeout = setTimeout(function() {
                             const searchValue = searchInput.val();
-                            const currentPage = new URLSearchParams(window.location.search).get(
-                                'page') || 1;
                             const currentPerPage = $('#perPageSelect').val() || 25;
+                            const currentPublishedFilter = $('[data-filter][name="published"]').val() || '';
 
                             const params = {
-                                page: 1, // Reset to page 1 when searching
+                                page: 1,
                                 per_page: currentPerPage
                             };
 
                             if (searchValue) {
                                 params.search = searchValue;
                             }
+                            if (currentPublishedFilter) {
+                                params.published = currentPublishedFilter;
+                            }
 
-                            // Update URL without reload
-                            const newUrl = new URL(window.location.pathname, window.location
-                                .origin);
+                            const newUrl = new URL(window.location.pathname, window.location.origin);
                             Object.keys(params).forEach(key => {
                                 if (params[key]) {
                                     newUrl.searchParams.set(key, params[key]);
@@ -640,18 +646,55 @@
                             });
                             window.history.pushState({}, '', newUrl.toString());
 
-                            // Load table via AJAX
-                            AdminAjax.loadTable('{{ route('admin.courier-company') }}', $(
-                                '.table-container')[0], {
+                            AdminAjax.loadTable('{{ route('admin.home-gallery') }}', $('.table-container')[0], {
                                 params: params,
                                 onSuccess: function(response) {
                                     if (response.pagination) {
-                                        $('.pagination-container').html(response
-                                            .pagination);
+                                        $('.pagination-container').html(response.pagination);
                                     }
                                 }
                             });
-                        }, 500); // Debounce search
+                        }, 500);
+                    });
+
+                    /* -----------------------------------
+                     FILTER HANDLER
+                    ----------------------------------- */
+                    $(document).on('change', '[data-filter]', function(e) {
+                        e.preventDefault();
+                        const filterName = $(this).attr('name');
+                        const filterValue = $(this).val();
+                        const currentPerPage = $('#perPageSelect').val() || 25;
+                        const currentSearch = $('[data-search]').val() || '';
+
+                        const params = {
+                            page: 1,
+                            per_page: currentPerPage
+                        };
+
+                        if (currentSearch) {
+                            params.search = currentSearch;
+                        }
+                        if (filterValue) {
+                            params[filterName] = filterValue;
+                        }
+
+                        const newUrl = new URL(window.location.pathname, window.location.origin);
+                        Object.keys(params).forEach(key => {
+                            if (params[key]) {
+                                newUrl.searchParams.set(key, params[key]);
+                            }
+                        });
+                        window.history.pushState({}, '', newUrl.toString());
+
+                        AdminAjax.loadTable('{{ route('admin.home-gallery') }}', $('.table-container')[0], {
+                            params: params,
+                            onSuccess: function(response) {
+                                if (response.pagination) {
+                                    $('.pagination-container').html(response.pagination);
+                                }
+                            }
+                        });
                     });
 
                     /* -----------------------------------
@@ -663,17 +706,13 @@
                      SHOW TOAST (OUTSIDE MODAL - TOP RIGHT)
                     ----------------------------------- */
                     function showToastInModal(modal, message, type = 'error') {
-                        // Create or get toast container at top-right corner of page
                         let toastContainer = $('#global-toast-container');
 
                         if (!toastContainer.length) {
-                            toastContainer = $(
-                                '<div id="global-toast-container" class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 9999;"></div>'
-                            );
+                            toastContainer = $('<div id="global-toast-container" class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 9999;"></div>');
                             $('body').append(toastContainer);
                         }
 
-                        // Remove any existing toasts of the same type to avoid stacking
                         toastContainer.find('.toast').each(function() {
                             const bsToast = bootstrap.Toast.getInstance(this);
                             if (bsToast) {
@@ -681,7 +720,6 @@
                             }
                         });
 
-                        // Create toast
                         const toastBg = type === 'error' ? 'bg-danger' : 'bg-success';
                         const toastId = 'toast-' + Date.now();
                         const toast = $(`
@@ -698,17 +736,14 @@
 
                         toastContainer.append(toast);
 
-                        // Initialize and show toast
                         const bsToast = new bootstrap.Toast(toast[0], {
                             autohide: true,
                             delay: 5000
                         });
                         bsToast.show();
 
-                        // Remove toast element after it's hidden
                         toast.on('hidden.bs.toast', function() {
                             $(this).remove();
-                            // Remove container if empty
                             if (toastContainer.find('.toast').length === 0) {
                                 toastContainer.remove();
                             }
@@ -725,27 +760,27 @@
                             overflow: '',
                             paddingRight: ''
                         });
-                        $('#courierCompanyModal').remove();
+                        $('#homeGalleryModal').remove();
                     }
 
                     function loaderHtml() {
                         return `
-        <div class="modal fade" id="courierCompanyModal">
-            <div class="modal-dialog">
-                <div class="modal-content">
-                    <div class="modal-body text-center p-4">
-                        <div class="spinner-border"></div>
+            <div class="modal fade" id="homeGalleryModal">
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        <div class="modal-body text-center p-4">
+                            <div class="spinner-border"></div>
+                        </div>
                     </div>
                 </div>
-            </div>
-        </div>`;
+            </div>`;
                     }
 
                 });
             }
 
             // Start initialization
-            initCourierCompanyScript();
+            initHomeGalleryScript();
         })();
     </script>
 @endsection

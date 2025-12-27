@@ -136,12 +136,15 @@ Route::middleware(['admin'])->prefix('admin')->name('admin.')->group(function ()
     Route::delete('courier-company/{id}', [\App\Http\Controllers\Admin\CourierCompanyController::class, 'destroy'])->name('courier-company.destroy');
 
     // Manage Pages
-    Route::get('homegallery', function () {
-        return view('admin.pages.home-gallery');
-    })->name('home-gallery');
-    Route::get('pages/home', function () {
-        return view('admin.pages.home');
-    })->name('pages.home');
+    Route::get('homegallery', [\App\Http\Controllers\Admin\HomeGalleryController::class, 'index'])->name('home-gallery');
+    Route::get('homegallery/create', [\App\Http\Controllers\Admin\HomeGalleryController::class, 'create'])->name('home-gallery.create');
+    Route::post('homegallery', [\App\Http\Controllers\Admin\HomeGalleryController::class, 'store'])->name('home-gallery.store');
+    Route::get('homegallery/{id}', [\App\Http\Controllers\Admin\HomeGalleryController::class, 'show'])->name('home-gallery.show');
+    Route::get('homegallery/{id}/edit', [\App\Http\Controllers\Admin\HomeGalleryController::class, 'edit'])->name('home-gallery.edit');
+    Route::put('homegallery/{id}', [\App\Http\Controllers\Admin\HomeGalleryController::class, 'update'])->name('home-gallery.update');
+    Route::delete('homegallery/{id}', [\App\Http\Controllers\Admin\HomeGalleryController::class, 'destroy'])->name('home-gallery.destroy');
+    Route::get('pages/home', [\App\Http\Controllers\Admin\PageController::class, 'edit'])->defaults('pagename', 'home')->name('pages.home');
+    Route::put('pages/home', [\App\Http\Controllers\Admin\PageController::class, 'update'])->defaults('pagename', 'home')->name('pages.home.update');
     Route::get('pages/aboutus', function () {
         return view('admin.pages.aboutus');
     })->name('pages.aboutus');

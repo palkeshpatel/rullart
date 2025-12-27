@@ -465,10 +465,10 @@
 
                             AdminAjax.loadTable('{{ route('admin.discounts') }}', $('.table-container')[0], {
                                 params: params,
-                                onSuccess: function(response) {
-                                    if (response.pagination) {
+                    onSuccess: function(response) {
+                        if (response.pagination) {
                                         $('.pagination-container').html(response.pagination);
-                                    }
+                        }
                                     // Re-bind event handlers for dynamically loaded content
                                     bindPaginationHandlers();
                                 }
@@ -488,7 +488,7 @@
                         const currentPage = urlParams.get('page') || 1;
                         const currentPerPage = urlParams.get('per_page') || $('#perPageSelect').val() || 25;
                         const currentSearch = urlParams.get('search') || $('[data-search]').val() || '';
-
+                    
                         const params = {
                             page: currentPage,
                             per_page: currentPerPage
@@ -499,11 +499,11 @@
                         }
 
                         console.log('🔄 Reloading table with params:', params);
-
+                    
                         AdminAjax.loadTable('{{ route('admin.discounts') }}', $('.table-container')[0], {
                             params: params,
-                            onSuccess: function(response) {
-                                if (response.pagination) {
+                        onSuccess: function(response) {
+                            if (response.pagination) {
                                     $('.pagination-container').html(response.pagination);
                                 }
                                 // Re-bind event handlers for dynamically loaded content
@@ -677,7 +677,7 @@
                             const bsToast = bootstrap.Toast.getInstance(this);
                             if (bsToast) {
                                 bsToast.hide();
-                            }
+                                }
                         });
 
                         // Create toast

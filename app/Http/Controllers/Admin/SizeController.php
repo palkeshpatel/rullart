@@ -19,7 +19,7 @@ class SizeController extends Controller
             $search = $request->search;
             $query->where(function ($q) use ($search) {
                 $q->where('filtervalue', 'like', "%{$search}%")
-                    ->orWhere('filtervalueAR', 'like', "%{$search}%");
+                  ->orWhere('filtervalueAR', 'like', "%{$search}%");
             });
         }
 

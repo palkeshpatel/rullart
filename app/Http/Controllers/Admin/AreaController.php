@@ -82,18 +82,18 @@ class AreaController extends Controller
         $validated['isactive'] = $request->has('isactive') ? 1 : 0;
 
         try {
-            $area = Area::create($validated);
+        $area = Area::create($validated);
 
-            if ($request->ajax() || $request->expectsJson()) {
-                return response()->json([
-                    'success' => true,
-                    'message' => 'Area created successfully',
-                    'data' => $area
-                ]);
-            }
+        if ($request->ajax() || $request->expectsJson()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Area created successfully',
+                'data' => $area
+            ]);
+        }
 
-            return redirect()->route('admin.areas')
-                ->with('success', 'Area created successfully');
+        return redirect()->route('admin.areas')
+            ->with('success', 'Area created successfully');
         } catch (\Illuminate\Database\QueryException $e) {
             // Handle database constraint violations
             if ($e->getCode() == 23000) {
@@ -209,18 +209,18 @@ class AreaController extends Controller
         $validated['isactive'] = $request->has('isactive') ? 1 : 0;
 
         try {
-            $area->update($validated);
+        $area->update($validated);
 
-            if ($request->ajax() || $request->expectsJson()) {
-                return response()->json([
-                    'success' => true,
-                    'message' => 'Area updated successfully',
-                    'data' => $area
-                ]);
-            }
+        if ($request->ajax() || $request->expectsJson()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Area updated successfully',
+                'data' => $area
+            ]);
+        }
 
-            return redirect()->route('admin.areas')
-                ->with('success', 'Area updated successfully');
+        return redirect()->route('admin.areas')
+            ->with('success', 'Area updated successfully');
         } catch (\Illuminate\Database\QueryException $e) {
             // Handle database constraint violations
             if ($e->getCode() == 23000) {
