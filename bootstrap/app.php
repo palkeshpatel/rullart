@@ -11,13 +11,17 @@ return Application::configure(basePath: dirname(__DIR__))
         commands: __DIR__.'/../routes/console.php',
         health: '/up',
         then: function () {
-            Route::middleware('web')
-                ->group(base_path('routes/admin.php'));
+            if (file_exists(base_path('routes/admin.php'))) {
+                Route::middleware('web')
+                    ->group(base_path('routes/admin.php'));
+            }
         },
     )
     ->withMiddleware(function (Middleware $middleware) {
         $middleware->alias([
             'admin' => \App\Http\Middleware\Admin::class,
+            'locale' => \App\Http\Middleware\SetLocale::class,
+            'currency' => \App\Http\Middleware\SetCurrency::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {

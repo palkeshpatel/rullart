@@ -123,4 +123,15 @@ return [
         'store' => env('APP_MAINTENANCE_STORE', 'database'),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Frontend Configuration
+    |--------------------------------------------------------------------------
+    */
+
+    'resource_url' => env('RESOURCE_URL', '/resources/'),
+    'image_url' => env('IMAGE_URL', '/resources/'),
+    'default_country' => env('DEFAULT_COUNTRY', 'Kuwait'),
+    'default_currencycode' => env('DEFAULT_CURRENCYCODE', 'KWD'),
+
 ];

@@ -15,19 +15,20 @@ use App\Http\Controllers\RoutingController;
 */
 
 require __DIR__ . '/auth.php';
+require __DIR__ . '/frontend.php';
 
-// Redirect all non-admin routes to admin login
-Route::group(['prefix' => '/', 'middleware' => 'auth'], function () {
-    Route::get('', function () {
+// Admin routes - only apply auth middleware to admin paths
+Route::group(['prefix' => 'admin', 'middleware' => 'auth'], function () {
+    Route::get('dashboard', function () {
         return redirect('/admin/dashboard');
-    });
-
-    // Block old apps/ecommerce routes
-    Route::get('apps/{any}', function () {
-        return redirect('/admin/dashboard');
-    })->where('any', '.*');
-
-    Route::get('dashboards/{any}', function () {
-        return redirect('/admin/dashboard');
-    })->where('any', '.*');
+    })->name('admin.dashboard');
 });
+
+// Block old apps/ecommerce routes - redirect to admin
+Route::get('apps/{any}', function () {
+    return redirect('/admin/dashboard');
+})->where('any', '.*');
+
+Route::get('dashboards/{any}', function () {
+    return redirect('/admin/dashboard');
+})->where('any', '.*');

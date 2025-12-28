@@ -12,8 +12,10 @@ class Product extends Model
     public $timestamps = false;
 
     protected $fillable = [
-        'fkcategoryid', 'title', 'titleAR', 'productcode', 'shortdescr',
-        'price', 'discount', 'sellingprice', 'ispublished', 'isnew', 'ispopular'
+        'fkcategoryid', 'title', 'titleAR', 'productcode', 'shortdescr', 'shortdescrAR',
+        'longdescr', 'longdescrAR', 'price', 'discount', 'sellingprice', 
+        'ispublished', 'isnew', 'ispopular', 'photo1', 'photo2', 'photo3', 'photo4', 'photo5',
+        'metakeyword', 'metadescr', 'metatitle', 'isgift', 'updatedby', 'updateddate'
     ];
 
     public function category()
