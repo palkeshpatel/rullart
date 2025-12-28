@@ -1,0 +1,7 @@
+.product-item a .product-title{white-space: nowrap;text-overflow: ellipsis;overflow: hidden;}
+.container-fluid.disabled {pointer-events: none;opacity: 0.65;}
+#loading {position: fixed;top: calc(50% - 26px);left: calc(50% - 26px);z-index: 999;background: #fff;}
+.breadcrumb .breadcrumb-item.product.active {display: inline!important;}
+.inside-header h1{direction:ltr}.filter-content ul li a{direction:ltr;}
+.product-details .product-brief,.product-title,.product-title {direction: ltr; text-align:right;}
+.social-login ul li.lbl{width:45px}
