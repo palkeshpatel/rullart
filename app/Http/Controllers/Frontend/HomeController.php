@@ -14,10 +14,8 @@ class HomeController extends FrontendController
     {
         $locale = app()->getLocale();
 
-        // Get home gallery images
-        $homegallery = HomeGallery::where('ispublished', 1)
-            ->orderBy('displayorder', 'asc')
-            ->get();
+        // Get home gallery images - Match CI get_data() method with locale-specific fields
+        $homegallery = $this->getHomeGallery($locale);
 
         // Get popular products
         $popular = $this->getPopularProducts($locale);
@@ -38,6 +36,42 @@ class HomeController extends FrontendController
         ];
 
         return view('frontend.home.index', $data);
+    }
+
+    protected function getHomeGallery($locale)
+    {
+        // Match CI Homegallery_model->get_data() method
+        if ($locale == 'ar') {
+            $homegallery = HomeGallery::select(
+                DB::raw('titleAR as title'),
+                DB::raw('descrAR as descr'),
+                'link',
+                DB::raw('photo_ar as photo'),
+                DB::raw('photo_mobile_ar as photo_mobile'),
+                'displayorder',
+                DB::raw("IFNULL(videourl, '') as videourl")
+            )
+                ->where('ispublished', 1)
+                ->orderBy('displayorder', 'asc')
+                ->get();
+        } else {
+            $homegallery = HomeGallery::select(
+                'title',
+                'titleAR',
+                'descr',
+                'descrAR',
+                'link',
+                'photo',
+                'photo_mobile',
+                'displayorder',
+                DB::raw("IFNULL(videourl, '') as videourl")
+            )
+                ->where('ispublished', 1)
+                ->orderBy('displayorder', 'asc')
+                ->get();
+        }
+
+        return $homegallery;
     }
 
     protected function getPopularProducts($locale)

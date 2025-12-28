@@ -280,4 +280,25 @@
             </div>
         </div>
     </div>
+    
+    {{-- Search Bar --}}
+    <div class="ra-search-bar">
+        <div class="container-fluid">
+            <div class="search-wrapper">
+                <form action="{{ route('search', ['locale' => $locale]) }}" id="frmSearch">
+                    <input type="search" placeholder="{{ __('Search here') }}" id="fieldSearch" name="keyword" class="fld-search required">
+                    <button type="submit" value="Search" class="btn-search" id="btnSearch">
+                        <svg class="icon icon-search">
+                            <use xlink:href="/static/images/symbol-defs.svg#icon-search"></use>
+                        </svg>
+                    </button>
+                </form>
+            </div>
+            <a id="closeSearch" class="close-search" href="javascript:;">
+                <svg class="icon icon-close">
+                    <use xlink:href="/static/images/symbol-defs.svg#icon-close"></use>
+                </svg>
+            </a>
+        </div>
+    </div>
 </header>

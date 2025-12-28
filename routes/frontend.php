@@ -6,6 +6,10 @@ use App\Http\Controllers\Frontend\HomeController;
 use App\Http\Controllers\Frontend\ProductController;
 use App\Http\Controllers\Frontend\CategoryController;
 use App\Http\Controllers\Frontend\PageController;
+use App\Http\Controllers\Frontend\SearchController;
+use App\Http\Controllers\Frontend\ShoppingCartController;
+use App\Http\Controllers\Frontend\CheckoutController;
+use App\Http\Controllers\Frontend\WishlistController;
 
 /*
 |--------------------------------------------------------------------------
@@ -27,22 +31,22 @@ Route::get('/language/{locale}', function ($locale) {
     if (in_array($locale, ['en', 'ar'])) {
         session(['locale' => $locale]);
         App::setLocale($locale);
-        
+
         // Get current URL and replace locale if present
         $currentUrl = request()->header('referer') ?: url('/');
         $currentUrl = str_replace('/en/', '/', $currentUrl);
         $currentUrl = str_replace('/ar/', '/', $currentUrl);
-        
+
         // Extract path after domain
         $parsedUrl = parse_url($currentUrl);
         $path = $parsedUrl['path'] ?? '/';
         $query = !empty($parsedUrl['query']) ? '?' . $parsedUrl['query'] : '';
-        
+
         // Build new URL with locale
         if ($path == '/' || $path == '') {
             return redirect('/' . $locale);
         }
-        
+
         return redirect('/' . $locale . $path . $query);
     }
     return redirect()->back();
@@ -53,7 +57,7 @@ Route::get('/currency/{code}', function ($code) {
     $country = \App\Models\Country::where('currencycode', $code)
         ->where('isactive', 1)
         ->first();
-    
+
     if ($country) {
         session([
             'currencycode' => $country->currencycode,
@@ -61,49 +65,52 @@ Route::get('/currency/{code}', function ($code) {
             'currencytimestamp' => time(),
         ]);
     }
-    
+
     return redirect()->back();
 })->name('currency.switch');
 
 // Frontend routes with optional locale prefix
 Route::group(['prefix' => '{locale?}', 'where' => ['locale' => 'en|ar'], 'middleware' => ['locale', 'currency']], function () {
-    
+
     // Homepage
     Route::get('/', [HomeController::class, 'index'])->name('home');
     Route::get('/home', [HomeController::class, 'index'])->name('home.alias');
-    
+
     // Product routes
     Route::get('/product/{category}/{product}', [ProductController::class, 'show'])
         ->name('product.show');
     Route::get('/product/{product}', [ProductController::class, 'showByCode'])
         ->name('product.show.code');
-    
+
     // Category routes
     Route::get('/category/{category}', [CategoryController::class, 'index'])
         ->name('category.index');
     Route::get('/all', [CategoryController::class, 'all'])->name('category.all');
-    
+
     // Occasion routes
     Route::get('/occassion/{occassion}', [CategoryController::class, 'occassion'])
         ->name('category.occassion');
-    
+
     // Special pages
     Route::get('/whatsnew', [CategoryController::class, 'whatsNew'])->name('whatsnew');
     Route::get('/sale', [CategoryController::class, 'sale'])->name('sale');
-    
+
+    // Search route
+    Route::get('/search', [SearchController::class, 'index'])->name('search');
+
     // Static pages
     Route::get('/page/{slug}', [PageController::class, 'show'])->name('page.show');
     Route::get('/about-us', [PageController::class, 'about'])->name('about');
     Route::get('/contact', [PageController::class, 'contact'])->name('contact');
     Route::get('/shipping', [PageController::class, 'shipping'])->name('shipping');
-    
+
     // Authentication routes
-    Route::get('/login', function() {
+    Route::get('/login', function () {
         // TODO: Implement frontend login page
         return redirect('/admin/login'); // Temporary redirect to admin login
     })->name('frontend.login');
-    
-    Route::get('/login/logout', function() {
+
+    Route::get('/login/logout', function () {
         // Match CI logout behavior - clear session and redirect
         session()->forget([
             'logged_in',
@@ -117,27 +124,48 @@ Route::group(['prefix' => '{locale?}', 'where' => ['locale' => 'en|ar'], 'middle
         session()->flush();
         return redirect('/' . app()->getLocale());
     })->name('login.logout');
-    
+
     // User account routes (placeholder - implement controllers later)
-    Route::get('/myorders', function() {
+    Route::get('/myorders', function () {
         abort(404, 'Not implemented yet');
     })->name('myorders');
-    
-    Route::get('/myprofile', function() {
+
+    Route::get('/myprofile', function () {
         abort(404, 'Not implemented yet');
     })->name('myprofile');
-    
-    Route::get('/myaddresses', function() {
+
+    Route::get('/myaddresses', function () {
         abort(404, 'Not implemented yet');
     })->name('myaddresses');
-    
-    // Shopping routes (placeholder - implement controllers later)
-    Route::get('/wishlist', function() {
-        abort(404, 'Not implemented yet');
-    })->name('wishlist');
-    
-    Route::get('/shoppingcart', function() {
-        abort(404, 'Not implemented yet');
-    })->name('cart.index');
-});
 
+    // Shopping routes
+    Route::get('/wishlist', [WishlistController::class, 'index'])->name('wishlist');
+    Route::post('/wishlist/add', [WishlistController::class, 'add'])->name('wishlist.add');
+    Route::post('/wishlist/remove', [WishlistController::class, 'remove'])->name('wishlist.remove');
+
+    Route::get('/shoppingcart', [ShoppingCartController::class, 'index'])->name('cart.index');
+    Route::post('/shoppingcart/ajax', [ShoppingCartController::class, 'ajaxCart'])->name('cart.ajax');
+
+    // Checkout routes
+    Route::get('/checkout', [CheckoutController::class, 'index'])->name('checkout');
+    Route::post('/checkout/process', [CheckoutController::class, 'processPayment'])->name('checkout.process');
+
+    // Change currency route (matches CI format: changecurrency?currency=KWD)
+    Route::get('/changecurrency', function (\Illuminate\Http\Request $request) {
+        $currency = $request->get('currency');
+        if ($currency) {
+            $country = \App\Models\Country::where('currencycode', $currency)
+                ->where('isactive', 1)
+                ->first();
+
+            if ($country) {
+                session([
+                    'currencycode' => $country->currencycode,
+                    'currencyrate' => $country->currencyrate,
+                    'currencytimestamp' => time(),
+                ]);
+            }
+        }
+        return redirect()->back();
+    })->name('changecurrency');
+});
