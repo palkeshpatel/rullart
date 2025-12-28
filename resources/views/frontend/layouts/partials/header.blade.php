@@ -9,15 +9,16 @@
             </a>
             <h1>
                 <a href="{{ route('home', ['locale' => $locale]) }}">
-                    <img alt="Rullart" src="{{ $resourceUrl }}images/rullart-logo.svg"/>
+                    <img alt="Rullart" src="{{ $resourceUrl }}images/rullart-logo.svg" />
                 </a>
             </h1>
             <nav role="navigation">
                 <div class="mobile-top-nav">
                     <ul>
                         <li>
-                            @if($locale == 'ar')
-                                <a href="{{ route('language.switch', ['locale' => 'en']) }}" class="lang-link">English</a>
+                            @if ($locale == 'ar')
+                                <a href="{{ route('language.switch', ['locale' => 'en']) }}"
+                                    class="lang-link">English</a>
                             @else
                                 <a href="{{ route('language.switch', ['locale' => 'ar']) }}" class="lang-link">عربي</a>
                             @endif
@@ -41,15 +42,17 @@
                         <div class="mega-dropdown">
                             <div class="container">
                                 <ul class="list-unstyled clearfix">
-                                    @foreach($categoryMenu as $category)
+                                    @foreach ($categoryMenu as $category)
                                         <li class="col-md-6">
-                                            <a href="{{ route('category.index', ['locale' => $locale, 'category' => $category->categorycode]) }}">
+                                            <a
+                                                href="{{ route('category.index', ['locale' => $locale, 'category' => $category->categorycode]) }}">
                                                 {{ $locale == 'ar' ? $category->categoryAR : $category->category }}
                                             </a>
                                         </li>
                                     @endforeach
                                     <li class="col-md-6">
-                                        <a href="{{ route('category.all', ['locale' => $locale]) }}">{{ __('All') }}</a>
+                                        <a
+                                            href="{{ route('category.all', ['locale' => $locale]) }}">{{ __('All') }}</a>
                                     </li>
                                 </ul>
                             </div>
@@ -67,9 +70,10 @@
                         <div class="mega-dropdown">
                             <div class="container">
                                 <ul class="list-unstyled clearfix">
-                                    @foreach($occassionMenu as $occassion)
+                                    @foreach ($occassionMenu as $occassion)
                                         <li class="col-md-6">
-                                            <a href="{{ route('category.occassion', ['locale' => $locale, 'occassion' => $occassion->occassioncode]) }}">
+                                            <a
+                                                href="{{ route('category.occassion', ['locale' => $locale, 'occassion' => $occassion->occassioncode]) }}">
                                                 {{ $locale == 'ar' ? $occassion->occassionAR : $occassion->occassion }}
                                             </a>
                                         </li>
@@ -80,7 +84,7 @@
                     </li>
 
                     {{-- Gifting (if available) --}}
-                    @if(isset($giftPackageMenu) && $giftPackageMenu->count() > 0)
+                    @if (isset($giftPackageMenu) && $giftPackageMenu->count() > 0)
                         <li class="has-sub {{ request()->is('*/gift-package*') ? 'active' : '' }}">
                             <a href="javascript:;">
                                 {{ strtolower(__('gifting')) }}
@@ -91,9 +95,10 @@
                             <div class="mega-dropdown">
                                 <div class="container">
                                     <ul class="list-unstyled clearfix">
-                                        @foreach($giftPackageMenu as $gift)
+                                        @foreach ($giftPackageMenu as $gift)
                                             <li class="col-md-6">
-                                                <a href="{{ route('category.index', ['locale' => $locale, 'category' => $gift->categorycode]) }}">
+                                                <a
+                                                    href="{{ route('category.index', ['locale' => $locale, 'category' => $gift->categorycode]) }}">
                                                     {{ $locale == 'ar' ? $gift->categoryAR : $gift->category }}
                                                 </a>
                                             </li>
@@ -125,14 +130,14 @@
                     </li>
 
                     {{-- User Menu --}}
-                    @if(session('logged_in'))
+                    @if (session('logged_in'))
                         <li class="user-name">
-                            {{ __('Welcome') }} {{ session('firstname') }}, 
+                            {{ __('Welcome') }} {{ session('firstname') }},
                             <a href="{{ route('login.logout', ['locale' => $locale]) }}">{{ __('Logout') }}</a>
                         </li>
                     @else
                         <li class="user-name hidden" id="liWelcome">
-                            {{ __('Welcome') }} <span id="spanFirstName"></span>, 
+                            {{ __('Welcome') }} <span id="spanFirstName"></span>,
                             <a href="{{ route('login.logout', ['locale' => $locale]) }}">{{ __('Logout') }}</a>
                         </li>
                     @endif
@@ -149,7 +154,8 @@
 
                     {{-- Login Link --}}
                     <li {!! $showlogin !!}>
-                        <a id="ra-login" class="user-link" href="{{ route('frontend.login', ['locale' => $locale]) }}">
+                        <a id="ra-login" class="user-link"
+                            href="{{ route('frontend.login', ['locale' => $locale]) }}">
                             <svg class="icon icon-person">
                                 <use xlink:href="/static/images/symbol-defs.svg#icon-person"></use>
                             </svg>
@@ -158,7 +164,8 @@
 
                     {{-- Post Login Menu --}}
                     <li {!! $showpostlogin !!}>
-                        <a id="ra-post-login" class="user-link dropdown-toggle" href="javascript:;" id="dropdownAccount" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
+                        <a id="ra-post-login" class="user-link dropdown-toggle" href="javascript:;" id="dropdownAccount"
+                            data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
                             <svg class="icon icon-person">
                                 <use xlink:href="/static/images/symbol-defs.svg#icon-person"></use>
                             </svg>
@@ -171,10 +178,12 @@
                                 <a href="{{ route('myprofile', ['locale' => $locale]) }}">{{ __('my profile') }}</a>
                             </li>
                             <li>
-                                <a href="{{ route('myaddresses', ['locale' => $locale]) }}">{{ __('my addresses') }}</a>
+                                <a
+                                    href="{{ route('myaddresses', ['locale' => $locale]) }}">{{ __('my addresses') }}</a>
                             </li>
                             <li>
-                                <a id="logout" href="{{ route('login.logout', ['locale' => $locale]) }}">{{ __('logout') }}</a>
+                                <a id="logout"
+                                    href="{{ route('login.logout', ['locale' => $locale]) }}">{{ __('logout') }}</a>
                             </li>
                         </ul>
                     </li>
@@ -190,11 +199,12 @@
 
                     {{-- Wishlist --}}
                     <li class="liwishlist">
-                        <a id="ra-wishlist" class="wishlist-link" href="{{ route('wishlist', ['locale' => $locale]) }}">
+                        <a id="ra-wishlist" class="wishlist-link"
+                            href="{{ route('wishlist', ['locale' => $locale]) }}">
                             <svg class="icon icon-heart">
                                 <use xlink:href="/static/images/symbol-defs.svg#icon-heart"></use>
                             </svg>
-                            @if($wishlistCount > 0)
+                            @if ($wishlistCount > 0)
                                 <span class="badge">{{ $wishlistCount }}</span>
                             @endif
                         </a>
@@ -202,21 +212,22 @@
 
                     {{-- Shopping Cart --}}
                     <li class="licart">
-                        @if(request()->is('*/payment*'))
+                        @if (request()->is('*/payment*'))
                             <a class="cart-link" href="javascript:;">
                                 <svg class="icon icon-bag">
                                     <use xlink:href="/static/images/symbol-defs.svg#icon-bag"></use>
                                 </svg>
-                                @if($cartCount > 0)
+                                @if ($cartCount > 0)
                                     <span class="badge">{{ $cartCount }}</span>
                                 @endif
                             </a>
                         @else
-                            <a id="ra-cart" class="cart-link" href="{{ route('cart.index', ['locale' => $locale]) }}">
+                            <a id="ra-cart" class="cart-link"
+                                href="{{ route('cart.index', ['locale' => $locale]) }}">
                                 <svg class="icon icon-bag">
                                     <use xlink:href="/static/images/symbol-defs.svg#icon-bag"></use>
                                 </svg>
-                                @if($cartCount > 0)
+                                @if ($cartCount > 0)
                                     <span class="badge">{{ $cartCount }}</span>
                                 @endif
                             </a>
@@ -224,33 +235,49 @@
                     </li>
 
                     {{-- Currency Selector --}}
-                    <li id="dCurrency">
-                        <div id="currency" class="currency">
-                            <div id="country-currency" class="country-currency">
-                                @php
-                                    $defaultCountry = strtolower(config('app.default_country', 'Kuwait'));
-                                @endphp
-                                <img src="{{ $imageUrl }}images/{{ $defaultCountry }}.png" alt="{{ __('Kuwait') }}">
-                            </div>
-                            <div class="country-currency-selection">
-                                <div>
-                                    <label>{{ __('Select Currency') }}</label>
-                                    <ul class="list-unstyled">
-                                        @foreach($currencyArr as $currency)
-                                            <li>
-                                                <a href="{{ route('currency.switch', ['code' => $currency->currencycode]) }}">
-                                                    {{ $currency->currencycode }}
-                                                </a>
-                                            </li>
-                                        @endforeach
-                                    </ul>
+                    @if (count($currencyArr) > 1)
+                        <li id="dCurrency">
+                            <div id="currency" class="currency">
+                                <div id="country-currency" class="country-currency">
+                                    @php
+                                        $defaultCountry = strtolower(config('app.default_country', 'Kuwait'));
+                                    @endphp
+                                    <img src="{{ $imageUrl }}images/{{ $defaultCountry }}.png"
+                                        alt="{{ __('Kuwait') }}">
                                 </div>
+                                <div class="country-currency-selection">
+                                    <div>
+                                        <div class="separator"></div>
+                                        <label>{{ __('Select Currency') }}</label>
+                                        <select>
+                                            @foreach ($currencyArr as $currency)
+                                                <option value="{{ $currency->currencycode }}"
+                                                    {{ session('currencycode') == $currency->currencycode ? 'selected' : '' }}>
+                                                    {{ $currency->currencycode }}
+                                                </option>
+                                            @endforeach
+                                        </select>
+                                        <div class="text-right">
+                                            <button class="btn btn-primary">{{ __('Close') }}</button>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="country-currency-selection-mask"></div>
                             </div>
-                        </div>
+                        </li>
+                    @endif
+
+                    {{-- Language Switcher --}}
+                    <li>
+                        @if ($locale == 'ar')
+                            <a href="{{ route('language.switch', ['locale' => 'en']) }}"
+                                class="lang-link">English</a>
+                        @else
+                            <a href="{{ route('language.switch', ['locale' => 'ar']) }}" class="lang-link">عربي</a>
+                        @endif
                     </li>
                 </ul>
             </div>
         </div>
     </div>
 </header>
-
