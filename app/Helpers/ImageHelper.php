@@ -20,10 +20,9 @@ class ImageHelper
         
         $imagePath = $prefix . $filename;
         
-        // Use resources/storage folder for product images (matches CI project)
-        // This will generate: http://127.0.0.1:8000/resources/storage/thumb-{filename}
-        // Same as CI: $this->image_url . 'storage/thumb-' . $photo
-        return url('resources/storage/' . $imagePath);
+        // Use /storage/ folder for product images (correct path: /storage/thumb-{filename})
+        // This will generate: http://127.0.0.1:8000/storage/thumb-{filename}
+        return url('storage/' . $imagePath);
     }
 }
 

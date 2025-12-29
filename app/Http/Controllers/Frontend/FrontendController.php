@@ -44,7 +44,8 @@ class FrontendController extends Controller
         $settings = Setting::all()->pluck('settingvalue', 'settingkey')->toArray();
         $this->settingsArr = $settings;
         $resourcePath = config('app.resource_url', '/resources/');
-        $imagePath = config('app.image_url', '/resources/');
+        // Image path should point to /storage/ for product images (not /resources/storage/)
+        $imagePath = config('app.image_url', '/');
 
         // Ensure paths end with slash
         if (!str_ends_with($resourcePath, '/')) {

@@ -23,18 +23,18 @@ class CategoryController extends FrontendController
 
         // Use locale from route parameter
         $locale = $locale ?? app()->getLocale();
-
+        
         $category = Category::where('categorycode', $categoryCode)
             ->where('ispublished', 1)
             ->first();
-
+        
         \Log::info("Category found: " . ($category ? "Yes - ID: {$category->categoryid}, Code: {$category->categorycode}" : "No"));
 
         if (!$category) {
             \Log::error("Category not found: {$categoryCode}");
             abort(404, 'Category not found');
         }
-
+        
         // Get filter parameters
         $sortby = request()->get('sortby', 'relevance');
         $color = request()->get('color', '');
@@ -98,12 +98,12 @@ class CategoryController extends FrontendController
 
         return view('frontend.category.index', $data);
     }
-
+    
     public function all()
     {
         $locale = app()->getLocale();
         $products = $this->getAllProducts($locale);
-
+        
         return view('frontend.category.index', [
             'category' => null,
             'products' => $products,
@@ -111,23 +111,23 @@ class CategoryController extends FrontendController
             'metaDescription' => ''
         ]);
     }
-
+    
     public function occassion($occassionCode)
     {
         $locale = app()->getLocale();
-
+        
         $occassion = DB::table('occassion')
             ->where('occassioncode', $occassionCode)
             ->where('ispublished', 1)
             ->first();
-
+        
         if (!$occassion) {
             abort(404);
         }
-
+        
         // Get products by occasion (you'll need to implement this based on your schema)
         $products = collect([]);
-
+        
         return view('frontend.category.index', [
             'category' => null,
             'products' => $products,
@@ -135,12 +135,12 @@ class CategoryController extends FrontendController
             'metaDescription' => ''
         ]);
     }
-
+    
     public function whatsNew()
     {
         $locale = app()->getLocale();
         $products = $this->getNewProducts($locale);
-
+        
         return view('frontend.category.index', [
             'category' => null,
             'products' => $products,
@@ -148,12 +148,12 @@ class CategoryController extends FrontendController
             'metaDescription' => ''
         ]);
     }
-
+    
     public function sale()
     {
         $locale = app()->getLocale();
         $products = $this->getSaleProducts($locale);
-
+        
         return view('frontend.category.index', [
             'category' => null,
             'products' => $products,
@@ -161,7 +161,7 @@ class CategoryController extends FrontendController
             'metaDescription' => ''
         ]);
     }
-
+    
     protected function getCategoryProducts($categoryCode, $locale, $sortby = 'relevance', $color = '', $size = '', $price = '', $page = 1, $main = 0, $subcategory = '')
     {
         try {
@@ -204,18 +204,18 @@ class CategoryController extends FrontendController
 
             // Get subcategories
             $subcategoriesQuery = DB::table('category as c')
-                ->select([
+            ->select([
                     $locale == 'ar' ? 'c.categoryAR as category' : 'c.category',
                     'c.categoryid',
-                    'c.categorycode',
+                'c.categorycode',
                     'c.parentid',
                     DB::raw("(SELECT COUNT(*) FROM products WHERE ispublished=1 AND fkcategoryid=c.categoryid) as productcnt")
-                ])
+            ])
                 ->distinct()
                 ->join('products as p', 'p.fkcategoryid', '=', 'c.categoryid')
-                ->where('p.ispublished', 1)
-                ->where('c.ispublished', 1);
-
+            ->where('p.ispublished', 1)
+            ->where('c.ispublished', 1);
+        
             if ($main == 0) {
                 if ($parentId > 0) {
                     $subcategoriesQuery->where(function ($query) use ($parentId, $categoryId) {
@@ -255,9 +255,9 @@ class CategoryController extends FrontendController
             if ($hasProductPriceView) {
                 $productsQuery->addSelect(['pp.discount', 'pp.sellingprice'])
                     ->join('productpriceview as pp', 'pp.kproductid', '=', 'p.productid');
-            } else {
+        } else {
                 $productsQuery->addSelect([
-                    DB::raw('COALESCE(p.discount, 0) as discount'),
+                DB::raw('COALESCE(p.discount, 0) as discount'),
                     DB::raw('COALESCE(p.sellingprice, p.price) as sellingprice')
                 ]);
             }
@@ -378,6 +378,17 @@ class CategoryController extends FrontendController
                     $products = $productsQuery->offset($offset)->limit($perPage)->get();
                 }
                 \Log::info("Products retrieved: " . $products->count());
+
+                // Calculate discount percentage for each product (if discount is stored as amount)
+                $products = $products->map(function ($product) {
+                    if (isset($product->discount) && isset($product->price) && $product->price > 0) {
+                        // If discount is stored as amount, calculate percentage
+                        if ($product->discount > 0 && $product->discount < $product->price) {
+                            $product->discount = round(($product->discount / $product->price) * 100, 2);
+                        }
+                    }
+                    return $product;
+                });
             } catch (\Exception $e) {
                 \Log::error("Error in products query: " . $e->getMessage());
                 \Log::error("Query: " . $productsQuery->toSql());
@@ -673,7 +684,7 @@ class CategoryController extends FrontendController
             return (object) $item;
         }, $ranges);
     }
-
+    
     protected function getAllProducts($locale)
     {
         $query = DB::table('products as p')
@@ -689,7 +700,7 @@ class CategoryController extends FrontendController
             ->leftJoin('category as c', 'p.fkcategoryid', '=', 'c.categoryid')
             ->where('p.ispublished', 1)
             ->where('c.ispublished', 1);
-
+        
         if (DB::getSchemaBuilder()->hasTable('productpriceview')) {
             $query->leftJoin('productpriceview as pp', 'pp.kproductid', '=', 'p.productid')
                 ->addSelect(['pp.discount', 'pp.sellingprice', 'p.price']);
@@ -700,12 +711,12 @@ class CategoryController extends FrontendController
                 'p.price'
             ]);
         }
-
+        
         return $query->havingRaw('qty > 0 OR qty IS NULL')
             ->orderBy('p.productid', 'desc')
             ->paginate(20);
     }
-
+    
     protected function getNewProducts($locale)
     {
         $query = DB::table('products as p')
@@ -722,7 +733,7 @@ class CategoryController extends FrontendController
             ->where('p.ispublished', 1)
             ->where('p.isnew', 1)
             ->where('c.ispublished', 1);
-
+        
         if (DB::getSchemaBuilder()->hasTable('productpriceview')) {
             $query->leftJoin('productpriceview as pp', 'pp.kproductid', '=', 'p.productid')
                 ->addSelect(['pp.discount', 'pp.sellingprice', 'p.price']);
@@ -733,12 +744,12 @@ class CategoryController extends FrontendController
                 'p.price'
             ]);
         }
-
+        
         return $query->havingRaw('qty > 0 OR qty IS NULL')
             ->orderBy('p.productid', 'desc')
             ->paginate(20);
     }
-
+    
     protected function getSaleProducts($locale)
     {
         $query = DB::table('products as p')
@@ -754,7 +765,7 @@ class CategoryController extends FrontendController
             ->leftJoin('category as c', 'p.fkcategoryid', '=', 'c.categoryid')
             ->where('p.ispublished', 1)
             ->where('c.ispublished', 1);
-
+        
         if (DB::getSchemaBuilder()->hasTable('productpriceview')) {
             $query->leftJoin('productpriceview as pp', 'pp.kproductid', '=', 'p.productid')
                 ->where('pp.discount', '>', 0)
@@ -767,9 +778,375 @@ class CategoryController extends FrontendController
                     'p.price'
                 ]);
         }
-
+        
         return $query->havingRaw('qty > 0 OR qty IS NULL')
             ->orderBy('p.productid', 'desc')
             ->paginate(20);
+    }
+
+    /**
+     * AJAX endpoint for product listing (matches CI Prodlisting->category)
+     * Returns JSON for dynamic filtering
+     */
+    public function prodlisting($locale, $categoryCode)
+    {
+        $locale = $locale ?? app()->getLocale();
+        
+        // Handle 'all' category
+        if ($categoryCode == 'all') {
+            $categoryCode = '';
+        }
+
+        // Get filter parameters
+        $sortby = request()->get('sortby', 'relevance');
+        $color = request()->get('color', '');
+        $size = request()->get('size', '');
+        $price = request()->get('price', '');
+        $page = request()->get('page', 1);
+        $main = request()->get('main', 0);
+        $subcategory = request()->get('category', '');
+        $firstload = request()->get('firstload', 1);
+
+        try {
+            if ($categoryCode == '') {
+                // Get all products
+                $collections = $this->getAllCategoryProducts($locale, $sortby, $color, $size, $price, $page, $main, $subcategory);
+            } else {
+                // Get category products
+                $collections = $this->getCategoryProducts($categoryCode, $locale, $sortby, $color, $size, $price, $page, $main, $subcategory);
+            }
+
+            if (!$collections || count($collections['products']) == 0) {
+                return response()->json('FALSE');
+            }
+
+            // Handle 'all' category metadata
+            if ($categoryCode == '') {
+                $collections['category']->category = 'All';
+                $collections['category']->categoryAR = 'All';
+                $collections['category']->metatitleAR = 'All';
+                $collections['category']->metatitle = 'All';
+                $collections['category']->metakeyword = 'All';
+                $collections['category']->metakeywordAR = 'All';
+                $collections['category']->metadescr = 'All';
+                $collections['category']->metadescrAR = 'All';
+                $collections['category']->categorycode = 'all';
+            }
+
+            // Format products for JSON response (ensure discount is percentage)
+            $formattedProducts = $collections['products']->map(function ($product) {
+                // Calculate discount percentage if needed
+                if (isset($product->discount) && isset($product->price) && $product->price > 0) {
+                    // If discount appears to be an amount (less than price), convert to percentage
+                    if ($product->discount > 0 && $product->discount < $product->price) {
+                        $product->discount = round(($product->discount / $product->price) * 100, 2);
+                    }
+                }
+                return $product;
+            });
+
+            // Get side filter HTML
+            $sideFilterHtml = view('frontend.category.sidefilter', [
+                'collections' => $collections,
+                'locale' => $locale,
+                'categoryCode' => $subcategory ?: $categoryCode
+            ])->render();
+
+            // Clean up HTML (remove newlines, tabs, etc. - matching CI)
+            $sideFilterHtml = str_replace(["\r", "\n", "\t"], '', $sideFilterHtml);
+
+            // Return JSON matching CI format
+            return response()->json([
+                'products' => $formattedProducts->values(),
+                'subcategory' => $collections['subcategory'],
+                'productcnt' => $collections['productcnt'],
+                'totalpage' => $collections['totalpage'],
+                'sidefilter' => $sideFilterHtml,
+            ]);
+
+        } catch (\Exception $e) {
+            \Log::error('CategoryController prodlisting error: ' . $e->getMessage());
+            \Log::error($e->getTraceAsString());
+            return response()->json('FALSE');
+        }
+    }
+
+    /**
+     * AJAX endpoint for occasion product listing
+     */
+    public function prodlistingOccassion($locale, $occassion)
+    {
+        $locale = $locale ?? app()->getLocale();
+        
+        $sortby = request()->get('sortby', 'relevance');
+        $color = request()->get('color', '');
+        $size = request()->get('size', '');
+        $price = request()->get('price', '');
+        $page = request()->get('page', 1);
+        $main = request()->get('main', 0);
+        $category = request()->get('category', '');
+        $firstload = request()->get('firstload', 1);
+
+        try {
+            $collections = $this->getOccassionProducts($occassion, $locale, $sortby, $color, $size, $price, $page, $main, $category);
+
+            if (!$collections || count($collections['products']) == 0) {
+                return response()->json('FALSE');
+            }
+
+            $sideFilterHtml = view('frontend.category.sidefilter', [
+                'collections' => $collections,
+                'locale' => $locale,
+                'categoryCode' => $category
+            ])->render();
+            $sideFilterHtml = str_replace(["\r", "\n", "\t"], '', $sideFilterHtml);
+
+            return response()->json([
+                'products' => $collections['products'],
+                'subcategory' => $collections['subcategory'],
+                'productcnt' => $collections['productcnt'],
+                'totalpage' => $collections['totalpage'],
+                'sidefilter' => $sideFilterHtml,
+            ]);
+
+        } catch (\Exception $e) {
+            \Log::error('CategoryController prodlistingOccassion error: ' . $e->getMessage());
+            return response()->json('FALSE');
+        }
+    }
+
+    /**
+     * AJAX endpoint for what's new product listing
+     */
+    public function prodlistingWhatsnew($locale)
+    {
+        $locale = $locale ?? app()->getLocale();
+        
+        $sortby = request()->get('sortby', 'relevance');
+        $color = request()->get('color', '');
+        $size = request()->get('size', '');
+        $price = request()->get('price', '');
+        $page = request()->get('page', 1);
+        $category = request()->get('category', '');
+        $firstload = request()->get('firstload', 1);
+
+        try {
+            $collections = $this->getNewProductsWithFilters($locale, $sortby, $color, $size, $price, $page, $category);
+
+            if (!$collections || count($collections['products']) == 0) {
+                return response()->json('FALSE');
+            }
+
+            $sideFilterHtml = view('frontend.category.sidefilter', [
+                'collections' => $collections,
+                'locale' => $locale,
+                'categoryCode' => $category
+            ])->render();
+            $sideFilterHtml = str_replace(["\r", "\n", "\t"], '', $sideFilterHtml);
+
+            return response()->json([
+                'products' => $collections['products'],
+                'subcategory' => $collections['subcategory'],
+                'productcnt' => $collections['productcnt'],
+                'totalpage' => $collections['totalpage'],
+                'sidefilter' => $sideFilterHtml,
+            ]);
+
+        } catch (\Exception $e) {
+            \Log::error('CategoryController prodlistingWhatsnew error: ' . $e->getMessage());
+            return response()->json('FALSE');
+        }
+    }
+
+    /**
+     * AJAX endpoint for sale product listing
+     */
+    public function prodlistingSale($locale)
+    {
+        $locale = $locale ?? app()->getLocale();
+        
+        $sortby = request()->get('sortby', 'relevance');
+        $color = request()->get('color', '');
+        $size = request()->get('size', '');
+        $price = request()->get('price', '');
+        $page = request()->get('page', 1);
+        $category = request()->get('category', '');
+        $firstload = request()->get('firstload', 1);
+
+        try {
+            $collections = $this->getSaleProductsWithFilters($locale, $sortby, $color, $size, $price, $page, $category);
+
+            if (!$collections || count($collections['products']) == 0) {
+                return response()->json('FALSE');
+            }
+
+            $sideFilterHtml = view('frontend.category.sidefilter', [
+                'collections' => $collections,
+                'locale' => $locale,
+                'categoryCode' => $category
+            ])->render();
+            $sideFilterHtml = str_replace(["\r", "\n", "\t"], '', $sideFilterHtml);
+
+            return response()->json([
+                'products' => $collections['products'],
+                'subcategory' => $collections['subcategory'],
+                'productcnt' => $collections['productcnt'],
+                'totalpage' => $collections['totalpage'],
+                'sidefilter' => $sideFilterHtml,
+            ]);
+
+        } catch (\Exception $e) {
+            \Log::error('CategoryController prodlistingSale error: ' . $e->getMessage());
+            return response()->json('FALSE');
+        }
+    }
+
+    /**
+     * Get all category products with filters (for 'all' page)
+     */
+    protected function getAllCategoryProducts($locale, $sortby, $color, $size, $price, $page, $main, $subcategory)
+    {
+        // This should use similar logic to getCategoryProducts but for all products
+        // For now, we'll use a simplified version
+        $currencyCode = $this->currencyCode;
+        $currencyRate = $this->currencyRate;
+        $customerId = session('customerid', 0);
+        $perPage = 20;
+
+        // Build products query
+        $productsQuery = DB::table('products as p')
+            ->select([
+                DB::raw($locale == 'ar' ? 'p.shortdescrAR as title' : 'p.shortdescr as title'),
+                'p.productid',
+                'p.productcode',
+                'p.price',
+                'p.photo1',
+                'c.categorycode',
+                DB::raw("IFNULL((SELECT SUM(qty) FROM productsfilter WHERE fkproductid=p.productid AND productsfilter.filtercode='size'), 0) as qty")
+            ])
+            ->distinct();
+
+        // Add price view join if exists
+        $hasProductPriceView = DB::selectOne("
+            SELECT 1 FROM information_schema.views
+            WHERE table_schema = DATABASE() AND table_name = 'productpriceview'
+        ");
+        $hasProductPriceView = !empty($hasProductPriceView);
+
+        if ($hasProductPriceView) {
+            $productsQuery->addSelect(['pp.discount', 'pp.sellingprice'])
+                ->join('productpriceview as pp', 'pp.kproductid', '=', 'p.productid');
+        } else {
+            $productsQuery->addSelect([
+                DB::raw('COALESCE(p.discount, 0) as discount'),
+                DB::raw('COALESCE(p.sellingprice, p.price) as sellingprice')
+            ]);
+        }
+
+        if ($customerId) {
+            $productsQuery->addSelect([DB::raw('IFNULL(w.wishlistid, 0) as wishlistid')]);
+        } else {
+            $productsQuery->addSelect([DB::raw('0 as wishlistid')]);
+        }
+
+        $productsQuery->leftJoin('category as c', 'c.categoryid', '=', 'p.fkcategoryid')
+            ->where('p.ispublished', 1)
+            ->where('c.ispublished', 1);
+
+        // Apply filters (color, size, price) - similar to getCategoryProducts
+        // ... (filter logic here)
+
+        // Apply sorting
+        if ($sortby == 'lowtohigh') {
+            $sortColumn = $hasProductPriceView ? 'pp.sellingprice' : DB::raw('COALESCE(p.sellingprice, p.price)');
+            $productsQuery->orderBy($sortColumn, 'asc');
+        } else if ($sortby == 'hightolow') {
+            $sortColumn = $hasProductPriceView ? 'pp.sellingprice' : DB::raw('COALESCE(p.sellingprice, p.price)');
+            $productsQuery->orderBy($sortColumn, 'desc');
+        } else {
+            $productsQuery->orderBy($locale == 'ar' ? 'p.shortdescrAR' : 'p.shortdescr', 'asc');
+        }
+
+        $productcnt = $productsQuery->count();
+        $totalpage = ceil($productcnt / $perPage);
+
+        if ($page == 1) {
+            $products = $productsQuery->limit($perPage * $page)->get();
+        } else {
+            $offset = ($page - 1) * $perPage;
+            $products = $productsQuery->offset($offset)->limit($perPage)->get();
+        }
+
+        // Get subcategories (all categories with products)
+        $subcategories = DB::table('category as c')
+            ->select([
+                $locale == 'ar' ? 'c.categoryAR as category' : 'c.category',
+                'c.categoryid',
+                'c.categorycode',
+                'c.parentid',
+                DB::raw("(SELECT COUNT(*) FROM products WHERE ispublished=1 AND fkcategoryid=c.categoryid) as productcnt")
+            ])
+            ->distinct()
+            ->join('products as p', 'p.fkcategoryid', '=', 'c.categoryid')
+            ->where('p.ispublished', 1)
+            ->where('c.ispublished', 1)
+            ->orderBy('c.parentid')
+            ->orderBy('c.displayorder')
+            ->get();
+
+        // Create dummy category object
+        $category = (object)[
+            'categoryid' => 0,
+            'categorycode' => 'all',
+            'category' => 'All',
+            'categoryAR' => 'All',
+            'metatitle' => 'All',
+            'metatitleAR' => 'All',
+            'metakeyword' => 'All',
+            'metakeywordAR' => 'All',
+            'metadescr' => 'All',
+            'metadescrAR' => 'All',
+        ];
+
+        return [
+            'category' => $category,
+            'products' => $products,
+            'subcategory' => $subcategories,
+            'productcnt' => $productcnt,
+            'totalpage' => $totalpage,
+            'colorsArr' => [],
+            'sizesArr' => [],
+            'pricerange' => [],
+        ];
+    }
+
+    /**
+     * Get occasion products with filters
+     */
+    protected function getOccassionProducts($occassion, $locale, $sortby, $color, $size, $price, $page, $main, $category)
+    {
+        // Similar to getCategoryProducts but filtered by occasion
+        // Implementation needed based on CI logic
+        return $this->getCategoryProducts($category ?: '', $locale, $sortby, $color, $size, $price, $page, $main, '');
+    }
+
+    /**
+     * Get new products with filters
+     */
+    protected function getNewProductsWithFilters($locale, $sortby, $color, $size, $price, $page, $category)
+    {
+        // Similar to getCategoryProducts but filtered by new products
+        // Implementation needed based on CI logic
+        return $this->getCategoryProducts($category ?: '', $locale, $sortby, $color, $size, $price, $page, 0, '');
+    }
+
+    /**
+     * Get sale products with filters
+     */
+    protected function getSaleProductsWithFilters($locale, $sortby, $color, $size, $price, $page, $category)
+    {
+        // Similar to getCategoryProducts but filtered by sale products
+        // Implementation needed based on CI logic
+        return $this->getCategoryProducts($category ?: '', $locale, $sortby, $color, $size, $price, $page, 0, '');
     }
 }

@@ -124,6 +124,7 @@ export default defineConfig({
                 'resources/js/pages/datatables-select.js',
                 'resources/js/pages/datatables-show-hide-columns.js',
                 'resources/js/pages/ui-notifications.js',
+                'resources/js/pages/home-page-editor.js',
 
                 //css
                 'resources/scss/app.scss',

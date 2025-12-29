@@ -88,6 +88,19 @@ Route::group(['prefix' => '{locale}', 'where' => ['locale' => 'en|ar'], 'middlew
         ->name('category.index');
     Route::get('/all', [CategoryController::class, 'all'])->name('category.all');
 
+    // AJAX product listing routes (for dynamic filtering)
+    Route::get('/prodlisting/category/{categoryCode}', [CategoryController::class, 'prodlisting'])
+        ->where('categoryCode', '[a-zA-Z0-9\-]+')
+        ->name('category.prodlisting');
+    Route::get('/prodlisting/occassion/{occassion}', [CategoryController::class, 'prodlistingOccassion'])
+        ->name('category.prodlisting.occassion');
+    Route::get('/prodlisting/whatsnew', [CategoryController::class, 'prodlistingWhatsnew'])
+        ->name('category.prodlisting.whatsnew');
+    Route::get('/prodlisting/sale', [CategoryController::class, 'prodlistingSale'])
+        ->name('category.prodlisting.sale');
+    Route::get('/prodlisting/search', [SearchController::class, 'prodlisting'])
+        ->name('search.prodlisting');
+
     // Occasion routes
     Route::get('/occassion/{occassion}', [CategoryController::class, 'occassion'])
         ->name('category.occassion');

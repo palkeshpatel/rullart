@@ -146,5 +146,72 @@ class SearchController extends FrontendController
             'pricerange' => [],
         ];
     }
+
+    /**
+     * AJAX endpoint for search product listing (matches CI Prodlisting->search)
+     */
+    public function prodlisting($locale)
+    {
+        $locale = $locale ?? app()->getLocale();
+        $keyword = request()->get('keyword', '');
+        
+        if (empty($keyword)) {
+            return response()->json('FALSE');
+        }
+        
+        $sortby = request()->get('sortby', 'relevance');
+        $color = request()->get('color', '');
+        $size = request()->get('size', '');
+        $price = request()->get('price', '');
+        $categorycode = request()->get('category', '');
+        $page = request()->get('page', 1);
+        $firstload = request()->get('firstload', 1);
+
+        try {
+            $collections = $this->searchProducts($keyword, $categorycode, $color, $size, $price, $sortby, $page, $locale);
+
+            if (!$collections || count($collections['products']) == 0) {
+                return response()->json('FALSE');
+            }
+
+            // Get subcategories for search results
+            $subcategories = DB::table('category as c')
+                ->select([
+                    $locale == 'ar' ? 'c.categoryAR as category' : 'c.category',
+                    'c.categoryid',
+                    'c.categorycode',
+                    'c.parentid',
+                    DB::raw("(SELECT COUNT(*) FROM products WHERE ispublished=1 AND fkcategoryid=c.categoryid) as productcnt")
+                ])
+                ->distinct()
+                ->join('products as p', 'p.fkcategoryid', '=', 'c.categoryid')
+                ->where('p.ispublished', 1)
+                ->where('c.ispublished', 1)
+                ->orderBy('c.parentid')
+                ->orderBy('c.displayorder')
+                ->get();
+
+            $collections['subcategory'] = $subcategories;
+
+            $sideFilterHtml = view('frontend.category.sidefilter', [
+                'collections' => $collections,
+                'locale' => $locale,
+                'categoryCode' => $categorycode
+            ])->render();
+            $sideFilterHtml = str_replace(["\r", "\n", "\t"], '', $sideFilterHtml);
+
+            return response()->json([
+                'products' => $collections['products'],
+                'subcategory' => $collections['subcategory'],
+                'productcnt' => $collections['productcnt'],
+                'totalpage' => $collections['totalpage'],
+                'sidefilter' => $sideFilterHtml,
+            ]);
+
+        } catch (\Exception $e) {
+            \Log::error('SearchController prodlisting error: ' . $e->getMessage());
+            return response()->json('FALSE');
+        }
+    }
 }
 

@@ -41,7 +41,7 @@ function productlist(url,firstload){
                   photo = v.photo1;
                   if (photo=='')
                     photo = 'noimage.jpg';
-  	              prodlist += '<div class="col-xs-6 col-sm-4"><div class="product-item"><a href="' + produrl + v.categorycode + '/' + v.productcode+'"><span class="product-image"><img src="'+resourceurl+'storage/thumb-'+photo+'" alt="'+v.title+'"></span>';
+  	              prodlist += '<div class="col-xs-6 col-sm-4"><div class="product-item"><a href="' + produrl + v.categorycode + '/' + v.productcode+'"><span class="product-image"><img src="/storage/thumb-'+photo+'" alt="'+v.title+'"></span>';
   	              prodlist += '<span class="product-content"><span class="product-title">'+v.title+'</span><span class="product-price">';
   	              if (v.discount>0)
   	                prodlist += '<span class="standard-price">' + KD + ' '+ parseFloat(v.price * currencyrate).toFixed(2)  +'</span>';

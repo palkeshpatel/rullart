@@ -94,7 +94,7 @@
 <main class="inside">
     @if(isset($collections['category']) && $collections['category']->photo)
     <div class="inside-hero">
-        <img src="{{ $imageUrl }}storage/{{ $collections['category']->photo }}" alt="{{ $categoryTitle }}">
+        <img src="{{ url('storage/' . $collections['category']->photo) }}" alt="{{ $categoryTitle }}">
     </div>
     @endif
     
@@ -179,7 +179,7 @@
                                         <div class="product-item">
                                             <a href="{{ route('product.show', ['locale' => $locale, 'category' => $row->categorycode, 'product' => $row->productcode]) }}">
                                                 <span class="product-image">
-                                                    <img src="{{ $imageUrl }}storage/thumb-{{ $photo }}" alt="{{ $productTitle }}">
+                                                    <img src="{{ url('storage/thumb-' . $photo) }}" alt="{{ $productTitle }}">
                                                 </span>
                                                 <span class="product-content">
                                                     <span class="product-title">{{ $productTitle }}</span>
