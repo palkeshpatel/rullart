@@ -29,7 +29,7 @@ class CategoryController extends FrontendController
             ->first();
         
         \Log::info("Category found: " . ($category ? "Yes - ID: {$category->categoryid}, Code: {$category->categorycode}" : "No"));
-
+        
         if (!$category) {
             \Log::error("Category not found: {$categoryCode}");
             abort(404, 'Category not found');
@@ -121,8 +121,8 @@ class CategoryController extends FrontendController
             
             $metaTitle = __('All Products');
             $metaDescription = '';
-            
-            return view('frontend.category.index', [
+        
+        return view('frontend.category.index', [
                 'collections' => $collections,
                 'metaTitle' => $metaTitle,
                 'metaDescription' => $metaDescription,
@@ -197,8 +197,8 @@ class CategoryController extends FrontendController
             
             $metaTitle = __('What\'s New');
             $metaDescription = '';
-            
-            return view('frontend.category.index', [
+        
+        return view('frontend.category.index', [
                 'collections' => $collections,
                 'metaTitle' => $metaTitle,
                 'metaDescription' => $metaDescription,
@@ -248,8 +248,8 @@ class CategoryController extends FrontendController
             
             $metaTitle = __('Sale');
             $metaDescription = '';
-            
-            return view('frontend.category.index', [
+        
+        return view('frontend.category.index', [
                 'collections' => $collections,
                 'metaTitle' => $metaTitle,
                 'metaDescription' => $metaDescription,
@@ -342,11 +342,11 @@ class CategoryController extends FrontendController
             $productsQuery = DB::table('products as p')
                 ->select([
                     DB::raw($locale == 'ar' ? 'p.shortdescrAR as title' : 'p.shortdescr as title'),
-                    'p.productid',
-                    'p.productcode',
+                'p.productid',
+                'p.productcode',
                     'p.price',
-                    'p.photo1',
-                    'c.categorycode',
+                'p.photo1',
+                'c.categorycode',
                     DB::raw("IFNULL((SELECT SUM(qty) FROM productsfilter WHERE fkproductid=p.productid AND productsfilter.filtercode='size'), 0) as qty")
                 ])
                 ->distinct();
@@ -922,6 +922,14 @@ class CategoryController extends FrontendController
         $subcategory = request()->get('category', '');
         $firstload = request()->get('firstload', 1);
 
+        \Log::info("CategoryController prodlisting called");
+        \Log::info("Request URL: " . request()->fullUrl());
+        \Log::info("Category Code: {$categoryCode}");
+        \Log::info("Color filter: {$color}");
+        \Log::info("Size filter: {$size}");
+        \Log::info("Price filter: {$price}");
+        \Log::info("Sort by: {$sortby}");
+
         try {
             if ($categoryCode == '') {
                 // Get all products
@@ -930,6 +938,8 @@ class CategoryController extends FrontendController
                 // Get category products
                 $collections = $this->getCategoryProducts($categoryCode, $locale, $sortby, $color, $size, $price, $page, $main, $subcategory);
             }
+            
+            \Log::info("prodlisting collections: " . ($collections ? "Found " . count($collections['products']) . " products" : "False"));
 
             if (!$collections || count($collections['products']) == 0) {
                 return response()->json('FALSE');

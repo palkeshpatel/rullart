@@ -203,17 +203,19 @@ function GetFilters() {
     
     var url = '';
 	  var urlarr = loc.split('/');
+    // URL structure: http://127.0.0.1:8000/en/category/gift-package
+    // urlarr[0] = '', urlarr[1] = 'en', urlarr[2] = 'category', urlarr[3] = 'gift-package'
     
-    if (urlarr[4]=="search")
+    if (urlarr[2]=="search")
       url = base_url + 'prodlisting/search?' + fdata;
-    else if (urlarr[4]=="whatsnew")
+    else if (urlarr[2]=="whatsnew")
       url = base_url + 'prodlisting/whatsnew?' + fdata;
-    else if (urlarr[4]=="sale")
+    else if (urlarr[2]=="sale")
       url = base_url + 'prodlisting/sale?' + fdata;
-    else if (urlarr[4]=="occassion")
-	    url = base_url + 'prodlisting/occassion/' + urlarr[5] + '?' + fdata;
+    else if (urlarr[2]=="occassion")
+	    url = base_url + 'prodlisting/occassion/' + urlarr[3] + '?' + fdata;
 	  else
-		  url = base_url + 'prodlisting/category/' + urlarr[5] + '?' + fdata;
+		  url = base_url + 'prodlisting/category/' + urlarr[3] + '?' + fdata;
 
     //$("#hdnPageNo").val(1);
     productlist(url,1);
