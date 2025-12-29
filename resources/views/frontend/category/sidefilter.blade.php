@@ -4,18 +4,8 @@
     $pricerange = $collections['pricerange'] ?? [];
     $subcategory = $collections['subcategory'] ?? [];
     $categoryCode = $categoryCode ?? '';
-    $colors_qry = request()->get('color', '');
-    $sizes_qry = request()->get('size', '');
-    $price_qry = request()->get('price', '');
-    
-    $arrColor = [];
-    if ($colors_qry != '') {
-        $arrColor = explode(',', $colors_qry);
-    }
-    $arrSize = [];
-    if ($sizes_qry != '') {
-        $arrSize = explode(',', $sizes_qry);
-    }
+    $arrColor = $arrColor ?? [];
+    $arrSize = $arrSize ?? [];
 @endphp
 
 <div class="catalog-filters">

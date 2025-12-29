@@ -2,24 +2,17 @@
 
 @section('content')
     @php
+        // Mobile detection for responsive images (presentation logic - acceptable in view)
         $is_mobile = preg_match(
             '/(android|iphone|ipod|ipad|windows phone|blackberry|mobile)/i',
             request()->userAgent(),
         );
-        $hasvideo = false;
-
-        foreach ($homegallery as $item) {
-            if (!empty($item->videourl)) {
-                $hasvideo = true;
-                break;
-            }
-        }
     @endphp
 
     <section class="hero-content">
         <div>
             <div id="heroSlider" class="hero-slider carousel slide carousel-fade" data-ride="carousel"
-                data-interval="{{ $hasvideo ? '6000' : '5000' }}">
+                data-interval="{{ $hasVideo ? '6000' : '5000' }}">
                 <div class="container-indicators">
                     <div class="container">
                         <ol class="carousel-indicators">

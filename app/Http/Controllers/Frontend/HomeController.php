@@ -17,6 +17,11 @@ class HomeController extends FrontendController
         // Get home gallery images - Match CI get_data() method with locale-specific fields
         $homegallery = $this->getHomeGallery($locale);
 
+        // Check if gallery has any videos (for carousel interval)
+        $hasVideo = $homegallery->contains(function ($item) {
+            return !empty($item->videourl);
+        });
+
         // Get popular products
         $popular = $this->getPopularProducts($locale);
 
@@ -30,6 +35,7 @@ class HomeController extends FrontendController
         $data = [
             'homegallery' => $homegallery,
             'popular' => $popular,
+            'hasVideo' => $hasVideo,
             'metaTitle' => $metaTitle,
             'metaDescription' => $metaDescription,
             'metaKeywords' => $metaKeywords,

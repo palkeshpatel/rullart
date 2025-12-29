@@ -69,27 +69,17 @@ class CategoryController extends FrontendController
             ? $collections['category']->metadescrAR
             : $collections['category']->metadescr;
 
-        $data = [
-            'collections' => $collections,
-            'category' => $collections['category'],
-            'products' => $collections['products'],
-            'subcategory' => $collections['subcategory'] ?? [],
-            'colorsArr' => $collections['colorsArr'] ?? [],
-            'sizesArr' => $collections['sizesArr'] ?? [],
-            'pricerange' => $collections['pricerange'] ?? [],
-            'productcnt' => $collections['productcnt'] ?? 0,
-            'totalpage' => $collections['totalpage'] ?? 1,
+        // Prepare view data using helper method
+        $data = $this->prepareViewData($collections, $locale, $metaTitle, $metaDescription, [
             'page' => $page,
             'main' => $main,
             'sortby' => $sortby,
             'color' => $color,
             'size' => $size,
             'price' => $price,
-            'metaTitle' => $metaTitle,
-            'metaDescription' => $metaDescription,
             'categoryCode' => $categoryCode,
             'isall' => false,
-        ];
+        ]);
 
         // Check if gift category (categoryid == 80)
         if ($collections['category']->categoryid == 80) {
@@ -122,13 +112,19 @@ class CategoryController extends FrontendController
             $metaTitle = __('All Products');
             $metaDescription = '';
         
-        return view('frontend.category.index', [
-                'collections' => $collections,
-                'metaTitle' => $metaTitle,
-                'metaDescription' => $metaDescription,
+            // Prepare view data using helper method
+            $data = $this->prepareViewData($collections, $locale, $metaTitle, $metaDescription, [
+                'page' => $page,
+                'main' => $main,
+                'sortby' => $sortby,
+                'color' => $color,
+                'size' => $size,
+                'price' => $price,
+                'categoryCode' => '',
                 'isall' => true,
-                'categoryCode' => ''
             ]);
+        
+        return view('frontend.category.index', $data);
         } catch (\Exception $e) {
             \Log::error('CategoryController all error: ' . $e->getMessage());
             abort(404);
@@ -198,12 +194,19 @@ class CategoryController extends FrontendController
             $metaTitle = __('What\'s New');
             $metaDescription = '';
         
-        return view('frontend.category.index', [
-                'collections' => $collections,
-                'metaTitle' => $metaTitle,
-                'metaDescription' => $metaDescription,
-                'categoryCode' => ''
+            // Prepare view data using helper method
+            $data = $this->prepareViewData($collections, $locale, $metaTitle, $metaDescription, [
+                'page' => $page,
+                'main' => 0,
+                'sortby' => $sortby,
+                'color' => $color,
+                'size' => $size,
+                'price' => $price,
+                'categoryCode' => '',
+                'isall' => false,
             ]);
+        
+        return view('frontend.category.index', $data);
         } catch (\Exception $e) {
             \Log::error('CategoryController whatsNew error: ' . $e->getMessage());
             abort(404);
@@ -249,12 +252,19 @@ class CategoryController extends FrontendController
             $metaTitle = __('Sale');
             $metaDescription = '';
         
-        return view('frontend.category.index', [
-                'collections' => $collections,
-                'metaTitle' => $metaTitle,
-                'metaDescription' => $metaDescription,
-                'categoryCode' => ''
+            // Prepare view data using helper method
+            $data = $this->prepareViewData($collections, $locale, $metaTitle, $metaDescription, [
+                'page' => $page,
+                'main' => 0,
+                'sortby' => $sortby,
+                'color' => $color,
+                'size' => $size,
+                'price' => $price,
+                'categoryCode' => '',
+                'isall' => false,
             ]);
+        
+        return view('frontend.category.index', $data);
         } catch (\Exception $e) {
             \Log::error('CategoryController sale error: ' . $e->getMessage());
             abort(404);
@@ -970,12 +980,11 @@ class CategoryController extends FrontendController
                 return $product;
             });
 
+            // Prepare filter data for sidefilter view
+            $filterData = $this->prepareFilterData($collections, $locale, $subcategory ?: $categoryCode, $color, $size, $price);
+            
             // Get side filter HTML
-            $sideFilterHtml = view('frontend.category.sidefilter', [
-                'collections' => $collections,
-                'locale' => $locale,
-                'categoryCode' => $subcategory ?: $categoryCode
-            ])->render();
+            $sideFilterHtml = view('frontend.category.sidefilter', $filterData)->render();
 
             // Clean up HTML (remove newlines, tabs, etc. - matching CI)
             $sideFilterHtml = str_replace(["\r", "\n", "\t"], '', $sideFilterHtml);
@@ -1019,11 +1028,10 @@ class CategoryController extends FrontendController
                 return response()->json('FALSE');
             }
 
-            $sideFilterHtml = view('frontend.category.sidefilter', [
-                'collections' => $collections,
-                'locale' => $locale,
-                'categoryCode' => $category
-            ])->render();
+            // Prepare filter data for sidefilter view
+            $filterData = $this->prepareFilterData($collections, $locale, $category, $color, $size, $price);
+            
+            $sideFilterHtml = view('frontend.category.sidefilter', $filterData)->render();
             $sideFilterHtml = str_replace(["\r", "\n", "\t"], '', $sideFilterHtml);
 
             return response()->json([
@@ -1062,11 +1070,10 @@ class CategoryController extends FrontendController
                 return response()->json('FALSE');
             }
 
-            $sideFilterHtml = view('frontend.category.sidefilter', [
-                'collections' => $collections,
-                'locale' => $locale,
-                'categoryCode' => $category
-            ])->render();
+            // Prepare filter data for sidefilter view
+            $filterData = $this->prepareFilterData($collections, $locale, $category, $color, $size, $price);
+            
+            $sideFilterHtml = view('frontend.category.sidefilter', $filterData)->render();
             $sideFilterHtml = str_replace(["\r", "\n", "\t"], '', $sideFilterHtml);
 
             return response()->json([
@@ -1105,11 +1112,10 @@ class CategoryController extends FrontendController
                 return response()->json('FALSE');
             }
 
-            $sideFilterHtml = view('frontend.category.sidefilter', [
-                'collections' => $collections,
-                'locale' => $locale,
-                'categoryCode' => $category
-            ])->render();
+            // Prepare filter data for sidefilter view
+            $filterData = $this->prepareFilterData($collections, $locale, $category, $color, $size, $price);
+            
+            $sideFilterHtml = view('frontend.category.sidefilter', $filterData)->render();
             $sideFilterHtml = str_replace(["\r", "\n", "\t"], '', $sideFilterHtml);
 
             return response()->json([
@@ -1633,5 +1639,77 @@ class CategoryController extends FrontendController
             \Log::error('CategoryController getSaleProductsWithFilters error: ' . $e->getMessage());
             return false;
         }
+    }
+
+    /**
+     * Prepare view data for category index page
+     * Moves business logic from Blade templates to controller
+     */
+    protected function prepareViewData($collections, $locale, $metaTitle, $metaDescription, $additionalData = [])
+    {
+        // Calculate category title
+        $categoryTitle = isset($collections['category']) && $collections['category']
+            ? ($locale == 'ar' ? $collections['category']->categoryAR : $collections['category']->category)
+            : ($metaTitle ?? __('All Products'));
+
+        // Prepare filter data for sidefilter
+        $filterData = $this->prepareFilterData(
+            $collections,
+            $locale,
+            $additionalData['categoryCode'] ?? '',
+            $additionalData['color'] ?? '',
+            $additionalData['size'] ?? '',
+            $additionalData['price'] ?? ''
+        );
+
+        return array_merge([
+            'collections' => $collections,
+            'category' => $collections['category'] ?? null,
+            'products' => $collections['products'] ?? collect(),
+            'subcategory' => $collections['subcategory'] ?? [],
+            'colorsArr' => $collections['colorsArr'] ?? [],
+            'sizesArr' => $collections['sizesArr'] ?? [],
+            'pricerange' => $collections['pricerange'] ?? [],
+            'productcnt' => $collections['productcnt'] ?? 0,
+            'totalpage' => $collections['totalpage'] ?? 1,
+            'categoryTitle' => $categoryTitle,
+            'metaTitle' => $metaTitle,
+            'metaDescription' => $metaDescription,
+        ], $additionalData, $filterData);
+    }
+
+    /**
+     * Prepare filter data for sidefilter view
+     * Processes query parameters and prepares arrays for filter checking
+     */
+    protected function prepareFilterData($collections, $locale, $categoryCode, $color, $size, $price)
+    {
+        // Process color query string into array
+        $colors_qry = $color;
+        $arrColor = [];
+        if (!empty($colors_qry)) {
+            $arrColor = array_filter(array_map('trim', explode(',', $colors_qry)));
+        }
+
+        // Process size query string into array
+        $sizes_qry = $size;
+        $arrSize = [];
+        if (!empty($sizes_qry)) {
+            $arrSize = array_filter(array_map('trim', explode(',', $sizes_qry)));
+        }
+
+        // Price query string
+        $price_qry = $price;
+
+        return [
+            'collections' => $collections,
+            'locale' => $locale,
+            'categoryCode' => $categoryCode,
+            'colors_qry' => $colors_qry,
+            'sizes_qry' => $sizes_qry,
+            'price_qry' => $price_qry,
+            'arrColor' => $arrColor,
+            'arrSize' => $arrSize,
+        ];
     }
 }
