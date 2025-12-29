@@ -171,7 +171,8 @@ Route::group(['prefix' => '{locale}', 'where' => ['locale' => 'en|ar'], 'middlew
     Route::post('/wishlist/remove', [WishlistController::class, 'remove'])->name('wishlist.remove');
 
     Route::get('/shoppingcart', [ShoppingCartController::class, 'index'])->name('cart.index');
-    Route::post('/shoppingcart/ajax', [ShoppingCartController::class, 'ajaxCart'])->name('cart.ajax');
+    Route::post('/shoppingcart/ajax_cart', [ShoppingCartController::class, 'ajaxCart'])->name('cart.ajax');
+    Route::post('/shoppingcart/ajax_wishlist', [ShoppingCartController::class, 'ajaxWishlist'])->name('cart.ajax.wishlist');
 
     // Checkout routes
     Route::get('/checkout', [CheckoutController::class, 'index'])->name('checkout');
