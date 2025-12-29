@@ -28,53 +28,71 @@ function productlist(url,firstload){
             var target = $(".breadcrumb");
             $("html, body").animate({ scrollTop: target.offset().top }, 600);
           }
-	        if(response) {
-              if (response=='FALSE'){
-                $('.catalog-items').html('<div class="no-results"><h3>'+NoProduct+'</h3><p class="small">'+OtherFilter+'</p></div>');
-              } else {
-  	            var obj = $.parseJSON(response);
-                var prodlist = ''; 
-                var photo = '';
-               
+	        
+          // Laravel's response()->json() sets Content-Type: application/json
+          // jQuery automatically parses JSON responses, so response is already an object
+          // But CI returns a JSON string, so we need to handle both cases
+          var obj = response;
+          
+          // If response is a string, try to parse it (CI format)
+          if (typeof response === 'string') {
+            if (response === 'FALSE' || response === 'false') {
+              $('.catalog-items').html('<div class="no-results"><h3>'+NoProduct+'</h3><p class="small">'+OtherFilter+'</p></div>');
+              return;
+            }
+            try {
+              obj = $.parseJSON(response);
+            } catch(e) {
+              console.error('JSON parse error:', e, response);
+              $('.catalog-items').html('<div class="no-results"><h3>'+NoProduct+'</h3><p class="small">'+OtherFilter+'</p></div>');
+              return;
+            }
+          }
+          
+          // Check for FALSE or empty response
+          if (!obj || obj === 'FALSE' || obj === false || (obj.products && obj.products.length === 0)) {
+            $('.catalog-items').html('<div class="no-results"><h3>'+NoProduct+'</h3><p class="small">'+OtherFilter+'</p></div>');
+          } else if (obj.products && obj.products.length > 0) {
+            var prodlist = ''; 
+            var photo = '';
+           
 
-  	            $.each(obj["products"], function(k, v) {
-                  photo = v.photo1;
-                  if (photo=='')
-                    photo = 'noimage.jpg';
-  	              prodlist += '<div class="col-xs-6 col-sm-4"><div class="product-item"><a href="' + produrl + v.categorycode + '/' + v.productcode+'"><span class="product-image"><img src="/storage/thumb-'+photo+'" alt="'+v.title+'"></span>';
-  	              prodlist += '<span class="product-content"><span class="product-title">'+v.title+'</span><span class="product-price">';
-  	              if (v.discount>0)
-  	                prodlist += '<span class="standard-price">' + KD + ' '+ parseFloat(v.price * currencyrate).toFixed(2)  +'</span>';
-  	              prodlist += '<span class="actual-price">' + KD + ' '+  parseFloat(v.sellingprice * currencyrate).toFixed(2) +'</span>';
-  	              prodlist += '</span>';
-  	              prodlist += '</span>';
-                  if (v.discount>0){
-                    prodlist += '<span class="product-discount">-';                   
-                    prodlist += removeTrailingZeros(v.discount);
-                    prodlist += '%</span>';
-                  }
-                  if (v.qty<=0){
-                    prodlist += '<p class="sold-out">'+SOLDOUT+'</p>';
-                  }
-                  prodlist += '</a></div></div>';
-  	            });
-                 if(page==1)
-  	               $('.catalog-items').html(prodlist);
-                else
-                  $('.catalog-items').append(prodlist);
-
-                
-                $('.results-num').html(obj["productcnt"] + ' ' + ResultsFound);
-
-                $('#colFilters').html(obj["sidefilter"]);
-
-                if (obj["totalpage"] > page)
-                  $('.catalog-footer').removeClass('hidden');
-                else
-                  $('.catalog-footer').addClass('hidden');
-
+            $.each(obj["products"], function(k, v) {
+              photo = v.photo1;
+              if (photo=='')
+                photo = 'noimage.jpg';
+              prodlist += '<div class="col-xs-6 col-sm-4"><div class="product-item"><a href="' + produrl + v.categorycode + '/' + v.productcode+'"><span class="product-image"><img src="/storage/thumb-'+photo+'" alt="'+v.title+'"></span>';
+              prodlist += '<span class="product-content"><span class="product-title">'+v.title+'</span><span class="product-price">';
+              if (v.discount>0)
+                prodlist += '<span class="standard-price">' + KD + ' '+ parseFloat(v.price * currencyrate).toFixed(2)  +'</span>';
+              prodlist += '<span class="actual-price">' + KD + ' '+  parseFloat(v.sellingprice * currencyrate).toFixed(2) +'</span>';
+              prodlist += '</span>';
+              prodlist += '</span>';
+              if (v.discount>0){
+                prodlist += '<span class="product-discount">-';                   
+                prodlist += removeTrailingZeros(v.discount);
+                prodlist += '%</span>';
               }
-	        }else{
+              if (v.qty<=0){
+                prodlist += '<p class="sold-out">'+SOLDOUT+'</p>';
+              }
+              prodlist += '</a></div></div>';
+            });
+            
+            if(page==1)
+              $('.catalog-items').html(prodlist);
+            else
+              $('.catalog-items').append(prodlist);
+
+            $('.results-num').html(obj["productcnt"] + ' ' + ResultsFound);
+
+            $('#colFilters').html(obj["sidefilter"]);
+
+            if (obj["totalpage"] > page)
+              $('.catalog-footer').removeClass('hidden');
+            else
+              $('.catalog-footer').addClass('hidden');
+          } else {
             $('.catalog-items').html('nodata');
           }
 	      
@@ -200,11 +218,11 @@ function GetFilters() {
     }
     
     
-    
     var url = '';
-	  var urlarr = loc.split('/');
-    // URL structure: http://127.0.0.1:8000/en/category/gift-package
+    // Use location.pathname instead of full URL to get correct array indices
+    // URL structure: /en/category/gift-package
     // urlarr[0] = '', urlarr[1] = 'en', urlarr[2] = 'category', urlarr[3] = 'gift-package'
+	  var urlarr = location.pathname.split('/');
     
     if (urlarr[2]=="search")
       url = base_url + 'prodlisting/search?' + fdata;
