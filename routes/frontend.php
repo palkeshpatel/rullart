@@ -10,6 +10,7 @@ use App\Http\Controllers\Frontend\SearchController;
 use App\Http\Controllers\Frontend\ShoppingCartController;
 use App\Http\Controllers\Frontend\CheckoutController;
 use App\Http\Controllers\Frontend\WishlistController;
+use App\Http\Controllers\Frontend\LoginController;
 
 /*
 |--------------------------------------------------------------------------
@@ -119,10 +120,22 @@ Route::group(['prefix' => '{locale}', 'where' => ['locale' => 'en|ar'], 'middlew
     Route::get('/shipping', [PageController::class, 'shipping'])->name('shipping');
 
     // Authentication routes
-    Route::get('/login', function () {
-        // TODO: Implement frontend login page
-        return redirect('/admin/login'); // Temporary redirect to admin login
-    })->name('frontend.login');
+    Route::get('/login', [LoginController::class, 'index'])->name('frontend.login');
+    Route::post('/login/validate', [LoginController::class, 'validateLogin'])->name('login.validate');
+    Route::post('/login/validate_guest', [LoginController::class, 'validateGuest'])->name('login.validate.guest');
+    Route::post('/login/guest', [LoginController::class, 'guestLogin'])->name('login.guest');
+    Route::get('/login/register', function () {
+        // TODO: Implement registration
+        abort(404, 'Registration not implemented yet');
+    })->name('login.register');
+    Route::get('/login/forgot', function () {
+        // TODO: Implement forgot password
+        abort(404, 'Forgot password not implemented yet');
+    })->name('login.forgot');
+    Route::get('/login/google_login', function () {
+        // TODO: Implement Google login
+        abort(404, 'Google login not implemented yet');
+    })->name('login.google');
 
     Route::get('/login/logout', function () {
         // Match CI logout behavior - clear session and redirect
