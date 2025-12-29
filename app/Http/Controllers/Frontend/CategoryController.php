@@ -401,14 +401,22 @@ class CategoryController extends FrontendController
                     $join->on('p.productid', '=', 'pfcolor.fkproductid')
                         ->where('pfcolor.filtercode', '=', 'color');
                 });
-                // Get color IDs from filtervaluecode
-                $colorIds = DB::table('filtervalues')
-                    ->where('filtervaluecode', $color)
-                    ->where('fkfilterid', 2)
-                    ->pluck('filtervalueid')
-                    ->toArray();
-                if (!empty($colorIds)) {
-                    $productsQuery->whereIn('pfcolor.fkfiltervalueid', $colorIds);
+                // Get color IDs from filtervaluecode (handle comma-separated values)
+                $colorCodes = is_array($color) ? $color : explode(',', $color);
+                $colorCodes = array_filter(array_map('trim', $colorCodes)); // Remove empty values
+                
+                if (!empty($colorCodes)) {
+                    $colorIds = DB::table('filtervalues')
+                        ->whereIn('filtervaluecode', $colorCodes)
+                        ->where('fkfilterid', 2)
+                        ->pluck('filtervalueid')
+                        ->toArray();
+                    if (!empty($colorIds)) {
+                        $productsQuery->whereIn('pfcolor.fkfiltervalueid', $colorIds);
+                    } else {
+                        // If no color IDs found, return no products
+                        $productsQuery->whereRaw('1 = 0');
+                    }
                 }
             }
 
@@ -418,15 +426,23 @@ class CategoryController extends FrontendController
                     $join->on('p.productid', '=', 'pfsize.fkproductid')
                         ->where('pfsize.filtercode', '=', 'size');
                 });
-                // Get size IDs from filtervaluecode
-                $sizeIds = DB::table('filtervalues')
-                    ->where('filtervaluecode', $size)
-                    ->where('fkfilterid', 3)
-                    ->pluck('filtervalueid')
-                    ->toArray();
-                if (!empty($sizeIds)) {
-                    $productsQuery->whereIn('pfsize.fkfiltervalueid', $sizeIds)
-                        ->where('pfsize.qty', '>', 0);
+                // Get size IDs from filtervaluecode (handle comma-separated values)
+                $sizeCodes = is_array($size) ? $size : explode(',', $size);
+                $sizeCodes = array_filter(array_map('trim', $sizeCodes)); // Remove empty values
+                
+                if (!empty($sizeCodes)) {
+                    $sizeIds = DB::table('filtervalues')
+                        ->whereIn('filtervaluecode', $sizeCodes)
+                        ->where('fkfilterid', 3)
+                        ->pluck('filtervalueid')
+                        ->toArray();
+                    if (!empty($sizeIds)) {
+                        $productsQuery->whereIn('pfsize.fkfiltervalueid', $sizeIds)
+                            ->where('pfsize.qty', '>', 0);
+                    } else {
+                        // If no size IDs found, return no products
+                        $productsQuery->whereRaw('1 = 0');
+                    }
                 }
             }
 
