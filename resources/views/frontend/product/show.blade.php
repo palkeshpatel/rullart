@@ -3,7 +3,7 @@
 @section('content')
 @php
     $dir = $locale == 'ar' ? 'dir="rtl"' : '';
-    $backurl = request()->header('referer') ?: route('category.index', ['locale' => $locale, 'category' => $productData->categorycode]);
+    $backurl = request()->header('referer') ?: route('category.index', ['locale' => $locale, 'categoryCode' => $productData->categorycode]);
     $isSoldOut = isset($productData->qty) && $productData->qty <= 0;
     $price = isset($productData->sellingprice) ? $productData->sellingprice : $productData->price;
     $finalPrice = $price * $currencyRate;
@@ -18,7 +18,7 @@
             </li>
             @if(!empty($parentcategory ?? ''))
                 <li class="breadcrumb-item product active">
-                    <a href="{{ route('category.index', ['locale' => $locale, 'category' => $parentcategorycode ?? $productData->categorycode]) }}">
+                    <a href="{{ route('category.index', ['locale' => $locale, 'categoryCode' => $parentcategorycode ?? $productData->categorycode]) }}">
                         {{ $parentcategory ?? '' }}
                     </a>
                 </li>
@@ -27,7 +27,7 @@
         <h1>
             <span>
                 <span class="before-icon"></span>
-                <a href="{{ route('category.index', ['locale' => $locale, 'category' => $productData->categorycode]) }}">
+                <a href="{{ route('category.index', ['locale' => $locale, 'categoryCode' => $productData->categorycode]) }}">
                     {{ $productData->category ?? '' }}
                 </a>
                 <span class="after-icon"></span>

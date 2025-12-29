@@ -45,7 +45,7 @@
                                     @foreach ($categoryMenu as $category)
                                         <li class="col-md-6">
                                             <a
-                                                href="{{ route('category.index', ['locale' => $locale, 'category' => $category->categorycode]) }}">
+                                                href="{{ route('category.index', ['locale' => $locale, 'categoryCode' => $category->categorycode]) }}">
                                                 {{ $locale == 'ar' ? $category->categoryAR : $category->category }}
                                             </a>
                                         </li>
@@ -98,7 +98,7 @@
                                         @foreach ($giftPackageMenu as $gift)
                                             <li class="col-md-6">
                                                 <a
-                                                    href="{{ route('category.index', ['locale' => $locale, 'category' => $gift->categorycode]) }}">
+                                                    href="{{ route('category.index', ['locale' => $locale, 'categoryCode' => $gift->categorycode]) }}">
                                                     {{ $locale == 'ar' ? $gift->categoryAR : $gift->category }}
                                                 </a>
                                             </li>
@@ -280,13 +280,14 @@
             </div>
         </div>
     </div>
-    
+
     {{-- Search Bar --}}
     <div class="ra-search-bar">
         <div class="container-fluid">
             <div class="search-wrapper">
                 <form action="{{ route('search', ['locale' => $locale]) }}" id="frmSearch">
-                    <input type="search" placeholder="{{ __('Search here') }}" id="fieldSearch" name="keyword" class="fld-search required">
+                    <input type="search" placeholder="{{ __('Search here') }}" id="fieldSearch" name="keyword"
+                        class="fld-search required">
                     <button type="submit" value="Search" class="btn-search" id="btnSearch">
                         <svg class="icon icon-search">
                             <use xlink:href="/static/images/symbol-defs.svg#icon-search"></use>

@@ -70,7 +70,7 @@ Route::get('/currency/{code}', function ($code) {
 })->name('currency.switch');
 
 // Frontend routes with optional locale prefix
-Route::group(['prefix' => '{locale?}', 'where' => ['locale' => 'en|ar'], 'middleware' => ['locale', 'currency']], function () {
+Route::group(['prefix' => '{locale}', 'where' => ['locale' => 'en|ar'], 'middleware' => ['locale', 'currency']], function () {
 
     // Homepage
     Route::get('/', [HomeController::class, 'index'])->name('home');
@@ -82,8 +82,9 @@ Route::group(['prefix' => '{locale?}', 'where' => ['locale' => 'en|ar'], 'middle
     Route::get('/product/{product}', [ProductController::class, 'showByCode'])
         ->name('product.show.code');
 
-    // Category routes
-    Route::get('/category/{category}', [CategoryController::class, 'index'])
+    // Category routes - must come before other routes that might conflict
+    Route::get('/category/{categoryCode}', [CategoryController::class, 'index'])
+        ->where('categoryCode', '[a-zA-Z0-9\-]+')
         ->name('category.index');
     Route::get('/all', [CategoryController::class, 'all'])->name('category.all');
 
