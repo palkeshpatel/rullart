@@ -9,35 +9,100 @@ use Illuminate\Support\Facades\DB;
 
 class ProductController extends FrontendController
 {
-    public function show($category, $product)
+    public function show($locale, $category, $product)
     {
-        $locale = app()->getLocale();
-        
+        $customerId = session('customerid', 0);
+
+        // Match CI Product->index() structure
         $productData = $this->getProductData($product, $locale);
-        
+
         if (!$productData) {
             abort(404, 'Product not found');
         }
-        
-        // Check if category matches
+
+        // Check if category matches (CI line 94-96)
         if ($category != $productData->categorycode) {
             abort(404, 'Category mismatch');
         }
-        
-        // Get product photos
+
+        // Get product photos array (match CI lines 77-93)
         $photos = $this->getProductPhotos($productData);
-        
-        // Get product sizes/filters if available
+
+        // Get product sizes/filters (match CI lines 95-112)
         $sizes = $this->getProductSizes($productData->productid, $locale);
-        
-        // Get related products
-        $relatedProducts = $this->getRelatedProducts($productData, $locale);
-        
-        // Get page meta
-        $metaTitle = $productData->metatitle ?? $productData->title;
-        $metaDescription = $productData->metadescr ?? strip_tags($productData->shortdescr);
+
+        // Get wishlist status (match CI lines 123-134)
+        $wishlistcnt = 0;
+        $wishlistid = 0;
+        if ($customerId > 0) {
+            $wishlist = DB::table('wishlist')
+                ->where('fkcustomerid', $customerId)
+                ->where('fkproductid', $productData->productid)
+                ->first();
+            if ($wishlist) {
+                $wishlistcnt = 1;
+                $wishlistid = $wishlist->wishlistid;
+            }
+        }
+        $productData->wishlistid = $wishlistid;
+
+        // Get parent category (match CI lines 136-148)
+        $parentcategory = '';
+        $parentcategorycode = '';
+        $categoryArr = null;
+        if ($productData->parentid > 0) {
+            $categoryArr = DB::table('category')
+                ->where('categoryid', $productData->parentid)
+                ->where('ispublished', 1)
+                ->first();
+            if ($categoryArr) {
+                $parentcategory = $locale == 'ar' ? $categoryArr->categoryAR : $categoryArr->category;
+                $parentcategorycode = $categoryArr->categorycode;
+            }
+        }
+
+        // Get related products (match CI lines 150-201)
+        $relatedProducts = $this->getRelatedProducts($productData, $locale, $customerId);
+
+        // Get Delivery & Returns (match CI lines 229-233)
+        $deliveryReturns = '';
+        if ($locale == 'ar') {
+            $deliveryReturns = $this->settingsArr['Delivery & Returns (AR)'] ?? '';
+        } else {
+            $deliveryReturns = $this->settingsArr['Delivery & Returns'] ?? '';
+        }
+
+        // Get gift messages if enabled (match CI lines 84-85, 258-268)
+        $messages = collect([]);
+        $showGiftMessage = false;
+        $giftMessageCharge = 0;
+        if ($productData->qty > 0) {
+            $showGiftMessageSetting = $this->settingsArr['Show Gift Message'] ?? 'No';
+            if ($showGiftMessageSetting == 'Yes') {
+                $messages = DB::table('messages')->get();
+                if ($messages->count() > 0) {
+                    $showGiftMessage = true;
+                    $giftMessageCharge = $this->settingsArr['Gift Message Charge'] ?? 0;
+                }
+            }
+        }
+
+        // Check international delivery (match CI lines 21-31)
+        $shippingCountry = config('app.default_country', 'Kuwait');
+        $defaultCountry = config('app.default_country', 'Kuwait');
+        $internationDelivery = true;
+        if (isset($productData->internation_ship) && $productData->internation_ship == 0 && $shippingCountry != $defaultCountry) {
+            $internationDelivery = false;
+        }
+
+        // Get page meta (match CI lines 215-222)
+        $metaTitle = $productData->metatitle;
+        if (empty($metaTitle)) {
+            $metaTitle = $productData->title;
+        }
+        $metaDescription = $productData->metadescr ?? '';
         $metaKeywords = $productData->metakeyword ?? '';
-        
+
         return view('frontend.product.show', compact(
             'productData',
             'photos',
@@ -45,20 +110,28 @@ class ProductController extends FrontendController
             'relatedProducts',
             'metaTitle',
             'metaDescription',
-            'metaKeywords'
+            'metaKeywords',
+            'parentcategory',
+            'parentcategorycode',
+            'wishlistcnt',
+            'wishlistid',
+            'deliveryReturns',
+            'messages',
+            'showGiftMessage',
+            'giftMessageCharge',
+            'internationDelivery'
         ));
     }
-    
-    public function showByCode($product)
+
+    public function showByCode($locale, $product)
     {
-        $locale = app()->getLocale();
-        
+
         $productData = $this->getProductData($product, $locale);
-        
+
         if (!$productData) {
             abort(404, 'Product not found');
         }
-        
+
         // Redirect to proper URL with category
         return redirect()->route('product.show', [
             'locale' => $locale,
@@ -66,54 +139,43 @@ class ProductController extends FrontendController
             'product' => $product
         ]);
     }
-    
+
     protected function getProductData($productCode, $locale)
     {
+        // Match CI Product_model->get_data() exactly
+        if ($locale == 'ar') {
+            $columns = 'p.shortdescrAR as title, p.titleAR as shortdescr, p.longdescrAR as longdescr, c.categoryAR as category, c.categorycode';
+        } else {
+            $columns = 'p.shortdescr AS title, p.title as shortdescr, p.longdescr, c.category, c.categorycode';
+        }
+
         $query = DB::table('products as p')
-            ->select([
-                'p.productid',
-                $locale == 'ar' ? 'p.shortdescrAR as title' : 'p.shortdescr AS title',
-                $locale == 'ar' ? 'p.titleAR as shortdescr' : 'p.title as shortdescr',
-                $locale == 'ar' ? 'p.longdescrAR as longdescr' : 'p.longdescr',
-                $locale == 'ar' ? 'c.categoryAR as category' : 'c.category',
-                'p.productcode',
-                'p.photo1',
-                'p.photo2',
-                'p.photo3',
-                'p.photo4',
-                'p.photo5',
-                'c.categorycode',
-                'c.parentid',
-                'p.fkcategoryid',
-                'p.metatitle',
-                'p.metadescr',
-                'p.metakeyword',
-                DB::raw("(select sum(qty) from productsfilter where fkproductid=p.productid and productsfilter.filtercode='size') as qty")
-            ])
-            ->leftJoin('category as c', 'p.fkcategoryid', '=', 'c.categoryid')
+            ->select(DB::raw($columns . ', IFNULL(p.video, \'\') as video, IFNULL(p.videoposter, \'\') as videoposter, c.categoryid, p.productid, p.productcode, p.productcategoryid, p.productcategoryid2, p.productcategoryid3, p.productcategoryid4, p.price, p.productid, pp.discount, pp.sellingprice, p.photo1, p.photo2, p.photo3, p.photo4, p.photo5, p.metakeyword, p.metadescr, p.metatitle, c.categorycode, c.parentid, p.internation_ship, IFNULL((SELECT SUM(qty) FROM productsfilter WHERE fkproductid=p.productid AND productsfilter.filtercode=\'size\'), 0) as qty, p.related_category_1, p.related_category_2, p.gift_type, p.related_products'))
+            ->join('productpriceview as pp', 'pp.kproductid', '=', 'p.productid') // Actual view uses kproductid
+            ->join('category as c', 'p.fkcategoryid', '=', 'c.categoryid')
             ->where('p.productcode', $productCode)
             ->where('p.ispublished', 1)
             ->where('c.ispublished', 1);
-        
-        // Try to use productpriceview if it exists
-        if (DB::getSchemaBuilder()->hasTable('productpriceview')) {
-            $query->leftJoin('productpriceview as pp', 'pp.fkproductid', '=', 'p.productid')
-                ->addSelect([
-                    'pp.discount',
-                    'pp.sellingprice',
-                    'p.price'
-                ]);
-        } else {
-            $query->addSelect([
-                DB::raw('COALESCE(p.discount, 0) as discount'),
-                DB::raw('COALESCE(p.sellingprice, p.price) as sellingprice'),
-                'p.price'
-            ]);
+
+        $product = $query->first();
+
+        if (!$product) {
+            return false;
         }
-        
-        return $query->first();
+
+        // Handle videoposter like CI
+        if (empty($product->videoposter) && !empty($product->video)) {
+            $product->videoposter = 'playvideo.png';
+        }
+
+        // Set default photo1 if empty (like CI line 98-100)
+        if (empty($product->photo1)) {
+            $product->photo1 = 'noimage.jpg';
+        }
+
+        return $product;
     }
-    
+
     protected function getProductPhotos($product)
     {
         $photos = [];
@@ -122,58 +184,70 @@ class ProductController extends FrontendController
         if (!empty($product->photo3)) $photos[] = $product->photo3;
         if (!empty($product->photo4)) $photos[] = $product->photo4;
         if (!empty($product->photo5)) $photos[] = $product->photo5;
-        
+
         return $photos;
     }
-    
+
     protected function getProductSizes($productId, $locale)
     {
+        // Match CI Product_model->get_data() size query exactly (lines 96-112)
+        if ($locale == 'ar') {
+            $columns = 'fv.filtervalueAR as filtervalue';
+        } else {
+            $columns = 'fv.filtervalue';
+        }
+
         $query = DB::table('productsfilter as pf')
-            ->select([
-                $locale == 'ar' ? 'fv.filtervalueAR as filtervalue' : 'fv.filtervalue',
-                'pf.qty'
-            ])
-            ->leftJoin('filtervalues as fv', 'pf.fkfiltervalueid', '=', 'fv.filtervalueid')
-            ->where('pf.fkproductid', $productId)
+            ->select(DB::raw($columns . ', pf.filtercode, fv.filtervaluecode, fv.filtervalueid, pf.qty'))
+            ->join('filtervalues as fv', 'fv.filtervalueid', '=', 'pf.fkfiltervalueid')
+            ->where('fv.fkfilterid', 3) // CI uses fkfilterid = 3 for size
+            ->where('fv.isactive', 1)
             ->where('pf.filtercode', 'size')
+            ->where('pf.fkproductid', $productId)
             ->where('pf.qty', '>', 0)
+            ->where('fv.filtervalueid', '!=', 0)
             ->orderBy('fv.displayorder', 'asc');
-        
+
         return $query->get();
     }
-    
-    protected function getRelatedProducts($product, $locale, $limit = 4)
+
+    protected function getRelatedProducts($product, $locale, $customerId = 0, $limit = 4)
     {
-        // Get products from same category
-        $query = DB::table('products as p')
-            ->select([
-                'p.productid',
-                $locale == 'ar' ? 'p.shortdescrAR as title' : 'p.shortdescr AS title',
-                'p.productcode',
-                'p.photo1',
-                'c.categorycode',
-                DB::raw("(select sum(qty) from productsfilter where fkproductid=p.productid and productsfilter.filtercode='size') as qty")
-            ])
-            ->leftJoin('category as c', 'p.fkcategoryid', '=', 'c.categoryid')
-            ->where('p.fkcategoryid', $product->fkcategoryid)
-            ->where('p.productid', '!=', $product->productid)
-            ->where('p.ispublished', 1)
-            ->where('c.ispublished', 1);
-        
-        if (DB::getSchemaBuilder()->hasTable('productpriceview')) {
-            $query->leftJoin('productpriceview as pp', 'pp.fkproductid', '=', 'p.productid')
-                ->addSelect(['pp.discount', 'pp.sellingprice', 'p.price']);
+        // Match CI Product_model->get_related() exactly (lines 221-272)
+        if ($locale == 'ar') {
+            $columns = 'p.shortdescrAR as title';
         } else {
-            $query->addSelect([
-                DB::raw('COALESCE(p.discount, 0) as discount'),
-                DB::raw('COALESCE(p.sellingprice, p.price) as sellingprice'),
-                'p.price'
-            ]);
+            $columns = 'p.shortdescr as title';
         }
-        
-        return $query->orderBy('p.productid', 'desc')
+
+        $select = $columns . ', p.productid, p.productcode, p.price, pp.discount, pp.sellingprice, p.photo1, c.categorycode, (SELECT SUM(qty) FROM productsfilter WHERE fkproductid=p.productid AND productsfilter.filtercode=\'size\') as qty';
+
+        if ($customerId > 0) {
+            $select .= ', IFNULL(w.wishlistid, 0) as wishlistid';
+        } else {
+            $select .= ', 0 as wishlistid';
+        }
+
+        $query = DB::table('products as p')
+            ->select(DB::raw($select))
+            ->distinct()
+            ->join('productpriceview as pp', 'pp.kproductid', '=', 'p.productid') // Actual view uses kproductid
+            ->join('category as c', 'p.fkcategoryid', '=', 'c.categoryid');
+
+        if ($customerId > 0) {
+            $query->leftJoin('wishlist as w', function ($join) use ($customerId) {
+                $join->on('p.productid', '=', 'w.fkproductid')
+                    ->where('w.fkcustomerid', '=', $customerId);
+            });
+        }
+
+        $query->where('p.ispublished', 1)
+            ->where('p.productid', '!=', $product->productid)
+            ->whereRaw('(SELECT SUM(qty) FROM productsfilter pf WHERE pf.fkproductid=p.productid) > 0')
+            ->where('c.categorycode', $product->categorycode)
             ->limit($limit)
-            ->get();
+            ->orderByRaw('RAND()'); // CI uses RANDOM
+
+        return $query->get();
     }
 }
-
