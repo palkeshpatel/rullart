@@ -64,9 +64,9 @@
                                                 <span class="product-title">{{ $productTitle }}</span>
                                                 <span class="product-price">
                                                     @if($discount > 0)
-                                                        <span class="standard-price">{{ number_format($product->price * $currencyRate, 3) }} {{ $currencyCode }}</span>
+                                                        <span class="standard-price">{{ number_format($product->price * $currencyRate, 0) }} {{ $currencyCode }}</span>
                                                     @endif
-                                                    <span class="actual-price">{{ number_format($finalPrice, 3) }} {{ $currencyCode }}</span>
+                                                    <span class="actual-price">{{ number_format($finalPrice, 0) }} {{ $currencyCode }}</span>
                                                 </span>
                                             </span>
                                             @if($discount > 0)

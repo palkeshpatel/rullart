@@ -13,6 +13,7 @@
     <meta name="keywords" content="{{ $metaKeywords ?? '' }}">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="author" content="info@uno-digital.com">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
 
     {{-- Open Graph Meta Tags --}}
     <meta property="og:url" content="{{ url()->current() }}" />

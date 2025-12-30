@@ -725,8 +725,7 @@ class CategoryController extends FrontendController
                 $lowLimit = $rangeLimits[$i];
                 foreach ($prices as $perPrice) {
                     if ($perPrice < $price) {
-                        $decimal = $currencyCode == "KWD" ? 3 : 2;
-                        $convertedPrice = number_format($price * $currencyRate, $decimal);
+                        $convertedPrice = number_format($price * $currencyRate, 0);
                         $text = __('Below') . ' ' . $currencyCode . ' ' . $convertedPrice;
                         $slab = [
                             'price' => '0-' . $price,
@@ -749,8 +748,7 @@ class CategoryController extends FrontendController
                 $lowLimit = $rangeLimits[$i];
                 foreach ($prices as $perPrice) {
                     if ($perPrice > $price) {
-                        $decimal = $currencyCode == "KWD" ? 3 : 2;
-                        $convertedPrice = number_format($price * $currencyRate, $decimal);
+                        $convertedPrice = number_format($price * $currencyRate, 0);
                         $text = __('Above') . ' ' . $currencyCode . ' ' . $convertedPrice;
                         $slab = [
                             'price' => (string) $price,
@@ -775,9 +773,8 @@ class CategoryController extends FrontendController
                 $highLimit = $rangeLimits[$i + 1];
                 foreach ($prices as $perPrice) {
                     if ($perPrice >= $lowLimit && $perPrice < $highLimit) {
-                        $decimal = $currencyCode == "KWD" ? 3 : 2;
-                        $convertedLow = number_format($lowLimit * $currencyRate, $decimal);
-                        $convertedHigh = number_format($highLimit * $currencyRate, $decimal);
+                        $convertedLow = number_format($lowLimit * $currencyRate, 0);
+                        $convertedHigh = number_format($highLimit * $currencyRate, 0);
                         $text = $currencyCode . ' ' . $convertedLow . ' to ' . $currencyCode . ' ' . $convertedHigh;
                         $slab = [
                             'price' => $lowLimit . '-' . $highLimit,

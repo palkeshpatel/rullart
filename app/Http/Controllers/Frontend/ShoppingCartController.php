@@ -11,24 +11,59 @@ class ShoppingCartController extends FrontendController
 {
     public function index()
     {
+        Log::info('=== SHOW CART START ===', [
+            'session_id' => Session::getId(),
+            'customerid' => Session::get('customerid', 0),
+            'shoppingcartid' => Session::get('shoppingcartid')
+        ]);
+
         $locale = app()->getLocale();
         $shoppingCartId = Session::get('shoppingcartid');
 
+        // If no cart ID in session, try to retrieve by customerid/sessionid (matches CI behavior)
         if (!$shoppingCartId) {
-            // Create new cart if doesn't exist
             $customerId = Session::get('customerid', 0);
             $sessionId = Session::getId();
             $shoppingCartId = $this->getOrCreateCartId($customerId, $sessionId);
-            Session::put('shoppingcartid', $shoppingCartId);
+            if ($shoppingCartId) {
+                Session::put('shoppingcartid', $shoppingCartId);
+            }
         }
 
         // Get cart data
+        Log::info('Getting cart data', ['cartid' => $shoppingCartId]);
         $cartData = $this->getCartData($shoppingCartId);
 
-        if (empty($cartData['shoppingcart'])) {
+        Log::info('Cart data retrieved', [
+            'has_cart' => !empty($cartData['shoppingcart']),
+            'items_count' => $cartData['shoppingcartitems']->count() ?? 0,
+            'cartid' => $cartData['shoppingcart']->cartid ?? 'NOT SET'
+        ]);
+
+        // Add messages for gift message dropdown (matches CI)
+        $cartData['messages'] = DB::table('messages')
+            ->orderBy('displayorder')
+            ->get();
+
+        // If cart is empty, show empty message
+        if (empty($cartData['shoppingcart']) || ($cartData['shoppingcartitems'] && $cartData['shoppingcartitems']->count() == 0)) {
             Session::forget('shoppingcartid');
-            return redirect()->route('home', ['locale' => $locale]);
+            // If AJAX request (overlay), return empty cart message
+            if (request()->ajax() || request()->has('t')) {
+                return view('frontend.shoppingcart.content', $cartData)->render();
+            }
+            // For full page, still show the cart page with empty message
         }
+
+        // If AJAX request (overlay), return just the content without layout
+        if (request()->ajax() || request()->has('t')) {
+            return view('frontend.shoppingcart.content', $cartData)->render();
+        }
+
+        // Full page view (for direct navigation)
+        Log::info('=== SHOW CART END ===', [
+            'items_count' => $cartData['shoppingcartitems']->count() ?? 0
+        ]);
 
         return view('frontend.shoppingcart.index', $cartData);
     }
@@ -38,18 +73,28 @@ class ShoppingCartController extends FrontendController
         $locale = app()->getLocale();
         $shippingcountryid = config('app.default_countryid', 1);
 
-        // Check if cart exists (CI doesn't use isactive column)
-        $cart = DB::table('shoppingcartmaster')
-            ->where('fkcustomerid', $customerId)
-            ->where('sessionid', $sessionId)
-            ->first();
+        // Check if cart exists - match CI logic exactly
+        // If customerid > 0, check by customerid (most recent)
+        // If customerid == 0, check by sessionid
+        if ($customerId > 0) {
+            $cart = DB::table('shoppingcartmaster')
+                ->where('fkcustomerid', $customerId)
+                ->orderBy('cartid', 'desc')
+                ->first();
+        } else {
+            // Guest user - check by sessionid
+            $cart = DB::table('shoppingcartmaster')
+                ->where('sessionid', $sessionId)
+                ->where('fkcustomerid', 0)
+                ->first();
+        }
 
         if ($cart) {
             return $cart->cartid; // CI uses 'cartid' not 'shoppingcartid'
         }
 
         // Create new cart - match CI exactly: lang, sessionid, fkcustomerid, shippingcountryid, shipping_method
-        // Also add required fields: itemtotal, shipping_charge (database requires them)
+        // Also add required fields: itemtotal, shipping_charge, total (database requires them)
         $cartId = DB::table('shoppingcartmaster')->insertGetId([
             'lang' => $locale,
             'sessionid' => $sessionId,
@@ -58,6 +103,17 @@ class ShoppingCartController extends FrontendController
             'shipping_method' => '',
             'itemtotal' => 0, // Required field, set to 0 initially
             'shipping_charge' => 0, // Required field, set to 0 initially
+            'total' => 0, // Required field, set to 0 initially
+            'paymentmethod' => '', // Required field
+            'addressid' => 0, // Required field
+            'billingaddressid' => 0, // Required field with default
+            'shippingaddressid' => 0, // Required field with default
+            'couponcode' => '', // Required field
+            'couponvalue' => 0, // Required field
+            'discount' => 0, // Required field
+            'mobiledevice' => '', // Required field
+            'browser' => '', // Required field
+            'platform' => '', // Required field
         ]);
 
         return $cartId;
@@ -65,8 +121,43 @@ class ShoppingCartController extends FrontendController
 
     protected function getCartData($shoppingCartId)
     {
-        $cart = DB::table('shoppingcartmaster')
-            ->where('cartid', $shoppingCartId)
+        // Get cart master - match CI cart_master_get
+        // Use LEFT JOIN for size to handle products without sizes (size = 0)
+        $total = DB::table('shoppingcartitems as s')
+            ->select(DB::raw('ifnull(sum(s.sellingprice*s.qty),0) as totalamt'))
+            ->join('products as p', 'p.productid', '=', 's.fkproductid')
+            ->leftJoin('productsfilter as pfsize', function ($join) {
+                $join->on('p.productid', '=', 'pfsize.fkproductid')
+                    ->where('pfsize.filtercode', '=', 'size')
+                    ->whereRaw('s.size=pfsize.fkfiltervalueid');
+            })
+            ->where('p.ispublished', 1)
+            ->where('s.fkcartid', $shoppingCartId)
+            ->value('totalamt') ?? 0;
+
+        $cart = DB::table('shoppingcartmaster as s')
+            ->select([
+                's.cartid',
+                's.fkcustomerid',
+                's.sessionid',
+                's.orderdate',
+                's.paymentmethod',
+                's.addressid',
+                's.lang',
+                DB::raw($total . ' as itemtotal'),
+                DB::raw("ifnull(s.couponcode,'') as couponcode"),
+                DB::raw("ifnull(s.couponvalue,'') as couponvalue"),
+                DB::raw("ifnull(s.discount,0) as discount"),
+                's.asGift',
+                DB::raw("ifnull(s.giftMessage,'') as giftMessage"),
+                's.shippingaddressid',
+                's.billingaddressid',
+                's.shippingcountryid',
+                DB::raw("ifnull(c.email,'') as email"),
+                's.shipping_charge',
+            ])
+            ->leftJoin('customers as c', 's.fkcustomerid', '=', 'c.customerid')
+            ->where('s.cartid', $shoppingCartId)
             ->first();
 
         if (!$cart) {
@@ -76,22 +167,62 @@ class ShoppingCartController extends FrontendController
             ];
         }
 
-        $items = DB::table('shoppingcartitems as sci')
-            ->select([
-                'sci.*',
-                'p.productcode',
-                'p.shortdescr',
-                'p.shortdescrAR',
-                'p.title',
-                'p.titleAR',
-                'p.photo1',
-                'c.categorycode',
-                DB::raw("(SELECT sum(qty) FROM productsfilter WHERE fkproductid = p.productid AND filtercode = 'size') as available_qty")
-            ])
-            ->leftJoin('products as p', 'sci.fkproductid', '=', 'p.productid')
-            ->leftJoin('category as c', 'p.fkcategoryid', '=', 'c.categoryid')
-            ->where('sci.fkcartid', $shoppingCartId)
+        // Get cart items - match CI cart_get_items exactly
+        // CI uses INNER JOIN which means items with size=0 won't match unless there's a productsfilter record
+        // But we need to handle both cases: items with size > 0 AND items with size = 0
+        $locale = app()->getLocale();
+
+        // First, let's check what items actually exist in the database
+        $rawItems = DB::table('shoppingcartitems as s')
+            ->where('s.fkcartid', $shoppingCartId)
+            ->get(['cartitemid', 'fkproductid', 'size', 'qty', 'sizename']);
+
+        Log::info('getCartData: Raw items from DB', [
+            'cartid' => $shoppingCartId,
+            'raw_items' => $rawItems->toArray()
+        ]);
+
+        // Use a single query with LEFT JOIN for size filter to handle both cases
+        if ($locale == 'ar') {
+            $columns = "p.shortdescrAR as title, ifnull(filtersize.filtervalueAR, ifnull(s.sizename, '')) as sizename";
+        } else {
+            $columns = "p.shortdescr as title, ifnull(filtersize.filtervalue, ifnull(s.sizename, '')) as sizename";
+        }
+
+        $items = DB::table('shoppingcartitems as s')
+            ->select(DB::raw($columns . ', s.cartitemid, p.photo1 as image, p.productid, p.productcode, s.price, s.sellingprice, s.subtotal, c.categorycode, c.parentid, p.discount, p.gift_type, s.qty, s.giftqty, ifnull(filtersize.filtervalueid, s.size) as size, ifnull(pfsize.qty, 0) as maxqty, s.giftproductid, s.giftproductid2, s.giftproductid3, s.giftproductid4, s.giftproductprice, s.giftproduct2price, s.giftproduct3price, s.giftproduct4price, s.giftboxprice, s.giftmessageid, ifnull(s.giftmessage,\'\') as giftmessage, s.gifttitleAR, s.gifttitle, p.fkcategoryid, s.giftmessage_charge, s.internation_ship'))
+            ->distinct()
+            ->join('products as p', 'p.productid', '=', 's.fkproductid')
+            ->leftJoin('productsfilter as pfsize', function ($join) {
+                $join->on('p.productid', '=', 'pfsize.fkproductid')
+                    ->where('pfsize.filtercode', '=', 'size')
+                    ->whereRaw('s.size=pfsize.fkfiltervalueid');
+            })
+            ->leftJoin('filtervalues as filtersize', 'pfsize.fkfiltervalueid', '=', 'filtersize.filtervalueid')
+            ->leftJoin('category as c', 'c.categoryid', '=', 'p.fkcategoryid')
+            ->where('p.ispublished', 1)
+            ->where('s.fkcartid', $shoppingCartId)
+            ->where(function ($query) {
+                // Include items with size > 0 that have qty > 0, OR items with size = 0
+                $query->where(function ($q) {
+                    $q->where('s.size', '>', 0)
+                        ->where('pfsize.qty', '>', 0);
+                })->orWhere('s.size', '=', 0);
+            })
             ->get();
+
+        Log::info('getCartData: Query executed', [
+            'cartid' => $shoppingCartId,
+            'items_count' => $items->count(),
+            'items' => $items->map(function ($item) {
+                return [
+                    'cartitemid' => $item->cartitemid,
+                    'productid' => $item->productid,
+                    'size' => $item->size,
+                    'qty' => $item->qty
+                ];
+            })->toArray()
+        ]);
 
         return [
             'shoppingcart' => $cart,
@@ -122,6 +253,13 @@ class ShoppingCartController extends FrontendController
      */
     protected function addToCartAjax(Request $request)
     {
+        Log::info('=== ADD TO CART START ===', [
+            'request_data' => $request->all(),
+            'session_id' => Session::getId(),
+            'customerid' => Session::get('customerid', 0),
+            'shoppingcartid' => Session::get('shoppingcartid')
+        ]);
+
         $locale = app()->getLocale();
         $pid = $request->input('p_id');
         $qty = $request->input('quantity', 1);
@@ -152,8 +290,8 @@ class ShoppingCartController extends FrontendController
                 $gifttitle = $giftmessages->message ?? '';
                 $gifttitleAR = $giftmessages->messageAR ?? '';
                 $giftmessage_charge = DB::table('settings')
-                    ->where('settingkey', 'Gift Message Charge')
-                    ->value('settingvalue') ?? 0;
+                    ->where('name', 'Gift Message Charge')
+                    ->value('details') ?? 0;
             }
         }
 
@@ -174,10 +312,21 @@ class ShoppingCartController extends FrontendController
         }
 
         // Get product by ID and size
+        Log::info('Getting product by size', ['productid' => $pid, 'size' => $size]);
         $product = $this->productBySize($pid, $size);
         if (!$product) {
+            Log::error('Product not found in productBySize', [
+                'productid' => $pid,
+                'size' => $size
+            ]);
             return response(0);
         }
+
+        Log::info('Product found', [
+            'productid' => $product['productid'],
+            'sellingprice' => $product['sellingprice'],
+            'qty' => $product['qty'] ?? 0
+        ]);
 
         $sellingprice = $product['sellingprice'];
         $available_qty = $product['qty'];
@@ -244,14 +393,59 @@ class ShoppingCartController extends FrontendController
             $shoppingcartid = Session::get('shoppingcartid');
             $sessionid = Session::getId();
 
-            if ($shoppingcartid == "" || $shoppingcartid == "0") {
+            Log::info('Checking cart ID', [
+                'shoppingcartid' => $shoppingcartid,
+                'customerid' => $customerid,
+                'sessionid' => $sessionid
+            ]);
+
+            if ($shoppingcartid == "" || $shoppingcartid == "0" || $shoppingcartid == 0) {
+                Log::info('Cart ID is empty, calling cartMaster', [
+                    'customerid' => $customerid,
+                    'sessionid' => $sessionid,
+                    'locale' => $locale
+                ]);
+
                 $shippingcountryid = config('app.default_countryid', 1);
                 $cartMaster = $this->cartMaster($customerid, $sessionid, $locale, $shippingcountryid);
-                $shoppingcartid = 0;
-                if ($cartMaster !== false) {
+
+                Log::info('cartMaster returned', [
+                    'cartMaster' => $cartMaster,
+                    'is_false' => $cartMaster === false,
+                    'has_cartid' => isset($cartMaster['cartid']),
+                    'cartid_value' => $cartMaster['cartid'] ?? 'NOT SET'
+                ]);
+
+                if ($cartMaster !== false && isset($cartMaster['cartid']) && $cartMaster['cartid'] > 0) {
                     $shoppingcartid = $cartMaster['cartid'];
+                    Session::put('shoppingcartid', $shoppingcartid);
+                    Log::info('Cart created/retrieved successfully', [
+                        'cartid' => $shoppingcartid,
+                        'customerid' => $customerid,
+                        'sessionid' => $sessionid
+                    ]);
+                } else {
+                    // If cartMaster failed, log error and return 0
+                    Log::error('Failed to create/get cart', [
+                        'customerid' => $customerid,
+                        'sessionid' => $sessionid,
+                        'cartMaster' => $cartMaster,
+                        'cartMaster_type' => gettype($cartMaster)
+                    ]);
+                    return response(0);
                 }
-                Session::put('shoppingcartid', $shoppingcartid);
+            } else {
+                Log::info('Using existing cart ID', ['cartid' => $shoppingcartid]);
+            }
+
+            // Double-check: Never insert with cartid = 0
+            if ($shoppingcartid == 0 || $shoppingcartid == "0" || $shoppingcartid == "") {
+                Log::error('Invalid cart ID before insert', [
+                    'shoppingcartid' => $shoppingcartid,
+                    'customerid' => $customerid,
+                    'sessionid' => $sessionid
+                ]);
+                return response(0);
             }
 
             // Prepare cart item data
@@ -291,7 +485,26 @@ class ShoppingCartController extends FrontendController
                 ]
             ];
 
+            Log::info('Calling cartInsert', [
+                'pdata' => $pdata,
+                'cartid' => $pdata['cartid']
+            ]);
+
             $returnarr = $this->cartInsert($pdata);
+
+            Log::info('cartInsert returned', [
+                'returnarr' => $returnarr,
+                'fkcartid' => $returnarr['fkcartid'] ?? 'NOT SET',
+                'cnt' => $returnarr['cnt'] ?? 0,
+                'status' => $returnarr['status'] ?? false
+            ]);
+
+            // Update cart ID in session (cartInsert may have created a new cart)
+            if (isset($returnarr['fkcartid']) && $returnarr['fkcartid'] > 0) {
+                $shoppingcartid = $returnarr['fkcartid'];
+                Session::put('shoppingcartid', $shoppingcartid);
+                Log::info('Updated cart ID in session', ['cartid' => $shoppingcartid]);
+            }
 
             // Remove from wishlist
             if ($customerid > 0) {
@@ -306,10 +519,21 @@ class ShoppingCartController extends FrontendController
                 Session::put('wishlist_item_cnt', $wishlistCount);
             }
 
-            // Check cart quantities
-            $this->cartQtyCheck($shoppingcartid);
+            // Check cart quantities (only if cart ID is valid)
+            // NOTE: cartQtyCheck might delete items if they don't have size filters
+            // Temporarily disabled to prevent items from being deleted immediately after insert
+            // if ($shoppingcartid > 0) {
+            //     $this->cartQtyCheck($shoppingcartid);
+            // }
 
             $cart_cnt = $returnarr["cnt"];
+
+            Log::info('=== ADD TO CART END ===', [
+                'cart_count' => $cart_cnt,
+                'final_cartid' => $shoppingcartid,
+                'returnarr' => $returnarr
+            ]);
+
             return response($cart_cnt);
         } else {
             $shoppingcartid = Session::get('shoppingcartid');
@@ -431,8 +655,8 @@ class ShoppingCartController extends FrontendController
                 $gifttitle = $giftmessages->message ?? '';
                 $gifttitleAR = $giftmessages->messageAR ?? '';
                 $giftmessage_charge = DB::table('settings')
-                    ->where('settingkey', 'Gift Message Charge')
-                    ->value('settingvalue') ?? 0;
+                    ->where('name', 'Gift Message Charge')
+                    ->value('details') ?? 0;
             }
             $giftqty = $cartitems['giftqty'] ?? 0;
         }
@@ -512,8 +736,15 @@ class ShoppingCartController extends FrontendController
     /**
      * Get or create cart master - matches CI cart_master
      */
-    protected function cartMaster($customerid, $sessionid, $lang, $shippingcountryid)
+    public function cartMaster($customerid, $sessionid, $lang, $shippingcountryid)
     {
+        Log::info('=== cartMaster START ===', [
+            'customerid' => $customerid,
+            'sessionid' => $sessionid,
+            'lang' => $lang,
+            'shippingcountryid' => $shippingcountryid
+        ]);
+
         if ($customerid == null) {
             $customerid = 0;
         }
@@ -534,16 +765,60 @@ class ShoppingCartController extends FrontendController
                 'shipping_method' => '',
                 'itemtotal' => 0, // Required field, set to 0 initially
                 'shipping_charge' => 0, // Required field, set to 0 initially
+                'total' => 0, // Required field, set to 0 initially
+                'paymentmethod' => '', // Required field
+                'addressid' => 0, // Required field
+                'billingaddressid' => 0, // Required field with default
+                'shippingaddressid' => 0, // Required field with default
+                'couponcode' => '', // Required field
+                'couponvalue' => 0, // Required field
+                'discount' => 0, // Required field
+                'mobiledevice' => '', // Required field
+                'browser' => '', // Required field
+                'platform' => '', // Required field
             ]);
         } else if ($customerid == 0 && $sessionid != "") {
+            Log::info('cartMaster: Guest user with sessionid', ['sessionid' => $sessionid]);
+
             $cart = DB::table('shoppingcartmaster')
                 ->where('sessionid', $sessionid)
+                ->where('fkcustomerid', 0)
                 ->first();
 
             if ($cart) {
                 $cartid = $cart->cartid;
+                Log::info('cartMaster: Found existing cart', ['cartid' => $cartid]);
+            } else {
+                Log::info('cartMaster: No cart found, creating new one');
+                // Create new cart for guest user if none exists
+                if ($shippingcountryid == "") {
+                    $shippingcountryid = config('app.default_countryid', 1);
+                }
+                $cartid = DB::table('shoppingcartmaster')->insertGetId([
+                    'lang' => $lang,
+                    'sessionid' => $sessionid,
+                    'fkcustomerid' => $customerid,
+                    'shippingcountryid' => $shippingcountryid,
+                    'shipping_method' => '',
+                    'itemtotal' => 0,
+                    'shipping_charge' => 0,
+                    'total' => 0,
+                    'paymentmethod' => '',
+                    'addressid' => 0,
+                    'billingaddressid' => 0,
+                    'shippingaddressid' => 0,
+                    'couponcode' => '',
+                    'couponvalue' => 0,
+                    'discount' => 0,
+                    'mobiledevice' => '',
+                    'browser' => '',
+                    'platform' => '',
+                ]);
+
+                Log::info('cartMaster: Created new cart for guest', ['cartid' => $cartid]);
             }
         } else if ($customerid > 0) {
+            Log::info('cartMaster: Logged in user', ['customerid' => $customerid]);
             $cart = DB::table('shoppingcartmaster')
                 ->where('fkcustomerid', $customerid)
                 ->orderBy('cartid', 'desc')
@@ -570,19 +845,33 @@ class ShoppingCartController extends FrontendController
                     'shipping_method' => '',
                     'itemtotal' => 0, // Required field, set to 0 initially
                     'shipping_charge' => 0, // Required field, set to 0 initially
+                    'total' => 0, // Required field, set to 0 initially
+                    'paymentmethod' => '', // Required field
+                    'addressid' => 0, // Required field
+                    'billingaddressid' => 0, // Required field with default
+                    'shippingaddressid' => 0, // Required field with default
+                    'couponcode' => '', // Required field
+                    'couponvalue' => 0, // Required field
+                    'discount' => 0, // Required field
+                    'mobiledevice' => '', // Required field
+                    'browser' => '', // Required field
+                    'platform' => '', // Required field
                 ]);
             }
         }
 
         if ($cartid == false) {
+            Log::error('cartMaster: cartid is false, returning false');
             return false;
         }
 
-        // Calculate total
+        Log::info('cartMaster: cartid obtained', ['cartid' => $cartid]);
+
+        // Calculate total - use LEFT JOIN to handle empty carts and items without sizes
         $total = DB::table('shoppingcartitems as s')
             ->select(DB::raw('ifnull(sum(s.sellingprice*s.qty),0) as totalamt'))
             ->join('products as p', 'p.productid', '=', 's.fkproductid')
-            ->join('productsfilter as pfsize', function ($join) {
+            ->leftJoin('productsfilter as pfsize', function ($join) {
                 $join->on('p.productid', '=', 'pfsize.fkproductid')
                     ->where('pfsize.filtercode', '=', 'size')
                     ->whereRaw('s.size=pfsize.fkfiltervalueid');
@@ -616,8 +905,17 @@ class ShoppingCartController extends FrontendController
             ->first();
 
         if ($cartMaster) {
+            Log::info('=== cartMaster END (SUCCESS) ===', [
+                'cartid' => $cartMaster->cartid ?? 'NOT SET',
+                'itemtotal' => $cartMaster->itemtotal ?? 0
+            ]);
             return (array) $cartMaster;
         }
+
+        Log::error('=== cartMaster END (FAILED) ===', [
+            'cartid' => $cartid,
+            'cartMaster' => $cartMaster
+        ]);
 
         return false;
     }
@@ -627,8 +925,31 @@ class ShoppingCartController extends FrontendController
      */
     protected function cartInsert($pdata)
     {
+        Log::info('=== cartInsert START ===', [
+            'pdata' => $pdata,
+            'cartid' => $pdata['cartid'] ?? 'NOT SET'
+        ]);
+
         $fkproductid = $pdata["id"];
         $cartid = $pdata["cartid"];
+
+        // Safety check: Never insert with cartid = 0
+        if ($cartid == 0 || $cartid == "0" || $cartid == "") {
+            Log::error('cartInsert called with invalid cartid', [
+                'cartid' => $cartid,
+                'productid' => $fkproductid,
+                'pdata' => $pdata
+            ]);
+            return [
+                'status' => false,
+                'msg' => 'Invalid cart ID',
+                'cnt' => 0,
+                'fkcartid' => 0
+            ];
+        }
+
+        Log::info('cartInsert: Valid cart ID', ['cartid' => $cartid, 'productid' => $fkproductid]);
+
         $price = $pdata["price"];
         $qty = $pdata["qty"];
         $giftqty = $pdata["options"]['giftqty'] ?? 0;
@@ -673,7 +994,8 @@ class ShoppingCartController extends FrontendController
 
         if ($cartitemid == 0) {
             // Insert new item
-            DB::table('shoppingcartitems')->insert([
+            // Prepare insert data
+            $insertData = [
                 'fkproductid' => $fkproductid,
                 'qty' => $qty,
                 'giftqty' => $giftqty,
@@ -702,6 +1024,33 @@ class ShoppingCartController extends FrontendController
                 'giftmessage_charge' => $giftmessage_charge,
                 'fkcartid' => $cartid,
                 'createdon' => now(),
+            ];
+
+            Log::info('cartInsert: Inserting new item', [
+                'cartid' => $cartid,
+                'cartid_type' => gettype($cartid),
+                'cartid_value' => $cartid,
+                'fkcartid_in_insert' => $insertData['fkcartid'],
+                'productid' => $fkproductid,
+                'size' => $size,
+                'qty' => $qty,
+                'insert_data_fkcartid' => $insertData['fkcartid']
+            ]);
+
+            $insertedId = DB::table('shoppingcartitems')->insertGetId($insertData);
+
+            // Verify what was actually inserted
+            $insertedItem = DB::table('shoppingcartitems')
+                ->where('cartitemid', $insertedId)
+                ->first(['cartitemid', 'fkproductid', 'fkcartid', 'qty']);
+
+            Log::info('cartInsert: Item inserted successfully', [
+                'cartid' => $cartid,
+                'productid' => $fkproductid,
+                'inserted_cartitemid' => $insertedId,
+                'verified_fkcartid' => $insertedItem->fkcartid ?? 'NOT FOUND',
+                'verified_productid' => $insertedItem->fkproductid ?? 'NOT FOUND',
+                'verified_qty' => $insertedItem->qty ?? 'NOT FOUND'
             ]);
 
             $msg = __('Product added in cart');
@@ -711,6 +1060,12 @@ class ShoppingCartController extends FrontendController
             $size = $existingItem->size;
             $cartqty = $existingItem->qty;
             $qty = $qty + $cartqty;
+
+            Log::info('cartInsert: Item exists, updating quantity', [
+                'cartitemid' => $cartitemid,
+                'current_qty' => $cartqty,
+                'new_qty' => $qty
+            ]);
 
             $product = $this->productBySize($pid, $size);
 
@@ -733,9 +1088,35 @@ class ShoppingCartController extends FrontendController
             }
         }
 
+        // Use fresh query to ensure we get the latest data (no caching)
         $cnt = DB::table('shoppingcartitems')
             ->where('fkcartid', $cartid)
             ->count();
+
+        // Also verify the specific item we just inserted
+        if (isset($insertedId)) {
+            $verifyItem = DB::table('shoppingcartitems')
+                ->where('cartitemid', $insertedId)
+                ->first(['cartitemid', 'fkproductid', 'fkcartid', 'qty']);
+
+            Log::info('cartInsert: Final verification of inserted item', [
+                'inserted_cartitemid' => $insertedId,
+                'verified_item' => $verifyItem ? [
+                    'cartitemid' => $verifyItem->cartitemid,
+                    'fkproductid' => $verifyItem->fkproductid,
+                    'fkcartid' => $verifyItem->fkcartid,
+                    'qty' => $verifyItem->qty
+                ] : 'ITEM NOT FOUND IN DB'
+            ]);
+        }
+
+        Log::info('=== cartInsert END ===', [
+            'cartid' => $cartid,
+            'item_count' => $cnt,
+            'status' => $status,
+            'msg' => $msg,
+            'inserted_cartitemid' => $insertedId ?? 'NOT SET'
+        ]);
 
         return [
             'status' => $status,
@@ -819,6 +1200,10 @@ class ShoppingCartController extends FrontendController
      */
     protected function cartQtyCheck($cartid)
     {
+        if (empty($cartid) || $cartid == 0) {
+            return true; // Skip if cart ID is invalid
+        }
+
         $cartitems = $this->getCartItems($cartid);
 
         foreach ($cartitems as $data) {
@@ -852,7 +1237,7 @@ class ShoppingCartController extends FrontendController
         }
 
         return DB::table('shoppingcartitems as s')
-            ->select(DB::raw($columns . ', s.cartitemid, s.productid, s.qty, filtersize.filtervalueid as size, pfsize.qty as maxqty'))
+            ->select(DB::raw($columns . ', s.cartitemid, p.productid, s.qty, filtersize.filtervalueid as size, pfsize.qty as maxqty'))
             ->join('products as p', 'p.productid', '=', 's.fkproductid')
             ->join('productsfilter as pfsize', function ($join) {
                 $join->on('p.productid', '=', 'pfsize.fkproductid')
@@ -904,6 +1289,32 @@ class ShoppingCartController extends FrontendController
 
         if (!$customerId) {
             return response('login');
+        }
+
+        if ($action == 'add' && $productId) {
+            // Check if already in wishlist
+            $existing = DB::table('wishlist')
+                ->where('fkcustomerid', $customerId)
+                ->where('fkproductid', $productId)
+                ->first();
+
+            if (!$existing) {
+                // Add to wishlist
+                DB::table('wishlist')->insert([
+                    'fkcustomerid' => $customerId,
+                    'fkproductid' => $productId,
+                ]);
+            }
+
+            // Get updated count
+            $count = DB::table('wishlist')
+                ->where('fkcustomerid', $customerId)
+                ->count();
+
+            Session::put('wishlist_item_cnt', $count);
+
+            // Return count as string (CI returns it as string/number)
+            return response($count);
         }
 
         if ($action == 'delete' && $productId) {

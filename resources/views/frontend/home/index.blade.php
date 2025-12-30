@@ -57,7 +57,7 @@
                                     <img src="{{ url('storage/' . $photo) }}" alt="{{ $title }}"
                                         class="img-responsive fill2">
                                 @if (!empty($item->link) && $item->link != '-')
-                                    </a>
+                                </a>
                                 @endif
                             </div>
                         @endif
@@ -115,12 +115,12 @@
                                         <h3 class="product-title">{{ $productTitle }}</h3>
                                         <div class="product-price">
                                             @if ($discount > 0)
-                                                <span class="old-price">{{ number_format($price * $currencyRate, 3) }}
+                                                <span class="old-price">{{ number_format($price * $currencyRate, 0) }}
                                                     {{ $currencyCode }}</span>
-                                                <span class="new-price">{{ number_format($finalPrice, 3) }}
+                                                <span class="new-price">{{ number_format($finalPrice, 0) }}
                                                     {{ $currencyCode }}</span>
                                             @else
-                                                <span class="price">{{ number_format($finalPrice, 3) }}
+                                                <span class="price">{{ number_format($finalPrice, 0) }}
                                                     {{ $currencyCode }}</span>
                                             @endif
                                         </div>

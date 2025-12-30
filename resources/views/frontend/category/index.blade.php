@@ -193,21 +193,10 @@
                                                         <span class="product-title">{{ $productTitle }}</span>
                                                         <span class="product-price">
                                                             @if ($discount > 0)
-                                                                @php
-                                                                    $decimal = $currencyCode == 'KWD' ? 3 : 2;
-                                                                    $standardPrice = number_format(
-                                                                        $price * $currencyRate,
-                                                                        $decimal,
-                                                                    );
-                                                                @endphp
-                                                                <span class="standard-price">{{ $standardPrice }}
+                                                                <span class="standard-price">{{ number_format($price * $currencyRate, 0) }}
                                                                     {{ $currencyCode }}</span>
                                                             @endif
-                                                            @php
-                                                                $decimal = $currencyCode == 'KWD' ? 3 : 2;
-                                                                $actualPrice = number_format($finalPrice, $decimal);
-                                                            @endphp
-                                                            <span class="actual-price">{{ $actualPrice }}
+                                                            <span class="actual-price">{{ number_format($finalPrice, 0) }}
                                                                 {{ $currencyCode }}</span>
                                                         </span>
                                                     </span>

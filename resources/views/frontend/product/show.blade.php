@@ -116,10 +116,10 @@
                             <p class="product-price">
                                 @if ($discount > 0)
                                     <span
-                                        class="standard-price">{{ number_format($productData->price * $currencyRate, 3) }}
+                                        class="standard-price">{{ number_format($productData->price * $currencyRate, 0) }}
                                         {{ $currencyCode }}</span>
                                 @endif
-                                <span class="actual-price" id="price">{{ number_format($finalPrice, 3) }}
+                                <span class="actual-price" id="price">{{ number_format($finalPrice, 0) }}
                                     {{ $currencyCode }}</span>
                             </p>
 
@@ -186,7 +186,7 @@
                                                 class="giftoccasion">{{ __('Add Gift Message') }}
                                             @if ($giftMessageCharge > 0)
                                                 ({{ __('additional fee of') }}
-                                                {{ number_format($giftMessageCharge * $currencyRate, 3) }}
+                                                {{ number_format($giftMessageCharge * $currencyRate, 0) }}
                                                 {{ $currencyCode }} {{ __('applies') }})
                                             @endif
                                         </label>
@@ -375,7 +375,7 @@
                                         <span class="product-content">
                                             <span class="product-title">{{ $relatedTitle }}</span>
                                             <span class="product-price">
-                                                <span class="actual-price">{{ number_format($relatedFinalPrice, 3) }}
+                                                <span class="actual-price">{{ number_format($relatedFinalPrice, 0) }}
                                                     {{ $currencyCode }}</span>
                                             </span>
                                         </span>

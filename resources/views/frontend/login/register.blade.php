@@ -1,0 +1,68 @@
+<div class="overlay-section">
+    <div class="overlay-title">
+        <h2>
+            <svg class="icon icon-person">
+                <use xlink:href="/static/images/symbol-defs.svg#icon-person"></use>
+            </svg>{{ __('Register Now') }}
+        </h2>
+    </div>
+
+    <form id="form-register">
+        <div class="form-group">
+            <label for="firstname" class="control-label">{{ __('First Name') }}</label>
+            <input class="form-control required" id="firstname" name="firstname">
+            <span class="help-block"></span>
+        </div>
+        <div class="form-group">
+            <label for="lastname" class="control-label">{{ __('Last Name') }}</label>
+            <input class="form-control required" id="lastname" name="lastname">
+            <span class="help-block"></span>
+        </div>
+        <div class="form-group">
+            <label for="email" class="control-label">{{ __('Email Address') }}</label>
+            <input type="email" class="form-control required email" id="email" name="email">
+        </div>
+        <div class="form-group">
+            <label for="password" class="control-label">{{ __('Password') }}</label>
+            <input type="password" class="form-control required" id="password" name="password">
+        </div>
+        <div class="form-group">
+            <label for="confirmPassword" class="control-label">{{ __('Confirm Password') }}</label>
+            <input type="password" class="form-control required" id="confirmPassword" name="confirmPassword" equalto="#password">
+        </div>
+        <button type="button" class="btn btn-primary" id="btnRegister">{{ __('Register') }}</button>
+    </form>
+
+    <div class="alert alert-danger print-error-msg" style="display:none"></div>
+
+    <div class="social-login">
+        <ul class="list-unstyled clearfix">
+            <li class="fb">
+                <a href="{{ $authUrl ?? '#' }}">
+                    <svg class="icon icon-facebook">
+                        <use xlink:href="/static/images/symbol-defs.svg#icon-facebook"></use>
+                    </svg>{{ __('Login with Facebook') }}
+                </a>
+            </li>
+            <li class="gp">
+                <a href="{{ url('/' . $locale . '/login/google_login') }}">
+                    <svg class="icon icon-gplus">
+                        <use xlink:href="/static/images/symbol-defs.svg#icon-gplus"></use>
+                    </svg>{{ __('Login with Google') }}
+                </a>
+            </li>
+        </ul>
+    </div>
+</div>
+<div class="overlay-section">
+    <div class="overlay-title">
+        <h2>
+            <svg class="icon icon-person">
+                <use xlink:href="/static/images/symbol-defs.svg#icon-person"></use>
+            </svg>{{ __("Already have an account?") }}
+        </h2>
+        <a id="ra-login1" href="{{ url('/' . $locale . '/login') }}" class="btn btn-secondary">{{ __('LOGIN') }}</a>
+    </div>
+</div>
+<script src="{{ $resourceUrl ?? url('/resources/') . '/' }}scripts/login.js?v=0.9"></script>
+

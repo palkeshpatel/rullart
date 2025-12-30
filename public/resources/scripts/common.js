@@ -1,12 +1,25 @@
-var base_url = $("#base_url").val();
 var pleasewait = 'Please wait...';
 var itemaddedwishlist = 'Item is added in wishlist';
-if ($("#base_url").val().indexOf('/ar/') > -1) {
+
+$(document).ready(function() {
+    // Set base_url and itemaddedwishlist based on locale
+    var base_url = $("#base_url").val();
+    if (!base_url) {
+        var path = window.location.pathname;
+        var pathParts = path.split('/');
+        if (pathParts.length >= 2) {
+            base_url = '/' + pathParts[1] + '/';
+        } else {
+            base_url = '/';
+        }
+    }
+    window.base_url = base_url; // Make it global
+    
+    if (base_url.indexOf('/ar/') > -1) {
     pleasewait = 'يرجى الإنتظار...';
     itemaddedwishlist = 'تم إضافة المنتج لقائمة الأمنيات';
 }
 
-$(document).ready(function() {
     $('#frmSearch').validate({
         highlight: function(element) {
             $(element).parent().addClass("has-error");

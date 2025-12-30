@@ -124,33 +124,18 @@ Route::group(['prefix' => '{locale}', 'where' => ['locale' => 'en|ar'], 'middlew
     Route::post('/login/validate', [LoginController::class, 'validateLogin'])->name('login.validate');
     Route::post('/login/validate_guest', [LoginController::class, 'validateGuest'])->name('login.validate.guest');
     Route::post('/login/guest', [LoginController::class, 'guestLogin'])->name('login.guest');
-    Route::get('/login/register', function () {
-        // TODO: Implement registration
-        abort(404, 'Registration not implemented yet');
-    })->name('login.register');
+    Route::get('/login/register', [LoginController::class, 'register'])->name('login.register');
+    Route::post('/login/registration', [LoginController::class, 'registration'])->name('login.registration');
     Route::get('/login/forgot', function () {
         // TODO: Implement forgot password
         abort(404, 'Forgot password not implemented yet');
     })->name('login.forgot');
-    Route::get('/login/google_login', function () {
-        // TODO: Implement Google login
-        abort(404, 'Google login not implemented yet');
-    })->name('login.google');
+    
+    // Social login routes (redirects - inside locale group)
+    Route::get('/login/facebook', [LoginController::class, 'redirectToFacebook'])->name('login.facebook');
+    Route::get('/login/google_login', [LoginController::class, 'redirectToGoogle'])->name('login.google');
 
-    Route::get('/login/logout', function () {
-        // Match CI logout behavior - clear session and redirect
-        session()->forget([
-            'logged_in',
-            'customerid',
-            'firstname',
-            'lastname',
-            'email',
-            'shoppingcartid',
-            'wishlist_item_cnt'
-        ]);
-        session()->flush();
-        return redirect('/' . app()->getLocale());
-    })->name('login.logout');
+    Route::get('/login/logout', [LoginController::class, 'logout'])->name('login.logout');
 
     // User account routes (placeholder - implement controllers later)
     Route::get('/myorders', function () {
@@ -197,3 +182,7 @@ Route::group(['prefix' => '{locale}', 'where' => ['locale' => 'en|ar'], 'middlew
         return redirect()->back();
     })->name('changecurrency');
 });
+
+// Social login callback routes (outside locale group - OAuth providers redirect to absolute URLs)
+Route::get('/login/facebook/callback', [LoginController::class, 'handleFacebookCallback'])->name('login.facebook.callback');
+Route::get('/login/google/callback', [LoginController::class, 'handleGoogleCallback'])->name('login.google.callback');
