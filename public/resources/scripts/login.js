@@ -50,6 +50,11 @@ $(document).ready(function() {
 		    $(this).attr('disabled',true); //set button disable 
 		    var url = base_url+"login/validate";		   
 		    var formData = new FormData($('#form-login')[0]);
+		    // Ensure CSRF token is included
+		    var csrfToken = $('meta[name="csrf-token"]').attr('content');
+		    if (csrfToken) {
+		        formData.append('_token', csrfToken);
+		    }
 		    $.ajax({
 		        url : url,
 		        type: "POST",
@@ -57,6 +62,9 @@ $(document).ready(function() {
 		        contentType: false,
 		        processData: false,
 		        dataType: "JSON",
+		        headers: {
+		            'X-CSRF-TOKEN': csrfToken || $('meta[name="csrf-token"]').attr('content')
+		        },
 		        success: function(data)
 		        {
 
@@ -110,6 +118,11 @@ $(document).ready(function() {
 		    $(this).attr('disabled',true); //set button disable 
 		    var url = base_url+"login/validate_guest";		   
 		    var formData = new FormData($('#form-login-guest')[0]);
+		    // Ensure CSRF token is included
+		    var csrfToken = $('meta[name="csrf-token"]').attr('content');
+		    if (csrfToken) {
+		        formData.append('_token', csrfToken);
+		    }
 		    $.ajax({
 		        url : url,
 		        type: "POST",
@@ -117,6 +130,9 @@ $(document).ready(function() {
 		        contentType: false,
 		        processData: false,
 		        dataType: "JSON",
+		        headers: {
+		            'X-CSRF-TOKEN': csrfToken || $('meta[name="csrf-token"]').attr('content')
+		        },
 		        success: function(data)
 		        {
 

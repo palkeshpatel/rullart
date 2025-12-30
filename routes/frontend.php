@@ -11,6 +11,9 @@ use App\Http\Controllers\Frontend\ShoppingCartController;
 use App\Http\Controllers\Frontend\CheckoutController;
 use App\Http\Controllers\Frontend\WishlistController;
 use App\Http\Controllers\Frontend\LoginController;
+use App\Http\Controllers\Frontend\MyOrdersController;
+use App\Http\Controllers\Frontend\MyProfileController;
+use App\Http\Controllers\Frontend\MyAddressesController;
 
 /*
 |--------------------------------------------------------------------------
@@ -137,18 +140,20 @@ Route::group(['prefix' => '{locale}', 'where' => ['locale' => 'en|ar'], 'middlew
 
     Route::get('/login/logout', [LoginController::class, 'logout'])->name('login.logout');
 
-    // User account routes (placeholder - implement controllers later)
-    Route::get('/myorders', function () {
+    // User account routes
+    Route::get('/myorders', [MyOrdersController::class, 'index'])->name('myorders');
+    
+    Route::get('/myprofile', [MyProfileController::class, 'index'])->name('myprofile');
+    Route::post('/myprofile/profile_update', [MyProfileController::class, 'profileUpdate'])->name('myprofile.update');
+    Route::post('/myprofile/change_password', [MyProfileController::class, 'changePassword'])->name('myprofile.changePassword');
+    
+    Route::get('/myaddresses', [MyAddressesController::class, 'index'])->name('myaddresses');
+    Route::post('/myaddresses/remove', [MyAddressesController::class, 'remove'])->name('myaddresses.remove');
+    
+    // Placeholder routes (to be implemented)
+    Route::get('/orderdetails/{orderno}', function () {
         abort(404, 'Not implemented yet');
-    })->name('myorders');
-
-    Route::get('/myprofile', function () {
-        abort(404, 'Not implemented yet');
-    })->name('myprofile');
-
-    Route::get('/myaddresses', function () {
-        abort(404, 'Not implemented yet');
-    })->name('myaddresses');
+    })->name('orderdetails');
 
     // Shopping routes
     Route::get('/wishlist', [WishlistController::class, 'index'])->name('wishlist');

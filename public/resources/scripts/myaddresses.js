@@ -1,3 +1,4 @@
+var base_url = window.base_url || $("#base_url").val() || '/';
 $(document).ready(function() {
 	$(".removeAddress").on("click",function(e){
 		e.preventDefault();
@@ -11,8 +12,14 @@ $(document).ready(function() {
 			 $.ajax({
 		        type:"post",
 		        url:base_url+"myaddresses/remove",
-		        data:{addressid:addressid},
+		        data:{
+		            addressid:addressid,
+		            _token: $('meta[name="csrf-token"]').attr('content')
+		        },
 		        dataType: "json",
+		        headers: {
+		            'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+		        },
 		        success: function(data)
 		        {
 		            if(data.status){

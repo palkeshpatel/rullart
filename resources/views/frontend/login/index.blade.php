@@ -8,6 +8,7 @@
     </div>
 
     <form id="form-login">
+        @csrf
         <div class="form-group">
             <label for="email" class="control-label">{{ __('Email Address') }}</label>
             <input type="email" class="form-control required email" id="email" name="email">
@@ -62,6 +63,7 @@
     </div>
 
     <form id="form-login-guest">
+        @csrf
         <div class="form-group hidden">
             <label for="email-guest" class="control-label">{{ __('Email Address') }}</label>
             <input type="email" class="form-control email" id="email-guest" name="email-guest">

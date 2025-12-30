@@ -1,3 +1,4 @@
+var base_url = window.base_url || $("#base_url").val() || '/';
 $(document).ready(function() {
 	$('#formProfile').validate({
 		highlight: function(element) {
@@ -17,6 +18,7 @@ $(document).ready(function() {
 		    $(this).attr('disabled',true); //set button disable 
 		    var url = base_url+"myprofile/profile_update";		   
 		    var formData = new FormData($('#formProfile')[0]);
+		    formData.append('_token', $('meta[name="csrf-token"]').attr('content'));
 		    $.ajax({
 		        url : url,
 		        type: "POST",
@@ -24,6 +26,9 @@ $(document).ready(function() {
 		        contentType: false,
 		        processData: false,
 		        dataType: "JSON",
+		        headers: {
+		            'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+		        },
 		        success: function(data)
 		        {
 
@@ -60,6 +65,7 @@ $(document).ready(function() {
 		    $(this).attr('disabled',true); //set button disable 
 		    var url = base_url+"myprofile/change_password";		   
 		    var formData = new FormData($('#formChangePassword')[0]);
+		    formData.append('_token', $('meta[name="csrf-token"]').attr('content'));
 		    $.ajax({
 		        url : url,
 		        type: "POST",
@@ -67,6 +73,9 @@ $(document).ready(function() {
 		        contentType: false,
 		        processData: false,
 		        dataType: "JSON",
+		        headers: {
+		            'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+		        },
 		        success: function(data)
 		        {
 
