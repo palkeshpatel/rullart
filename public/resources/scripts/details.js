@@ -216,26 +216,32 @@ $(document).ready(function() {
 				giftmessage: giftmessage,
 				gift_type: gift_type ?gift_type : 0,
 				giftqty: giftmessageid ?giftqty : 0,
-
+				_token: $('meta[name="csrf-token"]').attr('content') // Add CSRF token to data
 			},
+			dataType: 'text', // Explicitly set to text to match CI response format
 			success: function(result) {
 				console.log('Add to cart success, result:', result);
+				console.log('Result type:', typeof result);
+				// Ensure result is treated as a number/string
+				var cartCount = parseInt(result) || 0;
+				console.log('Parsed cart count:', cartCount);
+				
 				if ($("#ra-cart .badge").length == 0) {
-
-
 					$('li.licart a').html(function(_, html) {
-						return html + '<span class="badge">' + result + '</span>';
+						return html + '<span class="badge">' + cartCount + '</span>';
 					});
-					 var price = $("#price").html();
+					var price = $("#price").html();
 
-                  fbq('track', 'AddToCart', {
-                    content_ids: [pid], // Your product ID
-                    content_type: 'product',
-                    value: price, // Product price
-                    currency: 'KWD'
-                  });
+					if (typeof fbq !== 'undefined') {
+						fbq('track', 'AddToCart', {
+							content_ids: [pid], // Your product ID
+							content_type: 'product',
+							value: price, // Product price
+							currency: 'KWD'
+						});
+					}
 				} else {
-					$("#ra-cart .badge").text(result);
+					$("#ra-cart .badge").text(cartCount);
 				}
 				$("#ra-cart").click();
 			},

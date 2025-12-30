@@ -331,20 +331,28 @@ class ShoppingCartController extends FrontendController
         $sellingprice = $product['sellingprice'];
         $available_qty = $product['qty'];
 
-        // Check existing cart quantity
-        $shoppingcartid = Session::get('shoppingcartid');
-        if (!empty($shoppingcartid)) {
-            $cartProductQty = $this->getCartProductQty($shoppingcartid, $pid, $size);
-            if ($cartProductQty > 0) {
-                $available_qty = $available_qty - $cartProductQty;
-            }
-        }
+        // Don't reduce available_qty by cart quantity here
+        // cartInsert will handle checking if item exists and updating quantity properly
+        // It will add new qty to existing qty, then check against available stock
 
-        if ($available_qty < $qty) {
+        Log::info('Checking available quantity', [
+            'productid' => $pid,
+            'size' => $size,
+            'available_qty' => $available_qty,
+            'requested_qty' => $qty
+        ]);
+
+        // Only limit qty if it exceeds total available stock (basic validation)
+        // cartInsert will do the final check after combining with existing cart qty
+        if ($qty > $available_qty) {
             $qty = $available_qty;
+            Log::info('Limited qty to available stock', ['qty' => $qty]);
         }
 
+        // Always call cartInsert if qty > 0
+        // cartInsert will handle: checking if item exists, updating quantity, and stock validation
         if ($qty > 0) {
+            Log::info('Proceeding to cartInsert', ['qty' => $qty, 'available_qty' => $available_qty]);
             $giftboxprice = 0;
             $giftproductprice = 0;
             $giftproduct2price = 0;
@@ -534,14 +542,15 @@ class ShoppingCartController extends FrontendController
                 'returnarr' => $returnarr
             ]);
 
-            return response($cart_cnt);
+            // Return as plain text (not JSON) to match CI behavior
+            return response((string)$cart_cnt)->header('Content-Type', 'text/plain');
         } else {
             $shoppingcartid = Session::get('shoppingcartid');
             if (!empty($shoppingcartid)) {
                 $cnt = $this->getCartItemCount($shoppingcartid);
-                return response($cnt);
+                return response((string)$cnt)->header('Content-Type', 'text/plain');
             } else {
-                return response(0);
+                return response('0')->header('Content-Type', 'text/plain');
             }
         }
     }
@@ -556,15 +565,37 @@ class ShoppingCartController extends FrontendController
 
         $returnarr = $this->cartRemove($shoppingcartid, $cartitemid);
 
-        // Load cart view (if needed)
-        $cartview = view('frontend.shoppingcart.cartview', [
-            'shoppingcartid' => $shoppingcartid
-        ])->render();
+        // Load cart view only if it exists (for checkout page)
+        $cartview = '';
+        if (view()->exists('frontend.shoppingcart.cartview')) {
+            $cartview = view('frontend.shoppingcart.cartview', [
+                'shoppingcartid' => $shoppingcartid
+            ])->render();
+        }
+
+        // Get updated cart data for overlay
+        $cartData = $this->getCartData($shoppingcartid);
+        $cartContent = '';
+        if ($cartData && $cartData['shoppingcartitems']->count() > 0) {
+            $cartContent = view('frontend.shoppingcart.content', [
+                'shoppingcart' => $cartData['shoppingcart'],
+                'shoppingcartitems' => $cartData['shoppingcartitems'],
+                'messages' => DB::table('messages')->get() // Get gift messages
+            ])->render();
+        } else {
+            // Empty cart message
+            $cartContent = view('frontend.shoppingcart.content', [
+                'shoppingcart' => null,
+                'shoppingcartitems' => collect([]),
+                'messages' => collect([])
+            ])->render();
+        }
 
         return response()->json([
             'status' => true,
             'cnt' => $returnarr['cnt'],
-            'cartview' => $cartview
+            'cartview' => $cartview,
+            'cartcontent' => $cartContent
         ]);
     }
 
@@ -713,6 +744,17 @@ class ShoppingCartController extends FrontendController
             $columns = 'p.shortdescr as title, p.productid, p.productcode, p.price, pp.discount, pp.sellingprice, p.photo1, p.title as shortdescr, p.internation_ship, pf.qty, fv.filtervalue, c.categorycode';
         }
 
+        // For size=0 (no size), use sum of all sizes as fallback
+        $qtyColumn = $sizeid == 0
+            ? 'ifnull((select sum(qty) from productsfilter where fkproductid=p.productid and filtercode=\'size\'), 0) as qty'
+            : 'ifnull(pf.qty, 0) as qty';
+
+        if ($locale == 'ar') {
+            $columns = 'p.shortdescrAR as title, p.productid, p.productcode, p.price, pp.discount, pp.sellingprice, p.photo1, p.titleAR as shortdescr, p.internation_ship, ' . $qtyColumn . ', fv.filtervalue, c.categorycode';
+        } else {
+            $columns = 'p.shortdescr as title, p.productid, p.productcode, p.price, pp.discount, pp.sellingprice, p.photo1, p.title as shortdescr, p.internation_ship, ' . $qtyColumn . ', fv.filtervalue, c.categorycode';
+        }
+
         $product = DB::table('products as p')
             ->select(DB::raw($columns))
             ->join('productpriceview as pp', 'pp.kproductid', '=', 'p.productid')
@@ -727,7 +769,12 @@ class ShoppingCartController extends FrontendController
             ->first();
 
         if ($product) {
-            return (array) $product;
+            $productArray = (array) $product;
+            // Ensure qty is always a number, not NULL
+            if (!isset($productArray['qty']) || $productArray['qty'] === null) {
+                $productArray['qty'] = 0;
+            }
+            return $productArray;
         }
 
         return false;
@@ -977,13 +1024,41 @@ class ShoppingCartController extends FrontendController
         $giftmessage_charge = $pdata["options"]["giftmessage_charge"] ?? 0;
 
         // Check if item exists
-        $existingItem = DB::table('shoppingcartitems')
+        // Normalize values for comparison
+        $giftmessageNormalized = $giftmessage ?: '';
+        $sizeNormalized = (int)$size; // Ensure size is integer for comparison
+
+        // Build query with proper NULL/empty handling for giftmessage
+        $existingItemQuery = DB::table('shoppingcartitems')
             ->where('fkproductid', $fkproductid)
-            ->where('size', $size)
+            ->where('size', $sizeNormalized) // Use normalized size
             ->where('fkcartid', $cartid)
-            ->where('giftmessageid', $giftmessageid)
-            ->where('giftmessage', $giftmessage)
-            ->first();
+            ->where('giftmessageid', $giftmessageid);
+
+        // Handle giftmessage comparison (NULL or empty string should match)
+        if ($giftmessageNormalized === '') {
+            $existingItemQuery->where(function ($query) {
+                $query->whereNull('giftmessage')
+                    ->orWhere('giftmessage', '');
+            });
+        } else {
+            $existingItemQuery->where('giftmessage', $giftmessageNormalized);
+        }
+
+        $existingItem = $existingItemQuery->first();
+
+        Log::info('cartInsert: Checking for existing item', [
+            'productid' => $fkproductid,
+            'size' => $size,
+            'size_normalized' => $sizeNormalized,
+            'cartid' => $cartid,
+            'giftmessageid' => $giftmessageid,
+            'giftmessage' => $giftmessage,
+            'giftmessage_normalized' => $giftmessageNormalized,
+            'existing_item_found' => $existingItem ? true : false,
+            'existing_cartitemid' => $existingItem->cartitemid ?? 'NOT FOUND',
+            'existing_item_qty' => $existingItem->qty ?? 'N/A'
+        ]);
 
         $cartitemid = 0;
         if ($existingItem) {
@@ -1069,9 +1144,27 @@ class ShoppingCartController extends FrontendController
 
             $product = $this->productBySize($pid, $size);
 
-            if ($qty > $product['qty']) {
-                $msg = __("Only") . " " . $product['qty'] . " " . __("available.");
+            // Get available qty (ensure it's a number)
+            $availableQty = isset($product['qty']) && $product['qty'] !== null ? (int)$product['qty'] : null;
+
+            Log::info('cartInsert: Checking stock availability', [
+                'productid' => $pid,
+                'size' => $size,
+                'requested_qty' => $qty,
+                'available_qty' => $availableQty,
+                'product_qty_raw' => $product['qty'] ?? 'NULL',
+                'is_update' => true
+            ]);
+
+            // Only check stock if we have a valid available quantity
+            // If availableQty is null/0, allow the update (item already in cart)
+            if ($availableQty !== null && $availableQty > 0 && $qty > $availableQty) {
+                $msg = __("Only") . " " . $availableQty . " " . __("available.");
                 $status = false;
+                Log::info('cartInsert: Stock check failed', [
+                    'requested_qty' => $qty,
+                    'available_qty' => $availableQty
+                ]);
             } else {
                 $subtotal = $price * $qty;
 
@@ -1089,9 +1182,16 @@ class ShoppingCartController extends FrontendController
         }
 
         // Use fresh query to ensure we get the latest data (no caching)
+        // Recalculate count after insert/update to ensure accuracy
         $cnt = DB::table('shoppingcartitems')
             ->where('fkcartid', $cartid)
             ->count();
+
+        Log::info('cartInsert: Recalculated cart count', [
+            'cartid' => $cartid,
+            'count' => $cnt,
+            'action' => isset($insertedId) ? 'inserted' : 'updated'
+        ]);
 
         // Also verify the specific item we just inserted
         if (isset($insertedId)) {

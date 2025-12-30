@@ -81,19 +81,65 @@ function remove_cart(rowid) {
     $.ajax({
         type: "post",
         url: base_url + "shoppingcart/ajax_cart",
+        headers: {
+            'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+        },
         data: {
             action: 'delete',
-            rowid: rowid
+            rowid: rowid,
+            _token: $('meta[name="csrf-token"]').attr('content') // Add CSRF token to data
         },
         dataType: "JSON",
         success: function(result) {
-            $("#ra-cart").click();
-            $("#ra-cart .badge").text(result.cnt);
-            var urlarr = location.pathname.split('/');
-            if (urlarr[2] == "checkout") {
-                $("#cartview").html(result.cartview);
-                // location.reload();
+            // Update cart badge count
+            if (result.cnt > 0) {
+                if ($("#ra-cart .badge").length > 0) {
+                    $("#ra-cart .badge").text(result.cnt);
+                } else {
+                    $("#ra-cart").append('<span class="badge">' + result.cnt + '</span>');
+                }
+            } else {
+                $("#ra-cart .badge").remove();
             }
+            
+            // Check if cart overlay is currently open
+            var isCartOpen = $('#overlayBody').is(':visible') || $('.overlay-section').is(':visible');
+            
+            // Handle checkout page cartview
+            var urlarr = location.pathname.split('/');
+            if (urlarr[2] == "checkout" && result.cartview) {
+                $("#cartview").html(result.cartview);
+            }
+            
+            // If cart is empty, close the overlay
+            if (result.cnt == 0) {
+                if (isCartOpen) {
+                    $("#closeOverlay").click();
+                }
+            } else {
+                // If cart overlay is open, reload it to show updated content
+                if (isCartOpen) {
+                    // Reload cart content via AJAX
+                    var loadurl = base_url + "shoppingcart?t=" + Date.now();
+                    $('#overlayLoader').show();
+                    $.get(loadurl, function(data) {
+                        $('#overlayBody').html(data);
+                        $('#overlayLoader').hide();
+                    }).fail(function() {
+                        $('#overlayLoader').hide();
+                        // Fallback: use cartcontent if available
+                        if (result.cartcontent) {
+                            $('#overlayBody').html(result.cartcontent);
+                        }
+                    });
+                }
+            }
+        },
+        error: function(xhr, status, error) {
+            console.error('Remove cart error:', error);
+            console.error('Status:', status);
+            console.error('Response:', xhr.responseText);
+            alert('Error removing item from cart. Please try again.');
         }
     });
 }
