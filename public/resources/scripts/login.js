@@ -80,6 +80,30 @@ $(document).ready(function() {
 	                		welcome = welcome.replace("{{firstname}}", data.firstname);
 	                		$("#liWelcome").html(welcome);
 	                	}
+	                	// Update cart count badge
+	                	if (data.cartCount !== undefined) {
+	                		if (data.cartCount > 0) {
+	                			if ($("#ra-cart .badge").length > 0) {
+	                				$("#ra-cart .badge").text(data.cartCount);
+	                			} else {
+	                				$("#ra-cart").append('<span class="badge">' + data.cartCount + '</span>');
+	                			}
+	                		} else {
+	                			$("#ra-cart .badge").remove();
+	                		}
+	                	}
+	                	// Update wishlist count badge
+	                	if (data.wishlistCount !== undefined) {
+	                		if (data.wishlistCount > 0) {
+	                			if ($("#ra-wishlist .badge").length > 0) {
+	                				$("#ra-wishlist .badge").text(data.wishlistCount);
+	                			} else {
+	                				$("#ra-wishlist").append('<span class="badge">' + data.wishlistCount + '</span>');
+	                			}
+	                		} else {
+	                			$("#ra-wishlist .badge").remove();
+	                		}
+	                	}
 	                	$("#closeOverlay").click();
 	                	$("#ra-post-login").closest('li').show();
 	                	$("#ra-login").closest('li').hide();
@@ -147,6 +171,30 @@ $(document).ready(function() {
 	                		var welcome = $("#liWelcome").html();
 	                		welcome = welcome.replace("{{firstname}}", data.firstname);
 	                		$("#liWelcome").html(welcome);
+	                	}
+	                	// Update cart count badge
+	                	if (data.cartCount !== undefined) {
+	                		if (data.cartCount > 0) {
+	                			if ($("#ra-cart .badge").length > 0) {
+	                				$("#ra-cart .badge").text(data.cartCount);
+	                			} else {
+	                				$("#ra-cart").append('<span class="badge">' + data.cartCount + '</span>');
+	                			}
+	                		} else {
+	                			$("#ra-cart .badge").remove();
+	                		}
+	                	}
+	                	// Update wishlist count badge
+	                	if (data.wishlistCount !== undefined) {
+	                		if (data.wishlistCount > 0) {
+	                			if ($("#ra-wishlist .badge").length > 0) {
+	                				$("#ra-wishlist .badge").text(data.wishlistCount);
+	                			} else {
+	                				$("#ra-wishlist").append('<span class="badge">' + data.wishlistCount + '</span>');
+	                			}
+	                		} else {
+	                			$("#ra-wishlist .badge").remove();
+	                		}
 	                	}
 	                	$("#closeOverlay").click();
 	                	$("#ra-post-login").closest('li').show();

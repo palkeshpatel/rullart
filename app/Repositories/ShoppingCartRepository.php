@@ -132,13 +132,83 @@ class ShoppingCartRepository
     }
 
     /**
-     * Get cart item count
+     * Get cart item count (number of distinct items, not sum of quantities)
      */
     public function getCartItemCount($shoppingCartId)
     {
         return DB::table('shoppingcartitems')
             ->where('fkcartid', $shoppingCartId)
-            ->sum('qty') ?? 0;
+            ->count();
+    }
+
+    /**
+     * Get cart ID for customer
+     */
+    public function getCartIdForCustomer($customerId)
+    {
+        // First, try to find cart with items (most recent)
+        $cart = DB::table('shoppingcartmaster as scm')
+            ->join('shoppingcartitems as sci', 'scm.cartid', '=', 'sci.fkcartid')
+            ->where('scm.fkcustomerid', $customerId)
+            ->select('scm.cartid')
+            ->groupBy('scm.cartid')
+            ->orderBy('scm.cartid', 'desc')
+            ->first();
+
+        if ($cart) {
+            return $cart->cartid;
+        }
+
+        // If no cart with items, find any cart for this customer
+        $cart = DB::table('shoppingcartmaster')
+            ->where('fkcustomerid', $customerId)
+            ->orderBy('cartid', 'desc')
+            ->first();
+
+        if ($cart) {
+
+            return $cart->cartid;
+        }
+
+        // Last resort: Find cart by checking if items exist for any cart of this customer
+        // This handles cases where cart master exists but join didn't work
+        $cartWithItems = DB::table('shoppingcartitems as sci')
+            ->join('shoppingcartmaster as scm', 'sci.fkcartid', '=', 'scm.cartid')
+            ->where('scm.fkcustomerid', $customerId)
+            ->select('scm.cartid')
+            ->groupBy('scm.cartid')
+            ->orderBy('scm.cartid', 'desc')
+            ->first();
+
+        return $cartWithItems ? $cartWithItems->cartid : null;
+    }
+
+    /**
+     * Get cart ID by session ID (for guest users or when session ID matches)
+     */
+    public function getCartIdBySessionId($sessionId, $customerId = 0)
+    {
+        // If customer is logged in, prioritize carts with customer ID
+        if ($customerId > 0) {
+            $cart = DB::table('shoppingcartmaster')
+                ->where('sessionid', $sessionId)
+                ->where('fkcustomerid', $customerId)
+                ->orderBy('cartid', 'desc')
+                ->first();
+
+            if ($cart) {
+                return $cart->cartid;
+            }
+        }
+
+        // For guest users or fallback
+        $cart = DB::table('shoppingcartmaster')
+            ->where('sessionid', $sessionId)
+            ->where('fkcustomerid', $customerId)
+            ->orderBy('cartid', 'desc')
+            ->first();
+
+        return $cart ? $cart->cartid : null;
     }
 
     /**
@@ -156,7 +226,7 @@ class ShoppingCartRepository
         if (empty($normalizedGiftMessage)) {
             $query->where(function ($q) {
                 $q->whereNull('giftmessage')
-                  ->orWhere('giftmessage', '');
+                    ->orWhere('giftmessage', '');
             });
         } else {
             $query->where('giftmessage', $normalizedGiftMessage);
@@ -215,4 +285,3 @@ class ShoppingCartRepository
             ->update(['sessionid' => $sessionId]);
     }
 }
-

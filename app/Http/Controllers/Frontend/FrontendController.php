@@ -204,12 +204,25 @@ class FrontendController extends Controller
     {
         $shoppingCartId = Session::get('shoppingcartid');
         $sessionId = Session::getId();
+        // Try multiple ways to get customer ID
         $customerId = Session::get('customerid', 0);
+        if ($customerId == 0) {
+            // Try alternative session key
+            $customerId = Session::get('customer_id', 0);
+        }
+        // Also check if user is logged in
+        $isLoggedIn = Session::get('logged_in', false);
+        if ($isLoggedIn && $customerId == 0) {
+            // If logged in but no customer ID, try to get from session data
+            $customerId = Session::get('customerid');
+        }
 
         Log::info('=== getCartCount CALLED (PAGE LOAD) ===', [
             'shoppingcartid_from_session' => $shoppingCartId,
             'session_id' => $sessionId,
-            'customerid' => $customerId
+            'customerid' => $customerId,
+            'logged_in' => $isLoggedIn,
+            'all_session_keys' => array_keys(Session::all())
         ]);
 
         if ($shoppingCartId) {
@@ -225,102 +238,75 @@ class FrontendController extends Controller
             return $count;
         }
 
-        // If no cart ID in session, try to find cart by session ID or customer ID
-        if ($customerId > 0) {
-            $cart = DB::table('shoppingcartmaster')
-                ->where('fkcustomerid', $customerId)
-                ->orderBy('cartid', 'desc')
-                ->first();
+        // Use repository for cart lookup
+        $cartRepository = app(\App\Repositories\ShoppingCartRepository::class);
 
-            if ($cart) {
-                Log::info('getCartCount: Found cart by customer ID', [
-                    'customerid' => $customerId,
-                    'cartid' => $cart->cartid
-                ]);
-
-                Session::put('shoppingcartid', $cart->cartid);
-
-                $count = DB::table('shoppingcartitems')
-                    ->where('fkcartid', $cart->cartid)
-                    ->count();
-
-                Log::info('getCartCount: Count after finding cart by customer', [
-                    'cartid' => $cart->cartid,
-                    'count' => $count
-                ]);
-
-                return $count;
+        // If no cart ID in session, try to find cart by customer ID (for logged-in users)
+        if ($customerId > 0 || $isLoggedIn) {
+            // If logged in but customer ID is 0, try to find it from database
+            if ($isLoggedIn && $customerId == 0) {
+                // Try to get customer ID from email in session
+                $email = Session::get('email');
+                if ($email) {
+                    $customer = DB::table('customers')
+                        ->where('email', $email)
+                        ->where('isactive', 1)
+                        ->first();
+                    if ($customer) {
+                        $customerId = $customer->customerid;
+                        Session::put('customerid', $customerId);
+                        Log::info('getCartCount: Retrieved customer ID from email', [
+                            'email' => $email,
+                            'customerid' => $customerId
+                        ]);
+                    }
+                }
             }
-        }
 
-        // Try to find cart by session ID for guest users
-        if ($sessionId) {
-            // First, check if any cart exists with this session ID (with or without customerid check)
-            $allCarts = DB::table('shoppingcartmaster')
-                ->where('sessionid', $sessionId)
-                ->orderBy('cartid', 'desc')
-                ->get();
+            if ($customerId > 0) {
+                $cartId = $cartRepository->getCartIdForCustomer($customerId);
 
-            Log::info('getCartCount: Checking carts by session ID', [
-                'sessionid' => $sessionId,
-                'carts_found' => $allCarts->count(),
-                'carts' => $allCarts->map(function ($c) {
-                    return ['cartid' => $c->cartid, 'fkcustomerid' => $c->fkcustomerid, 'sessionid' => $c->sessionid];
-                })->toArray()
-            ]);
-
-            // Try to find cart with customerid = 0 first (guest cart)
-            $cart = DB::table('shoppingcartmaster')
-                ->where('sessionid', $sessionId)
-                ->where('fkcustomerid', 0)
-                ->orderBy('cartid', 'desc')
-                ->first();
-
-            if ($cart) {
-                Log::info('getCartCount: Found cart by session ID (guest)', [
-                    'sessionid' => $sessionId,
-                    'cartid' => $cart->cartid
-                ]);
-
-                Session::put('shoppingcartid', $cart->cartid);
-
-                $count = DB::table('shoppingcartitems')
-                    ->where('fkcartid', $cart->cartid)
-                    ->count();
-
-                Log::info('getCartCount: Count after finding cart by session', [
-                    'cartid' => $cart->cartid,
-                    'count' => $count
-                ]);
-
-                return $count;
-            } else {
-                // If no guest cart, check if there's any cart with this session ID
-                $anyCart = DB::table('shoppingcartmaster')
-                    ->where('sessionid', $sessionId)
-                    ->orderBy('cartid', 'desc')
-                    ->first();
-
-                if ($anyCart) {
-                    Log::info('getCartCount: Found cart by session ID (any customer)', [
-                        'sessionid' => $sessionId,
-                        'cartid' => $anyCart->cartid,
-                        'fkcustomerid' => $anyCart->fkcustomerid
+                if ($cartId) {
+                    Log::info('getCartCount: Found cart by customer ID', [
+                        'customerid' => $customerId,
+                        'cartid' => $cartId
                     ]);
 
-                    Session::put('shoppingcartid', $anyCart->cartid);
+                    Session::put('shoppingcartid', $cartId);
 
-                    $count = DB::table('shoppingcartitems')
-                        ->where('fkcartid', $anyCart->cartid)
-                        ->count();
+                    $count = $cartRepository->getCartItemCount($cartId);
 
-                    Log::info('getCartCount: Count after finding any cart by session', [
-                        'cartid' => $anyCart->cartid,
+                    Log::info('getCartCount: Count after finding cart by customer', [
+                        'cartid' => $cartId,
                         'count' => $count
                     ]);
 
                     return $count;
                 }
+            }
+        }
+
+        // Try to find cart by session ID
+        if ($sessionId) {
+            $cartId = $cartRepository->getCartIdBySessionId($sessionId, $customerId);
+
+            if ($cartId) {
+                Log::info('getCartCount: Found cart by session ID', [
+                    'sessionid' => $sessionId,
+                    'customerid' => $customerId,
+                    'cartid' => $cartId
+                ]);
+
+                Session::put('shoppingcartid', $cartId);
+
+                $count = $cartRepository->getCartItemCount($cartId);
+
+                Log::info('getCartCount: Count after finding cart by session', [
+                    'cartid' => $cartId,
+                    'count' => $count
+                ]);
+
+                return $count;
             }
         }
 

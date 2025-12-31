@@ -148,6 +148,8 @@ Route::group(['prefix' => '{locale}', 'where' => ['locale' => 'en|ar'], 'middlew
     Route::post('/myprofile/change_password', [MyProfileController::class, 'changePassword'])->name('myprofile.changePassword');
     
     Route::get('/myaddresses', [MyAddressesController::class, 'index'])->name('myaddresses');
+    Route::get('/addnewaddress', [MyAddressesController::class, 'add'])->name('addnewaddress');
+    Route::post('/addnewaddress', [MyAddressesController::class, 'save'])->name('addnewaddress.save');
     Route::post('/myaddresses/remove', [MyAddressesController::class, 'remove'])->name('myaddresses.remove');
     
     // Placeholder routes (to be implemented)

@@ -152,6 +152,15 @@ class LoginController extends FrontendController
             ->count();
         Session::put('wishlist_item_cnt', $wishlistCount);
 
+        // Get cart count after merge
+        $shoppingCartId = Session::get('shoppingcartid');
+        $cartCount = 0;
+        if ($shoppingCartId) {
+            $cartCount = DB::table('shoppingcartitems')
+                ->where('fkcartid', $shoppingCartId)
+                ->count();
+        }
+
         $redirect = $request->get('redirect', '');
 
         return response()->json([
@@ -159,6 +168,8 @@ class LoginController extends FrontendController
             'msg' => __('Login successful'),
             'firstname' => $customer->firstname,
             'redirect' => $redirect,
+            'cartCount' => $cartCount,
+            'wishlistCount' => $wishlistCount,
         ]);
     }
 
@@ -305,6 +316,15 @@ class LoginController extends FrontendController
             ->count();
         Session::put('wishlist_item_cnt', $wishlistCount);
 
+        // Get cart count after merge
+        $shoppingCartId = Session::get('shoppingcartid');
+        $cartCount = 0;
+        if ($shoppingCartId) {
+            $cartCount = DB::table('shoppingcartitems')
+                ->where('fkcartid', $shoppingCartId)
+                ->count();
+        }
+
         $redirect = $request->get('redirect', '');
 
         return response()->json([
@@ -312,6 +332,8 @@ class LoginController extends FrontendController
             'msg' => __('Guest login successful'),
             'firstname' => $firstname,
             'redirect' => $redirect,
+            'cartCount' => $cartCount,
+            'wishlistCount' => $wishlistCount,
         ]);
     }
 

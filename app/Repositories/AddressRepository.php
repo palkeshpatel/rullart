@@ -112,4 +112,49 @@ class AddressRepository
             ->where('fkcustomerid', $customerId)
             ->update(['isactive' => 0]);
     }
+
+    /**
+     * Save new address
+     */
+    public function saveAddress($customerId, $data)
+    {
+        // Get country ID
+        $country = DB::table('countrymaster')
+            ->where('countryname', $data['country'])
+            ->where('isactive', 1)
+            ->first();
+
+        if (!$country) {
+            return false;
+        }
+
+        // Check if this is the first address (set as default)
+        $existingCount = DB::table('addressbook')
+            ->where('fkcustomerid', $customerId)
+            ->where('isactive', 1)
+            ->count();
+
+        $addressData = [
+            'fkcustomerid' => $customerId,
+            'title' => $data['addressTitle'] ?? '',
+            'firstname' => $data['firstname'] ?? '',
+            'lastname' => $data['lastname'] ?? '',
+            'mobile' => $data['mobile'] ?? '',
+            'fkcountryid' => $country->countryid,
+            'fkareaid' => $data['area'] ?? null,
+            'block_number' => $data['block_number'] ?? '',
+            'street_number' => $data['street_number'] ?? '',
+            'house_number' => $data['house_number'] ?? '',
+            'floor_number' => $data['floor_number'] ?? '',
+            'flat_number' => $data['flat_number'] ?? '',
+            'city' => $data['city'] ?? '',
+            'address' => $data['address'] ?? '',
+            'securityid' => $data['securityid'] ?? '',
+            'is_default' => $existingCount == 0 ? 1 : 0,
+            'isactive' => 1,
+            'createdon' => now(),
+        ];
+
+        return DB::table('addressbook')->insertGetId($addressData);
+    }
 }
