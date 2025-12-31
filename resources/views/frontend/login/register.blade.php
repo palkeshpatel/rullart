@@ -1,4 +1,7 @@
 <div class="overlay-section">
+    <div class="overlay-title" style="text-align: center; margin-bottom: 20px;">
+        <img src="{{ $resourceUrl ?? url('/resources/') . '/' }}images/rullart-logo.svg" alt="Rullart" style="max-width: 200px; margin-bottom: 15px;">
+    </div>
     <div class="overlay-title">
         <h2>
             <svg class="icon icon-person">
