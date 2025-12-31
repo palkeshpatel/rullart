@@ -25,7 +25,7 @@
                         <a href="javascript:void(0);" class="btn btn-light btn-icon btn-sm rounded-circle view-category-btn" data-category-id="{{ $category->categoryid }}" title="View">
                             <i class="ti ti-eye fs-lg"></i>
                         </a>
-                        <a href="{{ route('admin.category.edit', $category->categoryid) }}" class="btn btn-light btn-icon btn-sm rounded-circle" title="Edit">
+                        <a href="javascript:void(0);" class="btn btn-light btn-icon btn-sm rounded-circle edit-category-btn" data-category-id="{{ $category->categoryid }}" title="Edit">
                             <i class="ti ti-edit fs-lg"></i>
                         </a>
                     </div>

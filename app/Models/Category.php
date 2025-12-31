@@ -13,7 +13,10 @@ class Category extends Model
 
     protected $fillable = [
         'category', 'categoryAR', 'categorycode', 'ispublished',
-        'showmenu', 'displayorder', 'parentid'
+        'showmenu', 'displayorder', 'parentid',
+        'metakeyword', 'metadescr', 'metatitle',
+        'metakeywordAR', 'metadescrAR', 'metatitleAR',
+        'photo', 'photo_mobile', 'updatedby', 'updateddate'
     ];
 
     public function products()

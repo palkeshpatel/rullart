@@ -390,8 +390,8 @@
 
                             AdminAjax.loadTable('{{ route('admin.customers') }}', $('.table-container')[0], {
                                 params: params,
-                                onSuccess: function(response) {
-                                    if (response.pagination) {
+                onSuccess: function(response) {
+                    if (response.pagination) {
                                         $('.pagination-container').html(response.pagination);
                                     }
                                     // Re-bind event handlers for dynamically loaded content
@@ -491,9 +491,9 @@
                                     if (response.pagination) {
                                         $('.pagination-container').html(response
                                             .pagination);
-                                    }
-                                }
-                            });
+                    }
+                }
+            });
                         });
                     }
 
@@ -529,8 +529,8 @@
                         AdminAjax.loadTable('{{ route('admin.customers') }}', $('.table-container')[
                             0], {
                             params: params,
-                            onSuccess: function(response) {
-                                if (response.pagination) {
+                    onSuccess: function(response) {
+                        if (response.pagination) {
                                     $('.pagination-container').html(response.pagination);
                                 }
                             }
