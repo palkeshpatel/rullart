@@ -18,6 +18,7 @@ class ShoppingCartController extends FrontendController
         ShoppingCartRepository $cartRepository,
         CartCalculationService $calculationService
     ) {
+        parent::__construct();
         $this->cartRepository = $cartRepository;
         $this->calculationService = $calculationService;
     }

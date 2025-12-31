@@ -13,6 +13,7 @@ class WishlistController extends FrontendController
 
     public function __construct(WishlistRepository $wishlistRepository)
     {
+        parent::__construct();
         $this->wishlistRepository = $wishlistRepository;
     }
 

@@ -12,6 +12,7 @@ class MyAddressesController extends FrontendController
 
     public function __construct(AddressRepository $addressRepository)
     {
+        parent::__construct();
         $this->addressRepository = $addressRepository;
     }
 

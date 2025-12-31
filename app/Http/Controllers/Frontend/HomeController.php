@@ -12,6 +12,7 @@ class HomeController extends FrontendController
 
     public function __construct(HomeRepository $homeRepository)
     {
+        parent::__construct();
         $this->homeRepository = $homeRepository;
     }
 
@@ -38,6 +39,7 @@ class HomeController extends FrontendController
         $metaKeywords = $pages->metakeyword ?? '';
 
         $data = [
+            'locale' => $locale,
             'homegallery' => $homegallery,
             'popular' => $popular,
             'hasVideo' => $hasVideo,

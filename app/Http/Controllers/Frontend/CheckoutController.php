@@ -306,7 +306,6 @@ class CheckoutController extends FrontendController
         // Check if user is logged in
         if (!Session::get('logged_in')) {
             return response()->json([
-                'status' => false,
                 'error' => 'Please login to continue'
             ], 401);
         }
@@ -315,7 +314,6 @@ class CheckoutController extends FrontendController
         $shippingAddr = Session::get('shipping_addr');
         if (!$shippingAddr) {
             return response()->json([
-                'status' => false,
                 'error' => 'Shipping address is required'
             ], 400);
         }
@@ -324,7 +322,6 @@ class CheckoutController extends FrontendController
         $method = $request->input('method');
         if (!$method) {
             return response()->json([
-                'status' => false,
                 'error' => 'Payment method is required'
             ], 400);
         }
@@ -333,7 +330,6 @@ class CheckoutController extends FrontendController
         $shoppingCartId = Session::get('shoppingcartid');
         if (!$shoppingCartId) {
             return response()->json([
-                'status' => false,
                 'error' => 'Cart is empty'
             ], 400);
         }
@@ -344,7 +340,7 @@ class CheckoutController extends FrontendController
         
         if ($cartItems->isEmpty()) {
             return response()->json([
-                'status' => true,
+                'error' => (object)[],
                 'redirect' => route('home', ['locale' => $locale])
             ]);
         }
@@ -391,22 +387,23 @@ class CheckoutController extends FrontendController
             
             $payURL = $knetService->performPayment();
             
+            // Return format expected by checkout.js: {error: {}, redirect: 'url'}
             return response()->json([
-                'status' => true,
+                'error' => (object)[], // Empty object for $.isEmptyObject() check
                 'redirect' => $payURL
             ]);
         } else if ($method == "Credit Card") {
             // Credit Card payment
             $payURL = route('thankyou.creditcard', ['locale' => $locale, 'cartid' => $shoppingCartId]);
             return response()->json([
-                'status' => true,
+                'error' => (object)[],
                 'redirect' => $payURL
             ]);
         } else if ($method == "Apple Pay") {
             // Apple Pay
             $payURL = route('thankyou.applepay', ['locale' => $locale, 'cartid' => $shoppingCartId]);
             return response()->json([
-                'status' => true,
+                'error' => (object)[],
                 'redirect' => $payURL
             ]);
         } else if ($method == "tabby") {
@@ -414,12 +411,11 @@ class CheckoutController extends FrontendController
             // For now, return placeholder
             $payURL = route('thankyou.tabby', ['locale' => $locale, 'cartid' => $shoppingCartId]);
             return response()->json([
-                'status' => true,
+                'error' => (object)[],
                 'redirect' => $payURL
             ]);
         } else {
             return response()->json([
-                'status' => false,
                 'error' => 'Invalid payment method'
             ], 400);
         }

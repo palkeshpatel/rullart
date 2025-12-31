@@ -20,6 +20,7 @@ class ProductController extends FrontendController
         WishlistRepository $wishlistRepository,
         ShoppingCartRepository $cartRepository
     ) {
+        parent::__construct();
         $this->productRepository = $productRepository;
         $this->wishlistRepository = $wishlistRepository;
         $this->cartRepository = $cartRepository;
@@ -31,19 +32,19 @@ class ProductController extends FrontendController
 
         // Match CI Product->index() structure
         $productData = $this->productRepository->getProductData($product, $locale);
-
+        
         if (!$productData) {
             abort(404, 'Product not found');
         }
-
+        
         // Check if category matches (CI line 94-96)
         if ($category != $productData->categorycode) {
             abort(404, 'Category mismatch');
         }
-
+        
         // Get product photos array (match CI lines 77-93)
         $photos = $this->getProductPhotos($productData);
-
+        
         // Get product sizes/filters (match CI lines 95-112)
         $sizes = $this->productRepository->getProductSizes($productData->productid, $locale);
 
@@ -72,10 +73,10 @@ class ProductController extends FrontendController
                 $parentcategorycode = $categoryArr->categorycode;
             }
         }
-
+        
         // Get related products
         $relatedProducts = $this->productRepository->getRelatedProducts($productData, $locale, $customerId);
-
+        
         // Get Delivery & Returns
         $deliveryReturns = '';
         if ($locale == 'ar') {
@@ -118,7 +119,7 @@ class ProductController extends FrontendController
         // Get currency info from parent class
         $currencyCode = $this->currencyCode;
         $currencyRate = $this->currencyRate;
-
+        
         return view('frontend.product.show', compact(
             'locale',
             'productData',
@@ -141,15 +142,15 @@ class ProductController extends FrontendController
             'currencyRate'
         ));
     }
-
+    
     public function showByCode($locale, $product)
     {
         $productData = $this->productRepository->getProductData($product, $locale);
-
+        
         if (!$productData) {
             abort(404, 'Product not found');
         }
-
+        
         // Redirect to proper URL with category
         return redirect()->route('product.show', [
             'locale' => $locale,
@@ -157,7 +158,7 @@ class ProductController extends FrontendController
             'product' => $product
         ]);
     }
-
+    
     protected function getProductPhotos($product)
     {
         $photos = [];
@@ -166,7 +167,7 @@ class ProductController extends FrontendController
         if (!empty($product->photo3)) $photos[] = $product->photo3;
         if (!empty($product->photo4)) $photos[] = $product->photo4;
         if (!empty($product->photo5)) $photos[] = $product->photo5;
-
+        
         return $photos;
     }
 }

@@ -12,6 +12,7 @@ class MyOrdersController extends FrontendController
 
     public function __construct(OrderRepository $orderRepository)
     {
+        parent::__construct();
         $this->orderRepository = $orderRepository;
     }
 

@@ -12,6 +12,7 @@ class SearchController extends FrontendController
 
     public function __construct(SearchRepository $searchRepository)
     {
+        parent::__construct();
         $this->searchRepository = $searchRepository;
     }
 
