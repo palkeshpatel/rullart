@@ -2,12 +2,19 @@
 
 namespace App\Http\Controllers\Frontend;
 
+use App\Repositories\OrderRepository;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Session;
 
 class MyOrdersController extends FrontendController
 {
+    protected $orderRepository;
+
+    public function __construct(OrderRepository $orderRepository)
+    {
+        $this->orderRepository = $orderRepository;
+    }
+
     public function index($locale, Request $request)
     {
         if (!Session::get('logged_in')) {
@@ -24,17 +31,16 @@ class MyOrdersController extends FrontendController
         $customerId = Session::get('customerid');
 
         // Get orders with pagination
-        $orders = $this->getOrdersList($customerId, $currentPage - 1, $pageSize);
+        $ordersPaginated = $this->orderRepository->getCustomerOrders($customerId, $pageSize);
+        $orders = $ordersPaginated->items();
 
         // Format order numbers
-        if ($orders && isset($orders['list'])) {
-            foreach ($orders['list'] as $key => $order) {
-                $orders['list'][$key]->orderno = $this->generateOrderNo($order->orderid, $order->orderdate);
-            }
+        foreach ($orders as $key => $order) {
+            $orders[$key]->orderno = $this->generateOrderNo($order->orderid, $order->orderdate);
         }
 
-        $totalOrders = $orders ? $orders['count'] : 0;
-        $noOfPages = ceil($totalOrders / $pageSize);
+        $totalOrders = $ordersPaginated->total();
+        $noOfPages = $ordersPaginated->lastPage();
 
         if ($currentPage > $noOfPages && $noOfPages > 0) {
             $currentPage = $noOfPages;
@@ -42,7 +48,7 @@ class MyOrdersController extends FrontendController
 
         $data = [
             'locale' => $locale,
-            'orders' => $orders,
+            'orders' => ['list' => $orders, 'count' => $totalOrders],
             'currentpage' => $currentPage,
             'pagesize' => $pageSize,
             'noofpage' => $noOfPages,
@@ -50,37 +56,6 @@ class MyOrdersController extends FrontendController
         ];
 
         return view('frontend.myorders.index', $data);
-    }
-
-    protected function getOrdersList($customerId, $pageNo, $pageSize)
-    {
-        $orders = DB::table('ordermaster as om')
-            ->select([
-                'om.*',
-                DB::raw('(SELECT SUM(qty) FROM orderitems WHERE fkorderid = om.orderid) as itemqty'),
-                'os.status',
-                'os.statusAR',
-                'os.classname'
-            ])
-            ->join('orderstatus as os', 'om.fkorderstatus', '=', 'os.statusid')
-            ->where('om.fkcustomerid', $customerId)
-            ->orderBy('om.orderdate', 'desc')
-            ->skip($pageNo * $pageSize)
-            ->take($pageSize)
-            ->get();
-
-        if ($orders->count() > 0) {
-            $totalCount = DB::table('ordermaster')
-                ->where('fkcustomerid', $customerId)
-                ->count();
-
-            return [
-                'list' => $orders,
-                'count' => $totalCount
-            ];
-        }
-
-        return false;
     }
 
     protected function generateOrderNo($orderId, $orderDate)

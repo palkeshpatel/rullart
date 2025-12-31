@@ -2,54 +2,35 @@
 
 namespace App\Http\Controllers\Frontend;
 
+use App\Repositories\WishlistRepository;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Session;
 use Illuminate\Support\Facades\Log;
 
 class WishlistController extends FrontendController
 {
+    protected $wishlistRepository;
+
+    public function __construct(WishlistRepository $wishlistRepository)
+    {
+        $this->wishlistRepository = $wishlistRepository;
+    }
+
     public function index()
     {
         try {
             $locale = app()->getLocale();
-            // Match CI exactly - get customerid from session (can be null/0)
-            // CI doesn't check if logged in, just tries to get wishlist items
             $customerId = Session::get('customerid');
-
-            // Match CI wishlist_get_items() method exactly
-            $titleColumn = $locale == 'ar' ? 'p.shortdescrAR as title' : 'p.shortdescr AS title';
-
-            // If customerId is null/0, query will return empty results (which is correct)
             $customerIdInt = $customerId ? (int) $customerId : 0;
 
             Log::info("WishlistController: Loading wishlist for customer ID: {$customerIdInt}");
 
-            // Match CI exactly - use inner join (not leftJoin)
-            // If customerId is 0, this will return empty collection
-            $wishlistItems = DB::table('wishlist as w')
-                ->select([
-                    DB::raw($titleColumn),
-                    'w.fkproductid',
-                    'p.productcode',
-                    'p.photo1',
-                    'p.price',
-                    'p.discount',
-                    'p.sellingprice',
-                    'c.categorycode',
-                ])
-                ->join('products as p', 'p.productid', '=', 'w.fkproductid')
-                ->join('category as c', 'p.fkcategoryid', '=', 'c.categoryid')
-                ->where('w.fkcustomerid', $customerIdInt)
-                // Note: CI doesn't filter by ispublished, so we won't either
-                ->get();
+            $wishlistItems = $this->wishlistRepository->getWishlistItems($customerIdInt, $locale);
 
             Log::info("WishlistController: Found " . $wishlistItems->count() . " wishlist items");
 
-            // Ensure resourceUrl is available
             $resourceUrl = $this->resourceUrl ?? url('/resources/') . '/';
 
-            // Always return wishlist view (will show "Your Wishlist is empty" if no items)
             return view('frontend.wishlist.index', [
                 'locale' => $locale,
                 'wishlistItems' => $wishlistItems,
@@ -75,29 +56,16 @@ class WishlistController extends FrontendController
             ]);
         }
 
-        // Check if already in wishlist
-        $exists = DB::table('wishlist')
-            ->where('fkcustomerid', $customerId)
-            ->where('fkproductid', $productId)
-            ->exists();
+        $added = $this->wishlistRepository->addToWishlist($customerId, $productId);
 
-        if ($exists) {
+        if (!$added) {
             return response()->json([
                 'status' => false,
                 'msg' => __('Item already in wishlist')
             ]);
         }
 
-        DB::table('wishlist')->insert([
-            'fkcustomerid' => $customerId,
-            'fkproductid' => $productId,
-            'createddate' => now()
-        ]);
-
-        $count = DB::table('wishlist')
-            ->where('fkcustomerid', $customerId)
-            ->count();
-
+        $count = $this->wishlistRepository->getWishlistCount($customerId);
         Session::put('wishlist_item_cnt', $count);
 
         return response()->json([
@@ -112,15 +80,9 @@ class WishlistController extends FrontendController
         $wishlistId = $request->input('wishlist_id');
         $customerId = Session::get('customerid');
 
-        DB::table('wishlist')
-            ->where('wishlistid', $wishlistId)
-            ->where('fkcustomerid', $customerId)
-            ->delete();
+        $this->wishlistRepository->removeFromWishlist($wishlistId, $customerId);
 
-        $count = DB::table('wishlist')
-            ->where('fkcustomerid', $customerId)
-            ->count();
-
+        $count = $this->wishlistRepository->getWishlistCount($customerId);
         Session::put('wishlist_item_cnt', $count);
 
         return response()->json([

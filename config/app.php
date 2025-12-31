@@ -86,6 +86,26 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Payment Gateway Settings
+    |--------------------------------------------------------------------------
+    |
+    | islive: 0 = Test mode, 1 = Live mode
+    | Tabby credentials for KWT and KSA
+    |
+    */
+
+    'islive' => env('ISLIVE', 0),
+    
+    'tabby_public_key_KWT' => env('TABBY_PUBLIC_KEY_KWT', 'pk_443830ab-31a5-4a9c-a14c-4d7dac5ea6a8'),
+    'tabby_secret_key_KWT' => env('TABBY_SECRET_KEY_KWT', 'sk_679c9b11-75ae-465f-bbd7-d4363866ec9b'),
+    'tabby_merchantcode_KWT' => env('TABBY_MERCHANTCODE_KWT', 'RLL'),
+    'tabby_public_key_KSA' => env('TABBY_PUBLIC_KEY_KSA', 'pk_443830ab-31a5-4a9c-a14c-4d7dac5ea6a8'),
+    'tabby_secret_key_KSA' => env('TABBY_SECRET_KEY_KSA', 'sk_679c9b11-75ae-465f-bbd7-d4363866ec9b'),
+    'tabby_merchantcode_KSA' => env('TABBY_MERCHANTCODE_KSA', 'RLSA'),
+    'allow_tabby' => env('ALLOW_TABBY', true),
+
+    /*
+    |--------------------------------------------------------------------------
     | Encryption Key
     |--------------------------------------------------------------------------
     |

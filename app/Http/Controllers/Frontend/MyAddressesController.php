@@ -2,12 +2,19 @@
 
 namespace App\Http\Controllers\Frontend;
 
+use App\Repositories\AddressRepository;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Session;
 
 class MyAddressesController extends FrontendController
 {
+    protected $addressRepository;
+
+    public function __construct(AddressRepository $addressRepository)
+    {
+        $this->addressRepository = $addressRepository;
+    }
+
     public function index($locale)
     {
         if (!Session::get('logged_in')) {
@@ -15,7 +22,7 @@ class MyAddressesController extends FrontendController
         }
 
         $customerId = Session::get('customerid');
-        $addresses = $this->getAddresses($customerId);
+        $addresses = $this->addressRepository->getAddressesByCustomer($customerId, $locale);
 
         $data = [
             'locale' => $locale,
@@ -34,10 +41,7 @@ class MyAddressesController extends FrontendController
         $addressId = $request->input('addressid');
         $customerId = Session::get('customerid');
 
-        $affectedRows = DB::table('addressbook')
-            ->where('addressid', $addressId)
-            ->where('fkcustomerid', $customerId)
-            ->delete();
+        $affectedRows = $this->addressRepository->deleteAddress($addressId, $customerId);
 
         if ($affectedRows == 0) {
             return response()->json([
@@ -50,35 +54,6 @@ class MyAddressesController extends FrontendController
             'status' => true,
             'msg' => __('Address removed successfully!!!')
         ]);
-    }
-
-    protected function getAddresses($customerId, $addressId = 0)
-    {
-        $query = DB::table('addressbook as ab')
-            ->select([
-                'ab.*',
-                'a.areaname',
-                'a.areanameAR',
-                'c.countryname',
-                'c.countrynameAR',
-                'c.countryid',
-                'c.shipping_charge'
-            ])
-            ->leftJoin('areamaster as a', 'ab.fkareaid', '=', 'a.areaid')
-            ->join('countrymaster as c', 'ab.fkcountryid', '=', 'c.countryid')
-            ->where('ab.fkcustomerid', $customerId)
-            ->where('c.isactive', 1)
-            ->where(function($q) {
-                $q->whereNull('ab.delivery_method')
-                  ->orWhere('ab.delivery_method', '!=', 'Avenues Mall Delivery');
-            });
-
-        if ($addressId > 0) {
-            $query->where('ab.addressid', $addressId);
-            return $query->first();
-        }
-
-        return $query->get();
     }
 }
 

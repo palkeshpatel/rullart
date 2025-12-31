@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers\Frontend;
 
+use App\Repositories\ShoppingCartRepository;
+use App\Services\CartCalculationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Session;
@@ -9,6 +11,17 @@ use Illuminate\Support\Facades\Log;
 
 class ShoppingCartController extends FrontendController
 {
+    protected $cartRepository;
+    protected $calculationService;
+
+    public function __construct(
+        ShoppingCartRepository $cartRepository,
+        CartCalculationService $calculationService
+    ) {
+        $this->cartRepository = $cartRepository;
+        $this->calculationService = $calculationService;
+    }
+
     public function index()
     {
         Log::info('=== SHOW CART START ===', [
@@ -32,7 +45,7 @@ class ShoppingCartController extends FrontendController
 
         // Get cart data
         Log::info('Getting cart data', ['cartid' => $shoppingCartId]);
-        $cartData = $this->getCartData($shoppingCartId);
+        $cartData = $this->cartRepository->getCartData($shoppingCartId, $locale);
 
         Log::info('Cart data retrieved', [
             'has_cart' => !empty($cartData['shoppingcart']),
@@ -41,23 +54,24 @@ class ShoppingCartController extends FrontendController
         ]);
 
         // Add messages for gift message dropdown (matches CI)
-        $cartData['messages'] = DB::table('messages')
-            ->orderBy('displayorder')
-            ->get();
+        $cartData['messages'] = $this->cartRepository->getMessages();
+
+        // Prepare view data with all calculations
+        $viewData = $this->prepareCartViewData($cartData, $locale);
 
         // If cart is empty, show empty message
         if (empty($cartData['shoppingcart']) || ($cartData['shoppingcartitems'] && $cartData['shoppingcartitems']->count() == 0)) {
             Session::forget('shoppingcartid');
             // If AJAX request (overlay), return empty cart message
             if (request()->ajax() || request()->has('t')) {
-                return view('frontend.shoppingcart.content', $cartData)->render();
+                return view('frontend.shoppingcart.content', $viewData)->render();
             }
             // For full page, still show the cart page with empty message
         }
 
         // If AJAX request (overlay), return just the content without layout
         if (request()->ajax() || request()->has('t')) {
-            return view('frontend.shoppingcart.content', $cartData)->render();
+            return view('frontend.shoppingcart.content', $viewData)->render();
         }
 
         // Full page view (for direct navigation)
@@ -65,7 +79,7 @@ class ShoppingCartController extends FrontendController
             'items_count' => $cartData['shoppingcartitems']->count() ?? 0
         ]);
 
-        return view('frontend.shoppingcart.index', $cartData);
+        return view('frontend.shoppingcart.index', $viewData);
     }
 
     protected function getOrCreateCartId($customerId, $sessionId)
@@ -228,6 +242,94 @@ class ShoppingCartController extends FrontendController
             'shoppingcart' => $cart,
             'shoppingcartitems' => $items
         ];
+    }
+
+    /**
+     * Prepare cart view data with all calculations
+     */
+    protected function prepareCartViewData($cartData, $locale)
+    {
+        $currencyCode = Session::get('currencycode', config('app.default_currencycode', 'KWD'));
+        $currencyRate = Session::get('currencyrate', 1);
+        $shippingCountry = Session::get('shipping_country', config('app.default_country', 'Kuwait'));
+        $shippingCharge = Session::get('shipping_charge', 0);
+        $freeShippingOver = Session::get('free_shipping_over', 0);
+        $freeShippingText = Session::get('free_shipping_text', '');
+        $vatPercent = Session::get('vat_percent', 0);
+
+        // Get settings
+        $giftMessageCharge = DB::table('settings')
+            ->where('name', 'Gift Message Charge')
+            ->value('details') ?? 0;
+        $showGiftMessage = DB::table('settings')
+            ->where('name', 'Show Gift Message')
+            ->value('details') ?? 'No';
+
+        // Process cart items with calculations
+        $processedItems = [];
+        if ($cartData['shoppingcartitems'] && $cartData['shoppingcartitems']->count() > 0) {
+            foreach ($cartData['shoppingcartitems'] as $item) {
+                $itemData = (object) [
+                    'cartitemid' => $item->cartitemid,
+                    'productid' => $item->productid,
+                    'productcode' => $item->productcode,
+                    'categorycode' => $item->categorycode,
+                    'title' => $item->title,
+                    'image' => $item->image,
+                    'qty' => $item->qty,
+                    'size' => $item->size,
+                    'sizename' => $item->sizename,
+                    'subtotal' => $item->subtotal,
+                    'giftmessageid' => $item->giftmessageid ?? 0,
+                    'giftqty' => $item->giftqty ?? 0,
+                    'giftmessage' => $item->giftmessage ?? '',
+                    'gifttitle' => $item->gifttitle ?? '',
+                    'gift_type' => $item->gift_type ?? 0,
+                    'internation_ship' => $item->internation_ship ?? 1,
+                ];
+
+                // Calculate subtotal with gift message charge
+                $itemSubtotal = $this->calculationService->calculateItemSubtotal(
+                    $itemData->subtotal,
+                    $itemData->giftmessageid,
+                    $itemData->giftqty
+                );
+                $itemData->calculated_subtotal = $itemSubtotal;
+
+                // Check if item should be struck through
+                $itemData->strike = $this->calculationService->shouldStrikeItem(
+                    $itemData->internation_ship,
+                    $shippingCountry
+                ) ? 'strike' : '';
+
+                $processedItems[] = $itemData;
+            }
+        }
+
+        // Calculate totals
+        $totals = $this->calculationService->calculateCartTotals(
+            $cartData['shoppingcartitems'],
+            $shippingCharge,
+            $vatPercent
+        );
+
+        return array_merge($cartData, [
+            'locale' => $locale,
+            'currencyCode' => $currencyCode,
+            'currencyRate' => $currencyRate,
+            'shippingCountry' => $shippingCountry,
+            'shippingCharge' => $shippingCharge,
+            'freeShippingOver' => $freeShippingOver,
+            'freeShippingText' => $freeShippingText,
+            'vatPercent' => $vatPercent,
+            'giftMessageCharge' => $giftMessageCharge,
+            'showGiftMessage' => $showGiftMessage,
+            'processedItems' => $processedItems,
+            'total' => $totals['total'],
+            'discountvalue' => $totals['discountvalue'],
+            'vat' => $totals['vat'],
+            'carttotal' => $totals['carttotal'],
+        ]);
     }
 
     /**
@@ -574,22 +676,14 @@ class ShoppingCartController extends FrontendController
         }
 
         // Get updated cart data for overlay
-        $cartData = $this->getCartData($shoppingcartid);
-        $cartContent = '';
-        if ($cartData && $cartData['shoppingcartitems']->count() > 0) {
-            $cartContent = view('frontend.shoppingcart.content', [
-                'shoppingcart' => $cartData['shoppingcart'],
-                'shoppingcartitems' => $cartData['shoppingcartitems'],
-                'messages' => DB::table('messages')->get() // Get gift messages
-            ])->render();
-        } else {
-            // Empty cart message
-            $cartContent = view('frontend.shoppingcart.content', [
-                'shoppingcart' => null,
-                'shoppingcartitems' => collect([]),
-                'messages' => collect([])
-            ])->render();
-        }
+        $locale = app()->getLocale();
+        $cartData = $this->cartRepository->getCartData($shoppingcartid, $locale);
+        $cartData['messages'] = $this->cartRepository->getMessages();
+        
+        // Prepare view data with all calculations
+        $viewData = $this->prepareCartViewData($cartData, $locale);
+        
+        $cartContent = view('frontend.shoppingcart.content', $viewData)->render();
 
         return response()->json([
             'status' => true,

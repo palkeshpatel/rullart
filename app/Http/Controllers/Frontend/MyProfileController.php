@@ -2,14 +2,21 @@
 
 namespace App\Http\Controllers\Frontend;
 
+use App\Repositories\CustomerRepository;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Session;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
 
 class MyProfileController extends FrontendController
 {
+    protected $customerRepository;
+
+    public function __construct(CustomerRepository $customerRepository)
+    {
+        $this->customerRepository = $customerRepository;
+    }
+
     public function index($locale)
     {
         if (!Session::get('logged_in')) {
@@ -39,12 +46,10 @@ class MyProfileController extends FrontendController
 
         $customerId = Session::get('customerid');
 
-        DB::table('customers')
-            ->where('customerid', $customerId)
-            ->update([
-                'firstname' => $request->input('firstname'),
-                'lastname' => $request->input('lastname'),
-            ]);
+        $this->customerRepository->updateCustomer($customerId, [
+            'firstname' => $request->input('firstname'),
+            'lastname' => $request->input('lastname'),
+        ]);
 
         // Update session
         Session::put('firstname', $request->input('firstname'));
@@ -77,12 +82,9 @@ class MyProfileController extends FrontendController
         $currentPassword = $request->input('currentPassword');
 
         // Get customer
-        $customer = DB::table('customers')
-            ->where('customerid', $customerId)
-            ->where('email', $email)
-            ->first();
-
-        if (!$customer) {
+        $customer = $this->customerRepository->getCustomerById($customerId);
+        
+        if (!$customer || $customer->email !== $email) {
             return response()->json([
                 'status' => false,
                 'msg' => __('Invalid current password.')
@@ -106,12 +108,8 @@ class MyProfileController extends FrontendController
             ]);
         }
 
-        // Update password (use bcrypt)
-        DB::table('customers')
-            ->where('customerid', $customerId)
-            ->update([
-                'password' => Hash::make($request->input('newPassword'))
-            ]);
+        // Update password
+        $this->customerRepository->updatePassword($customerId, $request->input('newPassword'));
 
         return response()->json(['status' => true]);
     }

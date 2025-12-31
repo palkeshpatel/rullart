@@ -165,8 +165,18 @@ Route::group(['prefix' => '{locale}', 'where' => ['locale' => 'en|ar'], 'middlew
     Route::post('/shoppingcart/ajax_wishlist', [ShoppingCartController::class, 'ajaxWishlist'])->name('cart.ajax.wishlist');
 
     // Checkout routes
-    Route::get('/checkout', [CheckoutController::class, 'index'])->name('checkout');
+    Route::get('/checkout', [CheckoutController::class, 'index'])->name('checkout.index');
+    Route::post('/checkout/delivery', [CheckoutController::class, 'delivery'])->name('checkout.delivery');
+    Route::post('/checkout/apply', [CheckoutController::class, 'applyCoupon'])->name('checkout.apply');
+    Route::post('/checkout/couponremove', [CheckoutController::class, 'removeCoupon'])->name('checkout.couponremove');
+    Route::post('/checkout/shippingmethod', [CheckoutController::class, 'shippingMethod'])->name('checkout.shippingmethod');
     Route::post('/checkout/process', [CheckoutController::class, 'processPayment'])->name('checkout.process');
+
+    // Payment routes
+    Route::get('/payment', [\App\Http\Controllers\Frontend\PaymentController::class, 'index'])->name('payment.index');
+    
+    // Thankyou/Process route (matches CI project - JavaScript calls thankyou/process)
+    Route::post('/thankyou/process', [CheckoutController::class, 'processPayment'])->name('thankyou.process');
 
     // Change currency route (matches CI format: changecurrency?currency=KWD)
     Route::get('/changecurrency', function (\Illuminate\Http\Request $request) {
