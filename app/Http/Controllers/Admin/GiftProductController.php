@@ -66,6 +66,7 @@ class GiftProductController extends Controller
             ]);
         }
 
+        // For now, return modal view (same as AJAX) since gift products should use modal
         return view('admin.gift-products.create', compact('categories'));
     }
 

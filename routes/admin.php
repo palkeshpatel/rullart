@@ -69,6 +69,12 @@ Route::middleware(['admin'])->prefix('admin')->name('admin.')->group(function ()
     Route::put('products/{id}', [\App\Http\Controllers\Admin\ProductController::class, 'update'])->name('products.update');
     Route::delete('products/{id}', [\App\Http\Controllers\Admin\ProductController::class, 'destroy'])->name('products.destroy');
     Route::get('giftproducts', [\App\Http\Controllers\Admin\GiftProductController::class, 'index'])->name('gift-products');
+    Route::get('giftproducts/create', [\App\Http\Controllers\Admin\GiftProductController::class, 'create'])->name('gift-products.create');
+    Route::post('giftproducts', [\App\Http\Controllers\Admin\GiftProductController::class, 'store'])->name('gift-products.store');
+    Route::get('giftproducts/{id}', [\App\Http\Controllers\Admin\GiftProductController::class, 'show'])->name('gift-products.show');
+    Route::get('giftproducts/{id}/edit', [\App\Http\Controllers\Admin\GiftProductController::class, 'edit'])->name('gift-products.edit');
+    Route::put('giftproducts/{id}', [\App\Http\Controllers\Admin\GiftProductController::class, 'update'])->name('gift-products.update');
+    Route::delete('giftproducts/{id}', [\App\Http\Controllers\Admin\GiftProductController::class, 'destroy'])->name('gift-products.destroy');
 
     // Reports
     Route::get('sales-report-date', [\App\Http\Controllers\Admin\Reports\SalesReportController::class, 'datewise'])->name('sales-report-date');

@@ -60,7 +60,7 @@ class ProductController extends Controller
         $categories = Category::orderBy('category')->get();
         
         // Get colors (filtervalues where fkfilterid = 2)
-        $colors = \DB::table('filtervalues')
+        $colors = DB::table('filtervalues')
             ->where('fkfilterid', 2)
             ->where('isactive', 1)
             ->orderBy('displayorder')
@@ -68,7 +68,7 @@ class ProductController extends Controller
             ->get();
         
         // Get sizes (filtervalues where fkfilterid = 3)
-        $sizes = \DB::table('filtervalues')
+        $sizes = DB::table('filtervalues')
             ->where('fkfilterid', 3)
             ->where('isactive', 1)
             ->orderBy('displayorder')
@@ -217,7 +217,7 @@ class ProductController extends Controller
                 $sizes = $request->input('sizes', []);
                 foreach ($sizes as $sizeData) {
                     if (isset($sizeData['filtervalueid']) && isset($sizeData['qty'])) {
-                        \DB::table('productsfilter')->insert([
+                        DB::table('productsfilter')->insert([
                             'fkproductid' => $product->productid,
                             'fkfiltervalueid' => $sizeData['filtervalueid'],
                             'filtercode' => 'size',
@@ -333,7 +333,7 @@ class ProductController extends Controller
         $categories = Category::orderBy('category')->get();
         
         // Get colors (filtervalues where fkfilterid = 2)
-        $colors = \DB::table('filtervalues')
+        $colors = DB::table('filtervalues')
             ->where('fkfilterid', 2)
             ->where('isactive', 1)
             ->orderBy('displayorder')
@@ -341,7 +341,7 @@ class ProductController extends Controller
             ->get();
         
         // Get sizes (filtervalues where fkfilterid = 3)
-        $sizes = \DB::table('filtervalues')
+        $sizes = DB::table('filtervalues')
             ->where('fkfilterid', 3)
             ->where('isactive', 1)
             ->orderBy('displayorder')
@@ -354,13 +354,13 @@ class ProductController extends Controller
             ->get();
         
         // Get product filters (sizes, colors, occasions)
-        $productFilters = \DB::table('productsfilter')
+        $productFilters = DB::table('productsfilter')
             ->where('fkproductid', $id)
             ->get()
             ->groupBy('filtercode');
         
         // Get product sizes with quantities
-        $productSizes = \DB::table('productsfilter as pf')
+        $productSizes = DB::table('productsfilter as pf')
             ->join('filtervalues as fv', 'fv.filtervalueid', '=', 'pf.fkfiltervalueid')
             ->where('pf.fkproductid', $id)
             ->where('pf.filtercode', 'size')
@@ -551,14 +551,14 @@ class ProductController extends Controller
             $storeId = 1; // Default store ID
             
             // Delete existing filters
-            \DB::table('productsfilter')->where('fkproductid', $product->productid)->delete();
+            DB::table('productsfilter')->where('fkproductid', $product->productid)->delete();
             
             // Save sizes with quantities
             if ($request->has('sizes')) {
                 $sizes = $request->input('sizes', []);
                 foreach ($sizes as $sizeData) {
                     if (isset($sizeData['filtervalueid']) && isset($sizeData['qty'])) {
-                        \DB::table('productsfilter')->insert([
+                        DB::table('productsfilter')->insert([
                             'fkproductid' => $product->productid,
                             'fkfiltervalueid' => $sizeData['filtervalueid'],
                             'filtercode' => 'size',
