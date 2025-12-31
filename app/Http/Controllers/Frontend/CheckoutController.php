@@ -373,15 +373,20 @@ class CheckoutController extends FrontendController
 
         // Handle different payment methods
         if ($method == "Knet") {
+            // Generate unique track ID to avoid duplicate merchant track ID error
+            // Use timestamp + cart ID to ensure uniqueness for each payment attempt
+            // Format: timestamp_cartid (e.g., 1704067200_12345)
+            $uniqueTrackId = time() . '_' . $shoppingCartId;
+            
             // Create Knet payment URL
             $knetService = new KnetPaymentService();
-            $knetService->setOrderId($shoppingCartId)
+            $knetService->setOrderId($uniqueTrackId) // Use unique track ID
                 ->setAmount($cartTotal)
                 ->setResponseUrl(url('/' . $locale . '/knetresponse'))
                 ->setErrorUrl(url('/' . $locale . '/ordererror'))
                 ->setUdf1(Session::get('email', ''))
                 ->setUdf2($customerId)
-                ->setUdf3($shoppingCartId)
+                ->setUdf3($shoppingCartId) // Store original cart ID in UDF3 for retrieval
                 ->setUdf4($cartTotal)
                 ->setLanguage($locale);
             

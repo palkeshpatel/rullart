@@ -29,6 +29,11 @@ Route::middleware(['admin'])->prefix('admin')->name('admin.')->group(function ()
 
     // Manage Orders
     Route::get('customers', [\App\Http\Controllers\Admin\CustomerController::class, 'index'])->name('customers');
+    Route::get('customers/create', [\App\Http\Controllers\Admin\CustomerController::class, 'create'])->name('customers.create');
+    Route::post('customers', [\App\Http\Controllers\Admin\CustomerController::class, 'store'])->name('customers.store');
+    Route::get('customers/{id}', [\App\Http\Controllers\Admin\CustomerController::class, 'show'])->name('customers.show');
+    Route::get('customers/{id}/edit', [\App\Http\Controllers\Admin\CustomerController::class, 'edit'])->name('customers.edit');
+    Route::put('customers/{id}', [\App\Http\Controllers\Admin\CustomerController::class, 'update'])->name('customers.update');
     Route::get('orders', [\App\Http\Controllers\Admin\OrderController::class, 'index'])->name('orders');
     Route::get('orders/{id}/edit', [\App\Http\Controllers\Admin\OrderController::class, 'edit'])->name('orders.edit');
     Route::put('orders/{id}', [\App\Http\Controllers\Admin\OrderController::class, 'update'])->name('orders.update');

@@ -179,6 +179,25 @@ Route::group(['prefix' => '{locale}', 'where' => ['locale' => 'en|ar'], 'middlew
     
     // Thankyou/Process route (matches CI project - JavaScript calls thankyou/process)
     Route::post('/thankyou/process', [CheckoutController::class, 'processPayment'])->name('thankyou.process');
+    
+    // Knet payment response and error routes
+    // Knet sends POST data, so we need to accept both GET and POST
+    Route::match(['get', 'post'], '/knetresponse', [\App\Http\Controllers\Frontend\KnetResponseController::class, 'index'])->name('knet.response');
+    Route::get('/ordererror', [\App\Http\Controllers\Frontend\OrderErrorController::class, 'index'])->name('order.error');
+    
+    // Thank you page (order confirmation)
+    Route::get('/thankyou', function (Request $request) {
+        $locale = app()->getLocale();
+        $orderId = $request->get('orderid');
+        
+        if (!$orderId) {
+            return redirect()->route('home', ['locale' => $locale]);
+        }
+        
+        // TODO: Create ThankYouController and view
+        // For now, redirect to myorders
+        return redirect()->route('myorders', ['locale' => $locale]);
+    })->name('thankyou');
 
     // Change currency route (matches CI format: changecurrency?currency=KWD)
     Route::get('/changecurrency', function (\Illuminate\Http\Request $request) {

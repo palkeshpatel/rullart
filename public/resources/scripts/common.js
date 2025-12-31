@@ -185,6 +185,32 @@ var overlayHide = function() {
     $('html').removeClass('offcanvas');
 };
 
+// Login function for checkout button (available globally)
+var login = function(e){
+    e.preventDefault();
+    $('html').addClass('overlay');
+    $("#overlayBg").show();
+    $('#overlayContent').show();
+    var $overlayBody = $('#overlayBody'),
+        $overlayLoader = $('#overlayLoader'),
+    loadurl = base_url+"login?redirect=checkout&t=" + Date.now();
+    $overlayBody.html("");
+    $overlayLoader.show();
+    $.get(loadurl, function(data) {
+        $overlayBody.html(data);
+    }).done(function() {
+        $overlayLoader.hide();
+        $overlayBody.show();
+    });
+    return false;
+};
+
+// Handle checkout button click for non-logged-in users (using event delegation for dynamically loaded content)
+$(document).on('click', '#btnCheckoutLogin', function(e) {
+    e.preventDefault();
+    login(e);
+});
+
 var closeOverlay = function() {
     $('#overlayBg, #closeOverlay').on('click', function(e) {
         e.preventDefault();

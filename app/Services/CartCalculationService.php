@@ -16,6 +16,9 @@ class CartCalculationService
         $total = 0;
         $giftMessageCharge = $this->getGiftMessageCharge();
         
+        // Get shipping country from session (outside loop so it's available later)
+        $shippingCountry = Session::get('shipping_country', config('app.default_country', 'Kuwait'));
+        
         foreach ($cartItems as $item) {
             $subtotal = $item->subtotal;
             
@@ -29,7 +32,6 @@ class CartCalculationService
             
             // Check international shipping
             $internation_ship = $item->internation_ship ?? 1;
-            $shippingCountry = Session::get('shipping_country', config('app.default_country', 'Kuwait'));
             
             if ($internation_ship == 0 && $shippingCountry != config('app.default_country', 'Kuwait')) {
                 // Item not available for international shipping

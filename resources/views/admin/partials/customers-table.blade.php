@@ -15,8 +15,14 @@
                 <td>{{ $customer->email }}</td>
                 <td>{{ $customer->createdon ? \Carbon\Carbon::parse($customer->createdon)->format('d-M-Y') : 'N/A' }}</td>
                 <td>
-                    <a href="#" class="btn btn-sm btn-info">View</a>
-                    <a href="#" class="btn btn-sm btn-warning">Edit</a>
+                    <div class="d-flex gap-1">
+                        <a href="javascript:void(0);" class="btn btn-light btn-icon btn-sm rounded-circle view-customer-btn" data-customer-id="{{ $customer->customerid }}" title="View">
+                            <i class="ti ti-eye fs-lg"></i>
+                        </a>
+                        <a href="javascript:void(0);" class="btn btn-light btn-icon btn-sm rounded-circle edit-customer-btn" data-customer-id="{{ $customer->customerid }}" title="Edit">
+                            <i class="ti ti-edit fs-lg"></i>
+                        </a>
+                    </div>
                 </td>
             </tr>
             @empty
