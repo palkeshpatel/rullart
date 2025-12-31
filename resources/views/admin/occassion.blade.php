@@ -1,5 +1,10 @@
 @extends('layouts.vertical', ['title' => 'Occasion List'])
 
+@php
+    // Redirect to new index view
+    header('Location: ' . route('admin.occassion'));
+    exit;
+
 @section('content')
     @include('layouts.partials/page-title', ['title' => 'Occasion List'])
 

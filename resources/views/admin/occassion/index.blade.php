@@ -1,40 +1,16 @@
-@extends('layouts.vertical', ['title' => 'Category List'])
+@extends('layouts.vertical', ['title' => 'Occasion List'])
 
 @section('content')
-    @include('layouts.partials/page-title', ['title' => 'Category List'])
+    @include('layouts.partials/page-title', ['title' => 'Occasion List'])
 
     <div class="row">
         <div class="col-12">
-            <!-- Filters Section - Top Bar -->
-            <form method="GET" action="{{ route('admin.category') }}" data-table-filters id="categoryFilterForm">
-                <div class="card mb-3">
-                    <div class="card-body">
-                        <div class="row align-items-end">
-                            <div class="col-md-3">
-                                <label class="form-label mb-1">Category:</label>
-                                <select name="parent_category" class="form-select form-select-sm" data-filter>
-                                    <option value="">--Parent--</option>
-                                    <option value="0" {{ request('parent_category') == '0' ? 'selected' : '' }}>No
-                                        Parent (Main Categories)</option>
-                                    @foreach ($parentCategories ?? [] as $parent)
-                                        <option value="{{ $parent->categoryid }}"
-                                            {{ request('parent_category') == $parent->categoryid ? 'selected' : '' }}>
-                                            {{ $parent->category }}
-                                        </option>
-                                    @endforeach
-                                </select>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </form>
-
-            <!-- Category Table Card -->
+            <!-- Occasion Table Card -->
             <div class="card">
                 <div class="card-header justify-content-between align-items-center border-dashed">
-                    <h4 class="card-title mb-0">Category List</h4>
-                    <a href="javascript:void(0);" class="btn btn-success btn-sm add-category-btn">
-                        <i class="ti ti-plus me-1"></i> Add Category
+                    <h4 class="card-title mb-0">Occasion List</h4>
+                    <a href="javascript:void(0);" class="btn btn-success btn-sm add-occassion-btn">
+                        <i class="ti ti-plus me-1"></i> Add Occasion
                     </a>
                 </div>
                 <div class="card-body">
@@ -44,7 +20,7 @@
                             <div class="d-flex gap-2 justify-content-between align-items-center">
                                 <div class="app-search app-search-sm" style="max-width: 300px;">
                                     <input type="text" name="search" class="form-control form-control-sm" data-search
-                                        placeholder="Search category..." value="{{ request('search') }}">
+                                        placeholder="Search occasion..." value="{{ request('search') }}">
                                     <i data-lucide="search" class="app-search-icon text-muted"></i>
                                 </div>
                                 <div class="d-flex align-items-center">
@@ -68,12 +44,12 @@
 
                     <!-- Table Container -->
                     <div class="table-container">
-                        @include('admin.partials.categories-table', ['categories' => $categories])
+                        @include('admin.partials.occassions-table', ['occassions' => $occassions])
                     </div>
 
                     <!-- Pagination -->
                     <div class="pagination-container">
-                        @include('admin.partials.pagination', ['items' => $categories])
+                        @include('admin.partials.pagination', ['items' => $occassions])
                     </div>
                 </div>
             </div>
@@ -81,17 +57,17 @@
     </div>
 
     <!-- Modal Container -->
-    <div id="categoryModalContainer"></div>
-    <div id="categoryViewModalContainer"></div>
+    <div id="occassionModalContainer"></div>
+    <div id="occassionViewModalContainer"></div>
 @endsection
 
 @section('scripts')
     <script>
         // Wait for jQuery to be available (Vite loads scripts asynchronously)
         (function() {
-            function initCategoryScript() {
+            function initOccassionScript() {
                 if (typeof jQuery === 'undefined' || typeof jQuery.fn.validate === 'undefined') {
-                    setTimeout(initCategoryScript, 50);
+                    setTimeout(initOccassionScript, 50);
                     return;
                 }
 
@@ -102,51 +78,54 @@
                     loadTableFromURL();
 
                     /* -----------------------------------
-                     HARD BLOCK native submit (AJAX forms)
+                     ADD OCCASION BUTTON
                     ----------------------------------- */
-                    $(document).off('submit', '#categoryForm');
-                    $(document).on('submit', '#categoryForm', function(e) {
+                    $(document).on('click', '.add-occassion-btn', function(e) {
                         e.preventDefault();
-                        return false;
+                        openOccassionModal(null);
                     });
 
                     /* -----------------------------------
-                     ADD CATEGORY BUTTON (OPEN MODAL ONLY)
+                     VIEW OCCASION BUTTON
                     ----------------------------------- */
-                    $(document).on('click', '.add-category-btn', function(e) {
+                    $(document).on('click', '.view-occassion-btn', function(e) {
                         e.preventDefault();
-                        openCategoryFormModal();
+                        const occassionId = $(this).data('occassion-id');
+                        openOccassionViewModal(occassionId);
                     });
 
                     /* -----------------------------------
-                     EDIT CATEGORY BUTTON
+                     EDIT OCCASION BUTTON
                     ----------------------------------- */
-                    $(document).on('click', '.edit-category-btn', function(e) {
+                    $(document).on('click', '.edit-occassion-btn', function(e) {
                         e.preventDefault();
-                        const categoryId = $(this).data('category-id');
-                        openCategoryFormModal(categoryId);
+                        const occassionId = $(this).data('occassion-id');
+                        openOccassionModal(occassionId);
                     });
 
                     /* -----------------------------------
-                     VIEW CATEGORY BUTTON
+                     DELETE OCCASION BUTTON
                     ----------------------------------- */
-                    $(document).on('click', '.view-category-btn', function(e) {
+                    $(document).on('click', '.delete-occassion-btn', function(e) {
                         e.preventDefault();
-                        const categoryId = $(this).data('category-id');
-                        openCategoryViewModal(categoryId);
+                        const occassionId = $(this).data('occassion-id');
+                        const occassionName = $(this).data('occassion-name') || 'this occasion';
+                        if (confirm(`Are you sure you want to delete ${occassionName}?`)) {
+                            deleteOccassion(occassionId);
+                        }
                     });
 
                     /* -----------------------------------
-                     OPEN VIEW MODAL
+                     OPEN OCCASION MODAL (ADD/EDIT)
                     ----------------------------------- */
-                    function openCategoryViewModal(categoryId) {
+                    function openOccassionModal(occassionId) {
                         cleanupModals();
+                        const url = occassionId
+                            ? '{{ route('admin.occassion.edit', ':id') }}'.replace(':id', occassionId)
+                            : '{{ route('admin.occassion.create') }}';
 
-                        const url = '{{ route('admin.category.show', ':id') }}'.replace(':id', categoryId);
-
-                        $('#categoryViewModalContainer').html(loaderHtml());
-
-                        const loadingModal = new bootstrap.Modal($('#categoryModal')[0], {
+                        $('#occassionModalContainer').html(loaderHtml());
+                        const loadingModal = new bootstrap.Modal($('#occassionModal')[0], {
                             backdrop: 'static',
                             keyboard: false
                         });
@@ -157,49 +136,29 @@
                             loadingModal.hide();
                             cleanupModals();
 
-                            $('#categoryViewModalContainer').html(response.html);
+                            $('#occassionModalContainer').html(response.html);
 
-                            const modalEl = document.getElementById('categoryViewModal');
+                            const modalEl = document.getElementById('occassionModal');
                             const modal = new bootstrap.Modal(modalEl);
                             modal.show();
 
-                            // Handle edit button click from view modal
-                            $(modalEl).find('.edit-category-btn').on('click', function(e) {
-                                e.preventDefault();
-                                const editCategoryId = $(this).data('category-id');
-                                modal.hide();
-                                cleanupModals();
-                                setTimeout(() => {
-                                    openCategoryFormModal(editCategoryId);
-                                }, 300);
-                            });
-
-                            modalEl.addEventListener('hidden.bs.modal', function() {
-                                cleanupModals();
-                            }, {
-                                once: true
-                            });
+                            setupOccassionValidation(occassionId, modal);
 
                         }).catch(err => {
                             loadingModal.hide();
                             cleanupModals();
-                            AdminAjax.showError('Failed to load category details.');
                         });
                     }
 
                     /* -----------------------------------
-                     OPEN FORM MODAL
+                     OPEN OCCASION VIEW MODAL
                     ----------------------------------- */
-                    function openCategoryFormModal(categoryId = null) {
+                    function openOccassionViewModal(occassionId) {
                         cleanupModals();
+                        const url = '{{ route('admin.occassion.show', ':id') }}'.replace(':id', occassionId);
 
-                        const url = categoryId ?
-                            '{{ route('admin.category.edit', ':id') }}'.replace(':id', categoryId) :
-                            '{{ route('admin.category.create') }}';
-
-                        $('#categoryModalContainer').html(loaderHtml());
-
-                        const loadingModal = new bootstrap.Modal($('#categoryModal')[0], {
+                        $('#occassionViewModalContainer').html(loaderHtml());
+                        const loadingModal = new bootstrap.Modal($('#occassionModal')[0], {
                             backdrop: 'static',
                             keyboard: false
                         });
@@ -210,52 +169,58 @@
                             loadingModal.hide();
                             cleanupModals();
 
-                            $('#categoryModalContainer').html(response.html);
+                            $('#occassionViewModalContainer').html(response.html);
 
-                            const modalEl = document.getElementById('categoryModal');
+                            const modalEl = document.getElementById('occassionViewModal');
                             const modal = new bootstrap.Modal(modalEl);
                             modal.show();
-
-                            setupCategoryValidation(categoryId, modal);
 
                         }).catch(err => {
                             loadingModal.hide();
                             cleanupModals();
                         });
+                    }
+
+                    /* -----------------------------------
+                     DELETE OCCASION
+                    ----------------------------------- */
+                    function deleteOccassion(occassionId) {
+                        const url = '{{ route('admin.occassion.destroy', ':id') }}'.replace(':id', occassionId);
+                        AdminAjax.request(url, 'DELETE')
+                            .then(res => {
+                                showToast('Occasion deleted successfully', 'success');
+                                reloadOccassionTable();
+                            })
+                            .catch(err => {
+                                showToast(err.message || 'Failed to delete occasion.', 'error');
+                            });
                     }
 
                     /* -----------------------------------
                      VALIDATION SETUP
                     ----------------------------------- */
-                    function setupCategoryValidation(categoryId, modal) {
-                        const $form = $('#categoryForm');
+                    function setupOccassionValidation(occassionId, modal) {
+                        const $form = $('#occassionForm');
                         if (!$form.length || $form.data('validator')) {
                             return;
                         }
 
                         $form.validate({
                             rules: {
-                                category: {
+                                occassion: {
                                     required: true
                                 },
-                                categoryAR: {
+                                occassionAR: {
                                     required: true
                                 },
-                                parentid: {
-                                    required: true
-                                },
-                                categorycode: {
-                                    required: true
-                                },
-                                parentid: {
+                                occassioncode: {
                                     required: true
                                 }
                             },
                             messages: {
-                                category: 'Category name (EN) is required.',
-                                categoryAR: 'Category name (AR) is required.',
-                                categorycode: 'Category code is required.',
-                                parentid: 'Parent category is required.'
+                                occassion: 'Occasion name (EN) is required.',
+                                occassionAR: 'Occasion name (AR) is required.',
+                                occassioncode: 'Occasion code is required.'
                             },
                             errorElement: 'div',
                             errorClass: 'invalid-feedback',
@@ -269,7 +234,7 @@
                                 error.insertAfter(element);
                             },
                             submitHandler(form) {
-                                submitCategoryForm(form, categoryId, modal);
+                                submitOccassionForm(form, occassionId, modal);
                             }
                         });
                     }
@@ -277,7 +242,7 @@
                     /* -----------------------------------
                      SUBMIT FORM (AJAX)
                     ----------------------------------- */
-                    function submitCategoryForm(form, categoryId, modal) {
+                    function submitOccassionForm(form, occassionId, modal) {
                         const formData = new FormData(form);
                         const url = form.action;
                         const method = form.querySelector('[name="_method"]')?.value || 'POST';
@@ -285,20 +250,18 @@
                         const originalText = submitBtn.innerHTML;
                         submitBtn.setAttribute('data-original-text', originalText);
                         submitBtn.disabled = true;
-                        submitBtn.innerHTML =
-                            '<span class="spinner-border spinner-border-sm me-1"></span> Saving...';
+                        submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Saving...';
 
                         AdminAjax.request(url, method, formData)
                             .then(res => {
-                                showToastInModal(modal, res.message || 'Category saved successfully',
-                                    'success');
+                                showToastInModal(modal, res.message || 'Occasion saved successfully', 'success');
                                 setTimeout(() => {
                                     modal.hide();
                                 }, 1500);
-                                reloadCategoryTable();
+                                reloadOccassionTable();
                             })
                             .catch(err => {
-                                let errorMessage = 'Failed to save category.';
+                                let errorMessage = 'Failed to save occasion.';
                                 if (err.message) {
                                     errorMessage = err.message;
                                 } else if (err.errors) {
@@ -310,27 +273,24 @@
                                     }
                                 }
                                 showToastInModal(modal, errorMessage, 'error');
-                                const $form = $('#categoryForm');
+                                const $form = $('#occassionForm');
                                 $form.find('.is-invalid').removeClass('is-invalid');
                                 $form.find('.is-valid').removeClass('is-valid');
                                 $form.find('[id$="-error"]').remove();
                                 $form.find('.invalid-feedback').html('').removeClass('d-block').hide();
                                 submitBtn.disabled = false;
-                                submitBtn.innerHTML = submitBtn.getAttribute('data-original-text') ||
-                                    originalText;
+                                submitBtn.innerHTML = submitBtn.getAttribute('data-original-text') || originalText;
                             });
                     }
 
                     /* -----------------------------------
-                     RELOAD CATEGORY TABLE (PRESERVE PAGE)
+                     RELOAD OCCASION TABLE (PRESERVE PAGE)
                     ----------------------------------- */
-                    function reloadCategoryTable() {
+                    function reloadOccassionTable() {
                         const urlParams = new URLSearchParams(window.location.search);
                         const currentPage = urlParams.get('page') || 1;
                         const currentPerPage = urlParams.get('per_page') || $('#perPageSelect').val() || 25;
                         const currentSearch = urlParams.get('search') || $('[data-search]').val() || '';
-                        const currentParentCategory = urlParams.get('parent_category') || $('[data-filter]')
-                            .val() || '';
 
                         const params = {
                             page: currentPage,
@@ -339,11 +299,8 @@
                         if (currentSearch) {
                             params.search = currentSearch;
                         }
-                        if (currentParentCategory) {
-                            params.parent_category = currentParentCategory;
-                        }
 
-                        AdminAjax.loadTable('{{ route('admin.category') }}', $('.table-container')[0], {
+                        AdminAjax.loadTable('{{ route('admin.occassion') }}', $('.table-container')[0], {
                             params: params,
                             onSuccess: function(response) {
                                 if (response.pagination) {
@@ -362,15 +319,13 @@
                         const page = urlParams.get('page');
                         const perPage = urlParams.get('per_page');
                         const search = urlParams.get('search');
-                        const parentCategory = urlParams.get('parent_category');
 
                         // Only load via AJAX if URL has parameters (otherwise use server-rendered content)
-                        if (page || perPage || search || parentCategory) {
+                        if (page || perPage || search) {
                             const params = {};
                             if (page) params.page = page;
                             if (perPage) params.per_page = perPage;
                             if (search) params.search = search;
-                            if (parentCategory) params.parent_category = parentCategory;
 
                             if (perPage && $('#perPageSelect').length) {
                                 $('#perPageSelect').val(perPage);
@@ -380,7 +335,7 @@
                                 $('[data-search]').val(search);
                             }
 
-                            AdminAjax.loadTable('{{ route('admin.category') }}', $('.table-container')[0], {
+                            AdminAjax.loadTable('{{ route('admin.occassion') }}', $('.table-container')[0], {
                                 params: params,
                                 onSuccess: function(response) {
                                     if (response.pagination) {
@@ -409,12 +364,8 @@
 
                             const urlObj = new URL(url, window.location.origin);
                             const page = urlObj.searchParams.get('page') || 1;
-                            const perPage = urlObj.searchParams.get('per_page') || $('#perPageSelect')
-                                .val() || 25;
-                            const search = urlObj.searchParams.get('search') || $('[data-search]')
-                            .val() || '';
-                            const parentCategory = urlObj.searchParams.get('parent_category') || $(
-                                '[data-filter]').val() || '';
+                            const perPage = urlObj.searchParams.get('per_page') || $('#perPageSelect').val() || 25;
+                            const search = urlObj.searchParams.get('search') || $('[data-search]').val() || '';
 
                             const params = {
                                 page: page,
@@ -422,9 +373,6 @@
                             };
                             if (search) {
                                 params.search = search;
-                            }
-                            if (parentCategory) {
-                                params.parent_category = parentCategory;
                             }
 
                             const newUrl = new URL(window.location.pathname, window.location.origin);
@@ -435,13 +383,11 @@
                             });
                             window.history.pushState({}, '', newUrl.toString());
 
-                            AdminAjax.loadTable('{{ route('admin.category') }}', $('.table-container')[
-                                0], {
+                            AdminAjax.loadTable('{{ route('admin.occassion') }}', $('.table-container')[0], {
                                 params: params,
                                 onSuccess: function(response) {
                                     if (response.pagination) {
-                                        $('.pagination-container').html(response
-                                        .pagination);
+                                        $('.pagination-container').html(response.pagination);
                                     }
                                 }
                             });
@@ -455,7 +401,6 @@
                         e.preventDefault();
                         const perPage = $(this).val();
                         const currentSearch = $('[data-search]').val() || '';
-                        const currentParentCategory = $('[data-filter]').val() || '';
 
                         const params = {
                             page: 1,
@@ -463,9 +408,6 @@
                         };
                         if (currentSearch) {
                             params.search = currentSearch;
-                        }
-                        if (currentParentCategory) {
-                            params.parent_category = currentParentCategory;
                         }
 
                         const newUrl = new URL(window.location.pathname, window.location.origin);
@@ -476,8 +418,7 @@
                         });
                         window.history.pushState({}, '', newUrl.toString());
 
-                        AdminAjax.loadTable('{{ route('admin.category') }}', $('.table-container')[
-                        0], {
+                        AdminAjax.loadTable('{{ route('admin.occassion') }}', $('.table-container')[0], {
                             params: params,
                             onSuccess: function(response) {
                                 if (response.pagination) {
@@ -497,7 +438,6 @@
                         searchTimeout = setTimeout(function() {
                             const searchValue = searchInput.val();
                             const currentPerPage = $('#perPageSelect').val() || 25;
-                            const currentParentCategory = $('[data-filter]').val() || '';
 
                             const params = {
                                 page: 1,
@@ -506,12 +446,8 @@
                             if (searchValue) {
                                 params.search = searchValue;
                             }
-                            if (currentParentCategory) {
-                                params.parent_category = currentParentCategory;
-                            }
 
-                            const newUrl = new URL(window.location.pathname, window.location
-                                .origin);
+                            const newUrl = new URL(window.location.pathname, window.location.origin);
                             Object.keys(params).forEach(key => {
                                 if (params[key]) {
                                     newUrl.searchParams.set(key, params[key]);
@@ -519,55 +455,15 @@
                             });
                             window.history.pushState({}, '', newUrl.toString());
 
-                            AdminAjax.loadTable('{{ route('admin.category') }}', $(
-                                '.table-container')[0], {
+                            AdminAjax.loadTable('{{ route('admin.occassion') }}', $('.table-container')[0], {
                                 params: params,
                                 onSuccess: function(response) {
                                     if (response.pagination) {
-                                        $('.pagination-container').html(response
-                                            .pagination);
+                                        $('.pagination-container').html(response.pagination);
                                     }
                                 }
                             });
                         }, 500);
-                    });
-
-                    /* -----------------------------------
-                     FILTER HANDLER (PARENT CATEGORY)
-                    ----------------------------------- */
-                    $(document).on('change', '[data-filter]', function(e) {
-                        const parentCategory = $(this).val();
-                        const currentSearch = $('[data-search]').val() || '';
-                        const currentPerPage = $('#perPageSelect').val() || 25;
-
-                        const params = {
-                            page: 1,
-                            per_page: currentPerPage
-                        };
-                        if (currentSearch) {
-                            params.search = currentSearch;
-                        }
-                        if (parentCategory) {
-                            params.parent_category = parentCategory;
-                        }
-
-                        const newUrl = new URL(window.location.pathname, window.location.origin);
-                        Object.keys(params).forEach(key => {
-                            if (params[key]) {
-                                newUrl.searchParams.set(key, params[key]);
-                            }
-                        });
-                        window.history.pushState({}, '', newUrl.toString());
-
-                        AdminAjax.loadTable('{{ route('admin.category') }}', $('.table-container')[
-                        0], {
-                            params: params,
-                            onSuccess: function(response) {
-                                if (response.pagination) {
-                                    $('.pagination-container').html(response.pagination);
-                                }
-                            }
-                        });
                     });
 
                     /* -----------------------------------
@@ -596,8 +492,8 @@
 
                         const toastBg = type === 'error' ? 'bg-danger' : 'bg-success';
                         const toastId = 'toast-' + Date.now();
-                        const toast = $(`
-                            <div id="${toastId}" class="toast ${toastBg} text-white border-0" role="alert" aria-live="assertive" aria-atomic="true">
+                        const toast = $(
+                            `<div id="${toastId}" class="toast ${toastBg} text-white border-0" role="alert" aria-live="assertive" aria-atomic="true">
                                 <div class="d-flex">
                                     <div class="toast-body">
                                         <i class="ti ti-${type === 'error' ? 'alert-circle' : 'check-circle'} me-2"></i>
@@ -605,8 +501,8 @@
                                     </div>
                                     <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
                                 </div>
-                            </div>
-                        `);
+                            </div>`
+                        );
 
                         toastContainer.append(toast);
 
@@ -624,6 +520,10 @@
                         });
                     }
 
+                    function showToast(message, type = 'error') {
+                        showToastInModal(null, message, type);
+                    }
+
                     /* -----------------------------------
                      HELPERS
                     ----------------------------------- */
@@ -633,13 +533,13 @@
                             overflow: '',
                             paddingRight: ''
                         });
-                        $('#categoryModal').remove();
-                        $('#categoryViewModal').remove();
+                        $('#occassionModal').remove();
+                        $('#occassionViewModal').remove();
                     }
 
                     function loaderHtml() {
                         return `
-        <div class="modal fade" id="categoryModal">
+        <div class="modal fade" id="occassionModal">
             <div class="modal-dialog">
                 <div class="modal-content">
                     <div class="modal-body text-center p-4">
@@ -654,7 +554,8 @@
             }
 
             // Start initialization
-            initCategoryScript();
+            initOccassionScript();
         })();
     </script>
 @endsection
+

@@ -6,10 +6,7 @@
                 <th><i class="fa fa-sort"></i> Title</th>
                 <th><i class="fa fa-sort"></i> Selling Price</th>
                 <th><i class="fa fa-sort"></i> Category</th>
-                <th>Photo</th>
-                <th><i class="fa fa-sort"></i> Quantity</th>
-                <th>Active</th>
-                <th>Updated Date</th>
+                <th>Published</th>
                 <th>Action</th>
             </tr>
         </thead>
@@ -20,23 +17,17 @@
                 <td>{{ $product->title }}</td>
                 <td>{{ number_format($product->sellingprice ?? 0, 3) }}</td>
                 <td>{{ $product->category->category ?? 'N/A' }}</td>
-                <td>
-                    @if($product->image)
-                        <img src="{{ asset('storage/' . $product->image) }}" alt="{{ $product->title }}" style="width: 50px; height: 50px; object-fit: cover;">
-                    @else
-                        <span class="text-muted">No Image</span>
-                    @endif
-                </td>
-                <td>{{ $product->quantity ?? 0 }}</td>
                 <td>{{ $product->ispublished ? 'Yes' : 'No' }}</td>
-                <td>{{ $product->updated_at ? \Carbon\Carbon::parse($product->updated_at)->format('d/M/Y') : 'N/A' }}</td>
                 <td>
                     <div class="d-flex gap-1">
-                        <a href="javascript:void(0);" class="btn btn-light btn-icon btn-sm rounded-circle" title="View">
+                        <a href="javascript:void(0);" class="btn btn-light btn-icon btn-sm rounded-circle view-gift-product-btn" data-product-id="{{ $product->productid }}" title="View">
                             <i class="ti ti-eye fs-lg"></i>
                         </a>
-                        <a href="javascript:void(0);" class="btn btn-light btn-icon btn-sm rounded-circle" title="Edit">
+                        <a href="javascript:void(0);" class="btn btn-light btn-icon btn-sm rounded-circle edit-gift-product-btn" data-product-id="{{ $product->productid }}" title="Edit">
                             <i class="ti ti-edit fs-lg"></i>
+                        </a>
+                        <a href="javascript:void(0);" class="btn btn-light btn-icon btn-sm rounded-circle delete-gift-product-btn" data-product-id="{{ $product->productid }}" data-product-name="{{ $product->title }}" title="Delete">
+                            <i class="ti ti-trash fs-lg"></i>
                         </a>
                     </div>
                 </td>

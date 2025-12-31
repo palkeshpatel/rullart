@@ -6,7 +6,6 @@ use App\Http\Controllers\Controller;
 use App\Models\Category;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 
 class CategoryController extends Controller
@@ -126,18 +125,24 @@ class CategoryController extends Controller
         $validated['updatedby'] = auth()->id() ?? 1;
         $validated['updateddate'] = now();
 
+        // Create uploads directory if it doesn't exist
+        $uploadPath = public_path('uploads/category');
+        if (!file_exists($uploadPath)) {
+            mkdir($uploadPath, 0755, true);
+        }
+
         // Handle file uploads
         if ($request->hasFile('photo')) {
             $photo = $request->file('photo');
-            $photoName = time() . '_' . uniqid() . '.' . $photo->getClientOriginalExtension();
-            $photoPath = $photo->storeAs('category', $photoName, 'public');
+            $photoName = time() . '_' . $photo->getClientOriginalName();
+            $photo->move($uploadPath, $photoName);
             $validated['photo'] = $photoName;
         }
 
         if ($request->hasFile('photo_mobile')) {
             $photoMobile = $request->file('photo_mobile');
-            $photoMobileName = time() . '_' . uniqid() . '_mobile.' . $photoMobile->getClientOriginalExtension();
-            $photoMobilePath = $photoMobile->storeAs('category', $photoMobileName, 'public');
+            $photoMobileName = time() . '_mobile_' . $photoMobile->getClientOriginalName();
+            $photoMobile->move($uploadPath, $photoMobileName);
             $validated['photo_mobile'] = $photoMobileName;
         }
 
@@ -321,6 +326,37 @@ class CategoryController extends Controller
         $validated['ispublished'] = $request->has('ispublished') ? 1 : 0;
         $validated['showmenu'] = $request->has('showmenu') ? 1 : 0;
         $validated['displayorder'] = $validated['displayorder'] ?? 0;
+        $validated['updatedby'] = auth()->id() ?? 1;
+        $validated['updateddate'] = now();
+
+        // Create uploads directory if it doesn't exist
+        $uploadPath = public_path('uploads/category');
+        if (!file_exists($uploadPath)) {
+            mkdir($uploadPath, 0755, true);
+        }
+
+        // Handle file uploads (only if new files are uploaded)
+        if ($request->hasFile('photo')) {
+            // Delete old photo if exists
+            if ($category->photo && file_exists(public_path('uploads/category/' . $category->photo))) {
+                unlink(public_path('uploads/category/' . $category->photo));
+            }
+            $photo = $request->file('photo');
+            $photoName = time() . '_' . $photo->getClientOriginalName();
+            $photo->move($uploadPath, $photoName);
+            $validated['photo'] = $photoName;
+        }
+
+        if ($request->hasFile('photo_mobile')) {
+            // Delete old photo if exists
+            if ($category->photo_mobile && file_exists(public_path('uploads/category/' . $category->photo_mobile))) {
+                unlink(public_path('uploads/category/' . $category->photo_mobile));
+            }
+            $photoMobile = $request->file('photo_mobile');
+            $photoMobileName = time() . '_mobile_' . $photoMobile->getClientOriginalName();
+            $photoMobile->move($uploadPath, $photoMobileName);
+            $validated['photo_mobile'] = $photoMobileName;
+        }
 
         try {
             $category->update($validated);

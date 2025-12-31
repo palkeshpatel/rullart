@@ -55,7 +55,19 @@ Route::middleware(['admin'])->prefix('admin')->name('admin.')->group(function ()
     Route::put('category/{id}', [\App\Http\Controllers\Admin\CategoryController::class, 'update'])->name('category.update');
     Route::delete('category/{id}', [\App\Http\Controllers\Admin\CategoryController::class, 'destroy'])->name('category.destroy');
     Route::get('occassion', [\App\Http\Controllers\Admin\OccassionController::class, 'index'])->name('occassion');
+    Route::get('occassion/create', [\App\Http\Controllers\Admin\OccassionController::class, 'create'])->name('occassion.create');
+    Route::post('occassion', [\App\Http\Controllers\Admin\OccassionController::class, 'store'])->name('occassion.store');
+    Route::get('occassion/{id}', [\App\Http\Controllers\Admin\OccassionController::class, 'show'])->name('occassion.show');
+    Route::get('occassion/{id}/edit', [\App\Http\Controllers\Admin\OccassionController::class, 'edit'])->name('occassion.edit');
+    Route::put('occassion/{id}', [\App\Http\Controllers\Admin\OccassionController::class, 'update'])->name('occassion.update');
+    Route::delete('occassion/{id}', [\App\Http\Controllers\Admin\OccassionController::class, 'destroy'])->name('occassion.destroy');
     Route::get('products', [\App\Http\Controllers\Admin\ProductController::class, 'index'])->name('products');
+    Route::get('products/create', [\App\Http\Controllers\Admin\ProductController::class, 'create'])->name('products.create');
+    Route::post('products', [\App\Http\Controllers\Admin\ProductController::class, 'store'])->name('products.store');
+    Route::get('products/{id}', [\App\Http\Controllers\Admin\ProductController::class, 'show'])->name('products.show');
+    Route::get('products/{id}/edit', [\App\Http\Controllers\Admin\ProductController::class, 'edit'])->name('products.edit');
+    Route::put('products/{id}', [\App\Http\Controllers\Admin\ProductController::class, 'update'])->name('products.update');
+    Route::delete('products/{id}', [\App\Http\Controllers\Admin\ProductController::class, 'destroy'])->name('products.destroy');
     Route::get('giftproducts', [\App\Http\Controllers\Admin\GiftProductController::class, 'index'])->name('gift-products');
 
     // Reports

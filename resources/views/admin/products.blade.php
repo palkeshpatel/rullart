@@ -1,5 +1,10 @@
 @extends('layouts.vertical', ['title' => 'Products List'])
 
+@php
+    // Redirect to new index view
+    header('Location: ' . route('admin.products'));
+    exit;
+
 @section('content')
     @include('layouts.partials/page-title', ['title' => 'Products List'])
 

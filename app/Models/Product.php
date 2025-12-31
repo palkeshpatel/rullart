@@ -15,7 +15,9 @@ class Product extends Model
         'fkcategoryid', 'title', 'titleAR', 'productcode', 'shortdescr', 'shortdescrAR',
         'longdescr', 'longdescrAR', 'price', 'discount', 'sellingprice', 
         'ispublished', 'isnew', 'ispopular', 'photo1', 'photo2', 'photo3', 'photo4', 'photo5',
-        'metakeyword', 'metadescr', 'metatitle', 'isgift', 'updatedby', 'updateddate'
+        'metakeyword', 'metadescr', 'metatitle', 'metakeywordAR', 'metadescrAR', 'metatitleAR',
+        'isgift', 'internation_ship', 'productcategoryid', 'productcategoryid2', 'productcategoryid3',
+        'video', 'videoposter', 'productcode_old', 'updatedby', 'updateddate'
     ];
 
     public function category()

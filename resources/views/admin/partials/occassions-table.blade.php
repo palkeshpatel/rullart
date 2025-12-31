@@ -6,7 +6,7 @@
                 <th><i class="fa fa-sort"></i> Occasion (AR)</th>
                 <th><i class="fa fa-sort"></i> Occasion Code</th>
                 <th>Published</th>
-                <th>Display Order</th>
+                <th>Show Home</th>
                 <th>Action</th>
             </tr>
         </thead>
@@ -17,14 +17,17 @@
                 <td>{{ $occassion->occassionAR ?? 'N/A' }}</td>
                 <td>{{ $occassion->occassioncode }}</td>
                 <td>{{ $occassion->ispublished ? 'Yes' : 'No' }}</td>
-                <td>{{ $occassion->displayorder ?? 0 }}</td>
+                <td>{{ $occassion->showhome ? 'Yes' : 'No' }}</td>
                 <td>
                     <div class="d-flex gap-1">
-                        <a href="javascript:void(0);" class="btn btn-light btn-icon btn-sm rounded-circle" title="View">
+                        <a href="javascript:void(0);" class="btn btn-light btn-icon btn-sm rounded-circle view-occassion-btn" data-occassion-id="{{ $occassion->occassionid }}" title="View">
                             <i class="ti ti-eye fs-lg"></i>
                         </a>
-                        <a href="javascript:void(0);" class="btn btn-light btn-icon btn-sm rounded-circle" title="Edit">
+                        <a href="javascript:void(0);" class="btn btn-light btn-icon btn-sm rounded-circle edit-occassion-btn" data-occassion-id="{{ $occassion->occassionid }}" title="Edit">
                             <i class="ti ti-edit fs-lg"></i>
+                        </a>
+                        <a href="javascript:void(0);" class="btn btn-light btn-icon btn-sm rounded-circle delete-occassion-btn" data-occassion-id="{{ $occassion->occassionid }}" data-occassion-name="{{ $occassion->occassion }}" title="Delete">
+                            <i class="ti ti-trash fs-lg"></i>
                         </a>
                     </div>
                 </td>
