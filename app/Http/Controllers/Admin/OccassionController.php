@@ -19,8 +19,8 @@ class OccassionController extends Controller
             $search = $request->search;
             $query->where(function ($q) use ($search) {
                 $q->where('occassion', 'like', "%{$search}%")
-                    ->orWhere('occassionAR', 'like', "%{$search}%")
-                    ->orWhere('occassioncode', 'like', "%{$search}%");
+                  ->orWhere('occassionAR', 'like', "%{$search}%")
+                  ->orWhere('occassioncode', 'like', "%{$search}%");
             });
         }
 

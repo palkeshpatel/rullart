@@ -57,9 +57,6 @@
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                <button type="button" class="btn btn-primary edit-customer-btn" data-customer-id="{{ $customer->customerid }}">
-                    <i class="ti ti-edit me-1"></i> Edit Customer
-                </button>
             </div>
         </div>
     </div>

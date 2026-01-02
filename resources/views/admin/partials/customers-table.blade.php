@@ -19,9 +19,6 @@
                         <a href="javascript:void(0);" class="btn btn-light btn-icon btn-sm rounded-circle view-customer-btn" data-customer-id="{{ $customer->customerid }}" title="View">
                             <i class="ti ti-eye fs-lg"></i>
                         </a>
-                        <a href="javascript:void(0);" class="btn btn-light btn-icon btn-sm rounded-circle edit-customer-btn" data-customer-id="{{ $customer->customerid }}" title="Edit">
-                            <i class="ti ti-edit fs-lg"></i>
-                        </a>
                     </div>
                 </td>
             </tr>
