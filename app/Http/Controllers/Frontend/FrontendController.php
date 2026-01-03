@@ -42,7 +42,8 @@ class FrontendController extends Controller
 
     protected function initializeSettings()
     {
-        $settings = Setting::all()->pluck('settingvalue', 'settingkey')->toArray();
+        // Settings table uses 'name' and 'details' columns (not 'settingkey' and 'settingvalue')
+        $settings = Setting::all()->pluck('details', 'name')->toArray();
         $this->settingsArr = $settings;
         $resourcePath = config('app.resource_url', '/resources/');
         // Image path should point to /storage/ for product images (not /resources/storage/)
