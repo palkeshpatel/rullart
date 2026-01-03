@@ -8,10 +8,10 @@
                 <div class="col-xxl-4 col-md-6 col-sm-8">
                     <div class="auth-brand text-center mb-4">
                         <a href="{{ route('admin.dashboard') }}" class="logo-dark">
-                            <img src="http://127.0.0.1:8000/resources/images/logo-footer.svg" alt="dark logo" height="32">
+                            <img src="{{ asset('resources/images/logo-footer.svg') }}" alt="dark logo" height="32">
                         </a>
                         <a href="{{ route('admin.dashboard') }}" class="logo-light">
-                            <img src="http://127.0.0.1:8000/resources/images/logo-footer.svg" alt="logo" height="32">
+                            <img src="{{ asset('resources/images/logo-footer.svg') }}" alt="logo" height="32">
                         </a>
                         <h4 class="fw-bold mt-3">Admin Login</h4>
 
