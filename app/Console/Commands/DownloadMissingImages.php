@@ -6,7 +6,7 @@ use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Http;
-use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Storage;
 
 class DownloadMissingImages extends Command
 {
@@ -15,10 +15,10 @@ class DownloadMissingImages extends Command
      *
      * @var string
      */
-    protected $signature = 'images:download 
+    protected $signature = 'images:download
                             {--source=https://www.rullart.com/ : Source URL to download from}
                             {--check-only : Only check which images are missing, don\'t download}
-                            {--type=all : Type of images to download (all, products, homegallery, category)}';
+                            {--type=category : Type of images to download (all, products, homegallery, category)}';
 
     /**
      * The console command description.
@@ -28,7 +28,6 @@ class DownloadMissingImages extends Command
     protected $description = 'Download missing images from live site (https://www.rullart.com/)';
 
     protected $sourceUrl;
-    protected $storagePath;
     protected $downloaded = 0;
     protected $failed = 0;
     protected $skipped = 0;
@@ -39,20 +38,11 @@ class DownloadMissingImages extends Command
     public function handle()
     {
         $this->sourceUrl = rtrim($this->option('source'), '/');
-        $this->storagePath = public_path('resources/storage');
-        
-        // Create storage directory if it doesn't exist
-        if (!File::exists($this->storagePath)) {
-            File::makeDirectory($this->storagePath, 0755, true);
-            $this->info("Created storage directory: {$this->storagePath}");
-        }
-
         $type = $this->option('type');
         $checkOnly = $this->option('check-only');
 
         $this->info("Starting image download process...");
         $this->info("Source URL: {$this->sourceUrl}");
-        $this->info("Storage Path: {$this->storagePath}");
         $this->info("Check Only: " . ($checkOnly ? 'Yes' : 'No'));
         $this->newLine();
 
@@ -80,28 +70,44 @@ class DownloadMissingImages extends Command
     protected function downloadProductImages($checkOnly = false)
     {
         $this->info("=== Product Images ===");
-        
-        // Get all product images
+
         $products = DB::table('products')
-            ->select('productid', 'productcode', 'photo1', 'shortdescr')
+            ->select('productid', 'productcode', 'photo1', 'photo2', 'photo3', 'photo4', 'photo5', 'shortdescr')
             ->where('ispublished', 1)
-            ->whereNotNull('photo1')
-            ->where('photo1', '!=', '')
-            ->where('photo1', '!=', 'noimage.jpg')
             ->get();
 
-        $this->info("Found {$products->count()} products with images");
+        $images = [];
+        foreach ($products as $product) {
+            for ($i = 1; $i <= 5; $i++) {
+                $photoField = 'photo' . $i;
+                if (!empty($product->$photoField)) {
+                    $images[] = [
+                        'filename' => $product->$photoField,
+                        'productid' => $product->productid,
+                        'productcode' => $product->productcode,
+                        'type' => $photoField
+                    ];
+                }
+            }
+        }
 
-        $bar = $this->output->createProgressBar($products->count());
+        $this->info("Found " . count($images) . " product images to check");
+
+        $bar = $this->output->createProgressBar(count($images));
         $bar->start();
 
-        foreach ($products as $product) {
-            $filename = $product->photo1;
-            $thumbnailName = 'thumb-' . $filename;
-            
-            $localPath = $this->storagePath . '/' . $thumbnailName;
-            
-            // Check if file already exists
+        $subdirectory = 'product';
+        $storagePath = storage_path('app/public/upload/' . $subdirectory);
+
+        if (!File::exists($storagePath)) {
+            File::makeDirectory($storagePath, 0755, true);
+            $this->info("Created directory: {$storagePath}");
+        }
+
+        foreach ($images as $image) {
+            $filename = $image['filename'];
+            $localPath = $storagePath . '/' . $filename;
+
             if (File::exists($localPath)) {
                 $this->skipped++;
                 $bar->advance();
@@ -110,18 +116,29 @@ class DownloadMissingImages extends Command
 
             if ($checkOnly) {
                 $this->newLine();
-                $this->warn("Missing: {$thumbnailName}");
+                $this->warn("Missing: {$filename} (Product: {$image['productcode']})");
                 $this->failed++;
                 $bar->advance();
                 continue;
             }
 
-            // Try to download from live site
-            $sourceUrl = $this->sourceUrl . '/resources/storage/' . $thumbnailName;
-            
-            if ($this->downloadImage($sourceUrl, $localPath, $thumbnailName)) {
+            $sourceUrl = $this->sourceUrl . '/storage/upload/' . $subdirectory . '/' . $filename;
+            $oldSourceUrl = $this->sourceUrl . '/resources/storage/' . $filename;
+
+            $downloaded = false;
+
+            if ($this->downloadImage($sourceUrl, $localPath, $filename)) {
                 $this->downloaded++;
+                $downloaded = true;
             } else {
+                $this->line("  Trying old path for: {$filename}");
+                if ($this->downloadImage($oldSourceUrl, $localPath, $filename)) {
+                    $this->downloaded++;
+                    $downloaded = true;
+                }
+            }
+
+            if (!$downloaded) {
                 $this->failed++;
             }
 
@@ -135,7 +152,7 @@ class DownloadMissingImages extends Command
     protected function downloadHomeGalleryImages($checkOnly = false)
     {
         $this->info("=== Home Gallery Images ===");
-        
+
         $gallery = DB::table('homegallery')
             ->select('homegalleryid', 'title', 'photo', 'photo_mobile', 'photo_ar', 'photo_mobile_ar')
             ->where('ispublished', 1)
@@ -144,28 +161,36 @@ class DownloadMissingImages extends Command
         $images = [];
         foreach ($gallery as $item) {
             if (!empty($item->photo)) {
-                $images[] = ['name' => $item->photo, 'type' => 'photo'];
+                $images[] = ['filename' => $item->photo, 'type' => 'photo'];
             }
             if (!empty($item->photo_mobile)) {
-                $images[] = ['name' => $item->photo_mobile, 'type' => 'photo_mobile'];
+                $images[] = ['filename' => $item->photo_mobile, 'type' => 'photo_mobile'];
             }
             if (!empty($item->photo_ar)) {
-                $images[] = ['name' => $item->photo_ar, 'type' => 'photo_ar'];
+                $images[] = ['filename' => $item->photo_ar, 'type' => 'photo_ar'];
             }
             if (!empty($item->photo_mobile_ar)) {
-                $images[] = ['name' => $item->photo_mobile_ar, 'type' => 'photo_mobile_ar'];
+                $images[] = ['filename' => $item->photo_mobile_ar, 'type' => 'photo_mobile_ar'];
             }
         }
 
-        $this->info("Found " . count($images) . " home gallery images");
+        $this->info("Found " . count($images) . " home gallery images to check");
 
         $bar = $this->output->createProgressBar(count($images));
         $bar->start();
 
+        $subdirectory = 'homegallery';
+        $storagePath = storage_path('app/public/upload/' . $subdirectory);
+
+        if (!File::exists($storagePath)) {
+            File::makeDirectory($storagePath, 0755, true);
+            $this->info("Created directory: {$storagePath}");
+        }
+
         foreach ($images as $image) {
-            $filename = $image['name'];
-            $localPath = $this->storagePath . '/' . $filename;
-            
+            $filename = $image['filename'];
+            $localPath = $storagePath . '/' . $filename;
+
             if (File::exists($localPath)) {
                 $this->skipped++;
                 $bar->advance();
@@ -180,11 +205,23 @@ class DownloadMissingImages extends Command
                 continue;
             }
 
-            $sourceUrl = $this->sourceUrl . '/resources/storage/' . $filename;
-            
+            $sourceUrl = $this->sourceUrl . '/storage/upload/' . $subdirectory . '/' . $filename;
+            $oldSourceUrl = $this->sourceUrl . '/resources/storage/' . $filename;
+
+            $downloaded = false;
+
             if ($this->downloadImage($sourceUrl, $localPath, $filename)) {
                 $this->downloaded++;
+                $downloaded = true;
             } else {
+                $this->line("  Trying old path for: {$filename}");
+                if ($this->downloadImage($oldSourceUrl, $localPath, $filename)) {
+                    $this->downloaded++;
+                    $downloaded = true;
+                }
+            }
+
+            if (!$downloaded) {
                 $this->failed++;
             }
 
@@ -198,23 +235,51 @@ class DownloadMissingImages extends Command
     protected function downloadCategoryImages($checkOnly = false)
     {
         $this->info("=== Category Images ===");
-        
+
         $categories = DB::table('category')
-            ->select('categoryid', 'categorycode', 'category', 'photo')
+            ->select('categoryid', 'categorycode', 'category', 'photo', 'photo_mobile')
             ->where('ispublished', 1)
-            ->whereNotNull('photo')
-            ->where('photo', '!=', '')
             ->get();
 
-        $this->info("Found {$categories->count()} categories with images");
+        $images = [];
+        foreach ($categories as $category) {
+            if (!empty($category->photo)) {
+                $images[] = [
+                    'filename' => $category->photo,
+                    'categoryid' => $category->categoryid,
+                    'category' => $category->category,
+                    'type' => 'photo'
+                ];
+            }
+            if (!empty($category->photo_mobile)) {
+                $images[] = [
+                    'filename' => $category->photo_mobile,
+                    'categoryid' => $category->categoryid,
+                    'category' => $category->category,
+                    'type' => 'photo_mobile'
+                ];
+            }
+        }
 
-        $bar = $this->output->createProgressBar($categories->count());
+        $this->info("Found " . count($images) . " category images to check");
+
+        $bar = $this->output->createProgressBar(count($images));
         $bar->start();
 
-        foreach ($categories as $category) {
-            $filename = $category->photo;
-            $localPath = $this->storagePath . '/' . $filename;
-            
+        $subdirectory = 'category';
+        $storagePath = storage_path('app/public/upload/' . $subdirectory);
+
+        // Create directory if it doesn't exist
+        if (!File::exists($storagePath)) {
+            File::makeDirectory($storagePath, 0755, true);
+            $this->info("Created directory: {$storagePath}");
+        }
+
+        foreach ($images as $image) {
+            $filename = $image['filename'];
+            $localPath = $storagePath . '/' . $filename;
+
+            // Check if file already exists
             if (File::exists($localPath)) {
                 $this->skipped++;
                 $bar->advance();
@@ -223,17 +288,34 @@ class DownloadMissingImages extends Command
 
             if ($checkOnly) {
                 $this->newLine();
-                $this->warn("Missing: {$filename}");
+                $this->warn("Missing: {$filename} (Category: {$image['category']})");
                 $this->failed++;
                 $bar->advance();
                 continue;
             }
 
-            $sourceUrl = $this->sourceUrl . '/resources/storage/' . $filename;
-            
+            // Try new path first: /storage/upload/category/filename
+            $sourceUrl = $this->sourceUrl . '/storage/upload/' . $subdirectory . '/' . $filename;
+
+            // If that fails, try old path: /resources/storage/filename
+            $oldSourceUrl = $this->sourceUrl . '/resources/storage/' . $filename;
+
+            $downloaded = false;
+
+            // Try new path first
             if ($this->downloadImage($sourceUrl, $localPath, $filename)) {
                 $this->downloaded++;
+                $downloaded = true;
             } else {
+                // Fallback to old path
+                $this->line("  Trying old path for: {$filename}");
+                if ($this->downloadImage($oldSourceUrl, $localPath, $filename)) {
+                    $this->downloaded++;
+                    $downloaded = true;
+                }
+            }
+
+            if (!$downloaded) {
                 $this->failed++;
             }
 
@@ -248,18 +330,14 @@ class DownloadMissingImages extends Command
     {
         try {
             $response = Http::timeout(30)->get($sourceUrl);
-            
-            if ($response->successful()) {
+
+            if ($response->successful() && $response->header('Content-Type') && strpos($response->header('Content-Type'), 'image') !== false) {
                 File::put($localPath, $response->body());
                 return true;
             } else {
-                $this->newLine();
-                $this->error("Failed to download {$filename}: HTTP {$response->status()}");
                 return false;
             }
         } catch (\Exception $e) {
-            $this->newLine();
-            $this->error("Error downloading {$filename}: " . $e->getMessage());
             return false;
         }
     }
