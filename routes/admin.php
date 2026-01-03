@@ -29,22 +29,29 @@ Route::middleware(['admin'])->prefix('admin')->name('admin.')->group(function ()
 
     // Manage Orders
     Route::get('customers', [\App\Http\Controllers\Admin\CustomerController::class, 'index'])->name('customers');
+    Route::get('customers/export', [\App\Http\Controllers\Admin\CustomerController::class, 'export'])->name('customers.export');
     Route::get('customers/create', [\App\Http\Controllers\Admin\CustomerController::class, 'create'])->name('customers.create');
     Route::post('customers', [\App\Http\Controllers\Admin\CustomerController::class, 'store'])->name('customers.store');
     Route::get('customers/{id}', [\App\Http\Controllers\Admin\CustomerController::class, 'show'])->name('customers.show');
     Route::get('customers/{id}/edit', [\App\Http\Controllers\Admin\CustomerController::class, 'edit'])->name('customers.edit');
     Route::put('customers/{id}', [\App\Http\Controllers\Admin\CustomerController::class, 'update'])->name('customers.update');
     Route::get('orders', [\App\Http\Controllers\Admin\OrderController::class, 'index'])->name('orders');
+    Route::get('orders/export', [\App\Http\Controllers\Admin\OrderController::class, 'export'])->name('orders.export');
     Route::get('orders/{id}/edit', [\App\Http\Controllers\Admin\OrderController::class, 'edit'])->name('orders.edit');
     Route::put('orders/{id}', [\App\Http\Controllers\Admin\OrderController::class, 'update'])->name('orders.update');
     Route::get('orders/{id}', [\App\Http\Controllers\Admin\OrderController::class, 'show'])->name('orders.show');
     Route::get('ordersnotprocess', [\App\Http\Controllers\Admin\ShoppingCartController::class, 'index'])->name('orders-not-process');
+    Route::get('ordersnotprocess/export', [\App\Http\Controllers\Admin\ShoppingCartController::class, 'export'])->name('orders-not-process.export');
     Route::get('ordersnotprocess/{id}', [\App\Http\Controllers\Admin\ShoppingCartController::class, 'show'])->name('orders-not-process.show');
     Route::delete('ordersnotprocess/{id}', [\App\Http\Controllers\Admin\ShoppingCartController::class, 'destroy'])->name('orders-not-process.destroy');
     Route::get('wishlist', [\App\Http\Controllers\Admin\WishlistController::class, 'index'])->name('wishlist');
+    Route::get('wishlist/export', [\App\Http\Controllers\Admin\WishlistController::class, 'export'])->name('wishlist.export');
     Route::get('productrate', [\App\Http\Controllers\Admin\ProductRatingController::class, 'index'])->name('product-rate');
+    Route::get('productrate/export', [\App\Http\Controllers\Admin\ProductRatingController::class, 'export'])->name('product-rate.export');
     Route::get('mobiledevice', [\App\Http\Controllers\Admin\MobileDeviceController::class, 'index'])->name('mobile-device');
+    Route::get('mobiledevice/export', [\App\Http\Controllers\Admin\MobileDeviceController::class, 'export'])->name('mobile-device.export');
     Route::get('returnrequest', [\App\Http\Controllers\Admin\ReturnRequestController::class, 'index'])->name('return-request');
+    Route::get('returnrequest/export', [\App\Http\Controllers\Admin\ReturnRequestController::class, 'export'])->name('return-request.export');
 
     // Manage Products
     Route::get('category', [\App\Http\Controllers\Admin\CategoryController::class, 'index'])->name('category');

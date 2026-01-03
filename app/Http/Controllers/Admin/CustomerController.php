@@ -7,6 +7,7 @@ use App\Models\Customer;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Response;
 
 class CustomerController extends Controller
 {
@@ -235,5 +236,75 @@ class CustomerController extends Controller
 
             return back()->withErrors(['general' => 'An error occurred while updating the customer.'])->withInput();
         }
+    }
+
+    public function export(Request $request)
+    {
+        $query = Customer::query();
+
+        // Apply same search filter as index method
+        if ($request->has('search') && $request->search) {
+            $search = $request->search;
+            $query->where(function($q) use ($search) {
+                $q->where('firstname', 'like', "%{$search}%")
+                  ->orWhere('lastname', 'like', "%{$search}%")
+                  ->orWhere('email', 'like', "%{$search}%");
+            });
+        }
+
+        // Get all customers (no pagination for export)
+        $customers = $query->orderBy('createdon', 'desc')->get();
+
+        $filename = 'customers_' . date('Y-m-d_His') . '.csv';
+
+        $headers_array = [
+            'Content-Type' => 'text/csv; charset=UTF-8',
+            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+        ];
+
+        // Add BOM for UTF-8 to ensure Excel opens it correctly
+        $callback = function () use ($customers) {
+            $file = fopen('php://output', 'w');
+            
+            // Add UTF-8 BOM for Excel compatibility
+            fprintf($file, chr(0xEF).chr(0xBB).chr(0xBF));
+
+            // Add title
+            fputcsv($file, ['Customers Export']);
+            fputcsv($file, ['Generated on: ' . date('d-M-Y H:i:s')]);
+            fputcsv($file, []); // Empty row
+
+            // Add headers
+            fputcsv($file, [
+                'Customer ID',
+                'First Name',
+                'Last Name',
+                'Email',
+                'Registration Date',
+                'Last Login',
+                'Status',
+                'Language',
+                'Newsletter'
+            ]);
+
+            // Add data
+            foreach ($customers as $customer) {
+                fputcsv($file, [
+                    $customer->customerid ?? 'N/A',
+                    $customer->firstname ?? '',
+                    $customer->lastname ?? '',
+                    $customer->email ?? '',
+                    $customer->createdon ? \Carbon\Carbon::parse($customer->createdon)->format('d-M-Y H:i:s') : 'N/A',
+                    $customer->last_login ? \Carbon\Carbon::parse($customer->last_login)->format('d-M-Y H:i:s') : 'N/A',
+                    $customer->isactive ? 'Active' : 'Inactive',
+                    $customer->language ?? 'N/A',
+                    $customer->isnewsletter ? 'Yes' : 'No'
+                ]);
+            }
+
+            fclose($file);
+        };
+
+        return Response::stream($callback, 200, $headers_array);
     }
 }

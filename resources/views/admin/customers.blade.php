@@ -8,13 +8,20 @@
             <div class="card">
                 <div class="card-header justify-content-between align-items-center border-dashed">
                     <h4 class="card-title mb-0">Customers List</h4>
-                    {{-- <a href="javascript:void(0);" class="btn btn-success btn-sm add-customer-btn">
-                        <i class="ti ti-plus me-1"></i> Add Customer
-                    </a> --}}
+                    <div class="d-flex gap-2">
+                        <a href="{{ route('admin.customers.export', ['search' => request('search')]) }}"
+                            class="btn btn-success btn-sm" title="Export to Excel">
+                            <i class="ti ti-file-excel me-1"></i> Export
+                        </a>
+                        <a href="javascript:void(0);" class="btn btn-primary btn-sm add-customer-btn">
+                            <i class="ti ti-plus me-1"></i> Add Customer
+                        </a>
+                    </div>
                 </div>
                 <div class="card-body">
                     <!-- Filters Form -->
-                    <form method="GET" action="{{ route('admin.customers') }}" data-table-filters id="customersFilterForm">
+                    <form method="GET" action="{{ route('admin.customers') }}" data-table-filters
+                        id="customersFilterForm">
                         <div class="row mb-3">
                             <div class="col-md-6">
                                 <label class="mb-0">Show
@@ -390,8 +397,8 @@
 
                             AdminAjax.loadTable('{{ route('admin.customers') }}', $('.table-container')[0], {
                                 params: params,
-                onSuccess: function(response) {
-                    if (response.pagination) {
+                                onSuccess: function(response) {
+                                    if (response.pagination) {
                                         $('.pagination-container').html(response.pagination);
                                     }
                                     // Re-bind event handlers for dynamically loaded content
@@ -491,9 +498,9 @@
                                     if (response.pagination) {
                                         $('.pagination-container').html(response
                                             .pagination);
-                    }
-                }
-            });
+                                    }
+                                }
+                            });
                         });
                     }
 
@@ -529,8 +536,8 @@
                         AdminAjax.loadTable('{{ route('admin.customers') }}', $('.table-container')[
                             0], {
                             params: params,
-                    onSuccess: function(response) {
-                        if (response.pagination) {
+                            onSuccess: function(response) {
+                                if (response.pagination) {
                                     $('.pagination-container').html(response.pagination);
                                 }
                             }

@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\ShoppingCartMaster;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Response;
 
 class ShoppingCartController extends Controller
 {
@@ -136,5 +137,77 @@ class ShoppingCartController extends Controller
             return redirect()->route('admin.orders-not-process')
                 ->with('error', 'Error deleting cart: ' . $e->getMessage());
         }
+    }
+
+    public function export(Request $request)
+    {
+        $query = ShoppingCartMaster::with(['customer', 'addressbook'])
+            ->whereDoesntHave('order');
+
+        // Apply same filters as index method
+        if ($request->has('search') && $request->search) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('cartid', 'like', "%{$search}%")
+                    ->orWhereHas('customer', function ($customerQuery) use ($search) {
+                        $customerQuery->where('firstname', 'like', "%{$search}%")
+                            ->orWhere('lastname', 'like', "%{$search}%")
+                            ->orWhere('email', 'like', "%{$search}%");
+                    });
+            });
+        }
+
+        if ($request->filled('country') && $request->country !== '' && $request->country !== '--All Country--') {
+            $query->whereHas('addressbook', function ($addressQuery) use ($request) {
+                $addressQuery->where('country', $request->country);
+            });
+        }
+
+        $carts = $query->orderBy('orderdate', 'desc')->get();
+
+        $filename = 'shopping_carts_' . date('Y-m-d_His') . '.csv';
+
+        $headers_array = [
+            'Content-Type' => 'text/csv; charset=UTF-8',
+            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+        ];
+
+        $callback = function () use ($carts) {
+            $file = fopen('php://output', 'w');
+            
+            fprintf($file, chr(0xEF).chr(0xBB).chr(0xBF));
+
+            fputcsv($file, ['Shopping Carts (Not Completed) Export']);
+            fputcsv($file, ['Generated on: ' . date('d-M-Y H:i:s')]);
+            fputcsv($file, []);
+
+            fputcsv($file, [
+                'Cart ID',
+                'Customer Name',
+                'Customer Email',
+                'Country',
+                'Cart Date',
+                'Total Amount'
+            ]);
+
+            foreach ($carts as $cart) {
+                $customerName = $cart->customer ? trim(($cart->customer->firstname ?? '') . ' ' . ($cart->customer->lastname ?? '')) : 'N/A';
+                $customerEmail = $cart->customer->email ?? 'N/A';
+                $country = $cart->addressbook->country ?? 'N/A';
+                
+                fputcsv($file, [
+                    $cart->cartid ?? 'N/A',
+                    $customerName ?: 'N/A',
+                    $customerEmail,
+                    $country,
+                    $cart->orderdate ? \Carbon\Carbon::parse($cart->orderdate)->format('d-M-Y H:i:s') : 'N/A',
+                    number_format($cart->totalamount ?? 0, 3)
+                ]);
+            }
+
+            fclose($file);
+        };
+
+        return Response::stream($callback, 200, $headers_array);
     }
 }

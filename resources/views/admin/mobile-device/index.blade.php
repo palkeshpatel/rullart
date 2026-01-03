@@ -8,9 +8,15 @@
             <div class="card">
                 <div class="card-header justify-content-between align-items-center border-dashed">
                     <h4 class="card-title mb-0">Customers Mobile Devices List</h4>
-                    <button type="button" class="btn btn-sm btn-primary">
-                        <i class="ti ti-send"></i> Send To All Customer
-                    </button>
+                    <div class="d-flex gap-2">
+                        <a href="{{ route('admin.mobile-device.export', ['search' => request('search')]) }}" 
+                            class="btn btn-success btn-sm" title="Export to Excel">
+                            <i class="ti ti-file-excel me-1"></i> Export
+                        </a>
+                        <button type="button" class="btn btn-sm btn-primary">
+                            <i class="ti ti-send"></i> Send To All Customer
+                        </button>
+                    </div>
                 </div>
                 <div class="card-body">
                     <!-- Filters Form -->

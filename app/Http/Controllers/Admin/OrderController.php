@@ -7,6 +7,7 @@ use App\Models\Order;
 use App\Models\OrderItem;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Response;
 
 class OrderController extends Controller
 {
@@ -130,5 +131,89 @@ class OrderController extends Controller
 
         return redirect()->route('admin.orders.edit', $id)
             ->with('success', 'Order updated successfully');
+    }
+
+    public function export(Request $request)
+    {
+        $query = Order::with('customer');
+
+        // Apply same filters as index method
+        if ($request->has('status') && $request->status) {
+            $query->where('fkorderstatus', $request->status);
+        }
+
+        if ($request->has('country') && $request->country && $request->country !== '--All Country--') {
+            $query->where('country', $request->country);
+        }
+
+        if ($request->has('search') && $request->search) {
+            $search = $request->search;
+            $query->where(function($q) use ($search) {
+                $q->where('orderid', 'like', "%{$search}%")
+                  ->orWhere('firstname', 'like', "%{$search}%")
+                  ->orWhere('lastname', 'like', "%{$search}%")
+                  ->orWhere('mobile', 'like', "%{$search}%")
+                  ->orWhereHas('customer', function($customerQuery) use ($search) {
+                      $customerQuery->where('email', 'like', "%{$search}%");
+                  });
+            });
+        }
+
+        $orders = $query->orderBy('orderdate', 'desc')->get();
+
+        $filename = 'orders_' . date('Y-m-d_His') . '.csv';
+
+        $headers_array = [
+            'Content-Type' => 'text/csv; charset=UTF-8',
+            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+        ];
+
+        $callback = function () use ($orders) {
+            $file = fopen('php://output', 'w');
+            
+            // Add UTF-8 BOM for Excel compatibility
+            fprintf($file, chr(0xEF).chr(0xBB).chr(0xBF));
+
+            fputcsv($file, ['Orders Export']);
+            fputcsv($file, ['Generated on: ' . date('d-M-Y H:i:s')]);
+            fputcsv($file, []);
+
+            fputcsv($file, [
+                'Order ID',
+                'Order Date',
+                'Customer Name',
+                'Customer Email',
+                'First Name',
+                'Last Name',
+                'Mobile',
+                'Country',
+                'Total Amount',
+                'Status',
+                'Tracking No'
+            ]);
+
+            foreach ($orders as $order) {
+                $customerName = $order->customer ? trim(($order->customer->firstname ?? '') . ' ' . ($order->customer->lastname ?? '')) : 'N/A';
+                $customerEmail = $order->customer->email ?? 'N/A';
+                
+                fputcsv($file, [
+                    $order->orderid ?? 'N/A',
+                    $order->orderdate ? \Carbon\Carbon::parse($order->orderdate)->format('d-M-Y H:i:s') : 'N/A',
+                    $customerName ?: 'N/A',
+                    $customerEmail,
+                    $order->firstname ?? '',
+                    $order->lastname ?? '',
+                    $order->mobile ?? 'N/A',
+                    $order->country ?? 'N/A',
+                    number_format($order->totalamount ?? 0, 3),
+                    $order->fkorderstatus ?? 'N/A',
+                    $order->trackingno ?? 'N/A'
+                ]);
+            }
+
+            fclose($file);
+        };
+
+        return Response::stream($callback, 200, $headers_array);
     }
 }

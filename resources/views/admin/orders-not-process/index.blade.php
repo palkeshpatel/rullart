@@ -30,6 +30,10 @@
             <div class="card">
                 <div class="card-header justify-content-between align-items-center border-dashed">
                     <h4 class="card-title mb-0">Shopping Cart Not Complete Payment</h4>
+                    <a href="{{ route('admin.orders-not-process.export', ['country' => request('country'), 'search' => request('search')]) }}" 
+                        class="btn btn-success btn-sm" title="Export to Excel">
+                        <i class="ti ti-file-excel me-1"></i> Export
+                    </a>
                 </div>
                 <div class="card-body">
                     <!-- Search and Per Page Controls -->

@@ -38,6 +38,10 @@
             <div class="card">
                 <div class="card-header justify-content-between align-items-center border-dashed">
                     <h4 class="card-title mb-0">Product Reviews</h4>
+                    <a href="{{ route('admin.product-rate.export', ['rating' => request('rating'), 'published' => request('published'), 'search' => request('search')]) }}" 
+                        class="btn btn-success btn-sm" title="Export to Excel">
+                        <i class="ti ti-file-excel me-1"></i> Export
+                    </a>
                 </div>
                 <div class="card-body">
                     <!-- Search and Per Page Controls -->
