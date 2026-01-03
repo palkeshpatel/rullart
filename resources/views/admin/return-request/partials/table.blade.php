@@ -27,13 +27,10 @@
                         @endif
                     </td>
                     <td>
-                        <div class="d-flex gap-2">
-                            <button type="button" class="btn btn-sm btn-primary" title="View">
-                                <i class="ti ti-eye"></i>
-                            </button>
-                            <button type="button" class="btn btn-sm btn-danger" title="Delete">
-                                <i class="ti ti-trash"></i>
-                            </button>
+                        <div class="d-flex gap-1">
+                            <a href="javascript:void(0);" class="btn btn-light btn-icon btn-sm rounded-circle delete-return-request-btn" data-request-id="{{ $request->returnrequestid ?? $request->id }}" title="Delete">
+                                <i class="ti ti-trash fs-lg"></i>
+                            </a>
                         </div>
                     </td>
                 </tr>
