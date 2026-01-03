@@ -53,7 +53,7 @@
                                 <th>Photo (Desktop):</th>
                                 <td>
                                     @if($homeGallery->photo)
-                                        <img src="{{ asset('uploads/homegallery/' . $homeGallery->photo) }}" 
+                                        <img src="{{ asset('storage/upload/homegallery/' . $homeGallery->photo) }}" 
                                              alt="{{ $homeGallery->title }}" 
                                              style="max-width: 200px; max-height: 200px; object-fit: cover;">
                                     @else
@@ -65,7 +65,7 @@
                                 <th>Photo (Mobile):</th>
                                 <td>
                                     @if($homeGallery->photo_mobile)
-                                        <img src="{{ asset('uploads/homegallery/' . $homeGallery->photo_mobile) }}" 
+                                        <img src="{{ asset('storage/upload/homegallery/' . $homeGallery->photo_mobile) }}" 
                                              alt="{{ $homeGallery->title }}" 
                                              style="max-width: 200px; max-height: 200px; object-fit: cover;">
                                     @else
@@ -77,7 +77,7 @@
                                 <th>Photo (AR - Desktop):</th>
                                 <td>
                                     @if($homeGallery->photo_ar)
-                                        <img src="{{ asset('uploads/homegallery/' . $homeGallery->photo_ar) }}" 
+                                        <img src="{{ asset('storage/upload/homegallery/' . $homeGallery->photo_ar) }}" 
                                              alt="{{ $homeGallery->title }}" 
                                              style="max-width: 200px; max-height: 200px; object-fit: cover;">
                                     @else
@@ -89,7 +89,7 @@
                                 <th>Photo (AR - Mobile):</th>
                                 <td>
                                     @if($homeGallery->photo_mobile_ar)
-                                        <img src="{{ asset('uploads/homegallery/' . $homeGallery->photo_mobile_ar) }}" 
+                                        <img src="{{ asset('storage/upload/homegallery/' . $homeGallery->photo_mobile_ar) }}" 
                                              alt="{{ $homeGallery->title }}" 
                                              style="max-width: 200px; max-height: 200px; object-fit: cover;">
                                     @else

@@ -7,9 +7,12 @@ use App\Models\Occassion;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rule;
+use App\Traits\ImageUploadTrait;
+use Illuminate\Http\UploadedFile;
 
 class OccassionController extends Controller
 {
+    use ImageUploadTrait;
     public function index(Request $request)
     {
         $query = Occassion::query();
@@ -69,8 +72,8 @@ class OccassionController extends Controller
             'metakeywordAR' => 'nullable|string|max:1000',
             'metadescr' => 'nullable|string|max:1500',
             'metadescrAR' => 'nullable|string|max:1000',
-            'photo' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:5120',
-            'photo_mobile' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:5120',
+            'photo' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:10240',
+            'photo_mobile' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:10240',
             'ispublished' => 'nullable',
             'showhome' => 'nullable',
         ], [
@@ -79,9 +82,9 @@ class OccassionController extends Controller
             'occassioncode.required' => 'Occasion code is required.',
             'occassioncode.unique' => 'This occasion code already exists. Please choose a different code.',
             'photo.image' => 'Photo must be an image.',
-            'photo.max' => 'Photo must not exceed 5MB.',
+            'photo.max' => 'Photo must not exceed 10MB.',
             'photo_mobile.image' => 'Mobile photo must be an image.',
-            'photo_mobile.max' => 'Mobile photo must not exceed 5MB.',
+            'photo_mobile.max' => 'Mobile photo must not exceed 10MB.',
         ]);
 
         // Handle boolean fields
@@ -90,25 +93,13 @@ class OccassionController extends Controller
         $validated['updatedby'] = auth()->id() ?? 1;
         $validated['updateddate'] = now();
 
-        // Create uploads directory if it doesn't exist
-        $uploadPath = public_path('uploads/occassion');
-        if (!file_exists($uploadPath)) {
-            mkdir($uploadPath, 0755, true);
-        }
-
-        // Handle file uploads
+        // Handle file uploads using trait
         if ($request->hasFile('photo')) {
-            $photo = $request->file('photo');
-            $photoName = time() . '_' . $photo->getClientOriginalName();
-            $photo->move($uploadPath, $photoName);
-            $validated['photo'] = $photoName;
+            $validated['photo'] = $this->uploadImage($request->file('photo'), null, 'occassion');
         }
 
         if ($request->hasFile('photo_mobile')) {
-            $photoMobile = $request->file('photo_mobile');
-            $photoMobileName = time() . '_mobile_' . $photoMobile->getClientOriginalName();
-            $photoMobile->move($uploadPath, $photoMobileName);
-            $validated['photo_mobile'] = $photoMobileName;
+            $validated['photo_mobile'] = $this->uploadImage($request->file('photo_mobile'), null, 'occassion');
         }
 
         try {
@@ -202,9 +193,10 @@ class OccassionController extends Controller
     {
         $occassion = Occassion::findOrFail($id);
 
-        // Fix for PUT requests with FormData - PHP doesn't populate $_POST for PUT
+        // Fix for PUT requests with FormData - PHP doesn't populate $_POST or $_FILES for PUT
+        // We need to manually parse multipart/form-data to extract both text fields and files
         if (
-            $request->isMethod('put') && empty($request->all()) &&
+            $request->isMethod('put') &&
             $request->header('Content-Type') &&
             str_contains($request->header('Content-Type'), 'multipart/form-data')
         ) {
@@ -218,11 +210,50 @@ class OccassionController extends Controller
             if ($boundary && $content) {
                 $parts = explode($boundary, $content);
                 $parsedData = [];
+                $parsedFiles = [];
 
-                foreach ($parts as $part) {
-                    if (preg_match('/Content-Disposition:\s*form-data;\s*name="([^"]+)"\s*\r?\n\r?\n(.*?)(?=\r?\n--|$)/s', $part, $matches)) {
-                        $fieldName = $matches[1];
-                        $fieldValue = trim($matches[2], "\r\n");
+                foreach ($parts as $index => $part) {
+                    $part = trim($part);
+                    if (empty($part) || $part === '--') {
+                        continue;
+                    }
+
+                    // Check if this is a file upload (has filename attribute)
+                    if (preg_match('/Content-Disposition:\s*form-data;\s*name="([^"]+)";\s*filename="([^"]+)"(?:\s*\r?\nContent-Type:\s*([^\r\n]+))?\s*\r?\n\r?\n(.*)/s', $part, $fileMatches)) {
+                        $fieldName = $fileMatches[1];
+                        $fileName = $fileMatches[2];
+                        $contentType = isset($fileMatches[3]) && !empty($fileMatches[3]) ? trim($fileMatches[3]) : 'application/octet-stream';
+                        $fileContent = $fileMatches[4];
+                        
+                        // Remove trailing boundary if present
+                        $fileContent = preg_replace('/\r?\n--.*$/s', '', $fileContent);
+                        $fileContent = rtrim($fileContent, "\r\n");
+
+                        if (strlen($fileContent) > 0) {
+                            // Create temporary file
+                            $tempFile = tempnam(sys_get_temp_dir(), 'laravel_upload_');
+                            file_put_contents($tempFile, $fileContent);
+
+                            // Create UploadedFile instance
+                            $uploadedFile = new UploadedFile(
+                                $tempFile,
+                                $fileName,
+                                $contentType,
+                                null,
+                                true // test mode
+                            );
+
+                            $parsedFiles[$fieldName] = $uploadedFile;
+                        }
+                    }
+                    // Check if this is a regular text field (no filename attribute)
+                    elseif (preg_match('/Content-Disposition:\s*form-data;\s*name="([^"]+)"\s*\r?\n\r?\n(.*)/s', $part, $textMatches)) {
+                        $fieldName = $textMatches[1];
+                        $fieldValue = $textMatches[2];
+                        
+                        // Remove trailing boundary if present
+                        $fieldValue = preg_replace('/\r?\n--.*$/s', '', $fieldValue);
+                        $fieldValue = trim($fieldValue, "\r\n");
 
                         if ($fieldName !== '_method') {
                             $parsedData[$fieldName] = $fieldValue;
@@ -230,8 +261,16 @@ class OccassionController extends Controller
                     }
                 }
 
+                // Merge parsed data
                 if (!empty($parsedData)) {
                     $request->merge($parsedData);
+                }
+
+                // Add files to request
+                if (!empty($parsedFiles)) {
+                    foreach ($parsedFiles as $key => $file) {
+                        $request->files->set($key, $file);
+                    }
                 }
             }
         }
@@ -251,8 +290,8 @@ class OccassionController extends Controller
             'metakeywordAR' => 'nullable|string|max:1000',
             'metadescr' => 'nullable|string|max:1500',
             'metadescrAR' => 'nullable|string|max:1000',
-            'photo' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:5120',
-            'photo_mobile' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:5120',
+            'photo' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:10240',
+            'photo_mobile' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:10240',
             'ispublished' => 'nullable',
             'showhome' => 'nullable',
         ], [
@@ -261,9 +300,9 @@ class OccassionController extends Controller
             'occassioncode.required' => 'Occasion code is required.',
             'occassioncode.unique' => 'This occasion code already exists. Please choose a different code.',
             'photo.image' => 'Photo must be an image.',
-            'photo.max' => 'Photo must not exceed 5MB.',
+            'photo.max' => 'Photo must not exceed 10MB.',
             'photo_mobile.image' => 'Mobile photo must be an image.',
-            'photo_mobile.max' => 'Mobile photo must not exceed 5MB.',
+            'photo_mobile.max' => 'Mobile photo must not exceed 10MB.',
         ]);
 
         // Handle boolean fields
@@ -272,33 +311,26 @@ class OccassionController extends Controller
         $validated['updatedby'] = auth()->id() ?? 1;
         $validated['updateddate'] = now();
 
-        // Create uploads directory if it doesn't exist
-        $uploadPath = public_path('uploads/occassion');
-        if (!file_exists($uploadPath)) {
-            mkdir($uploadPath, 0755, true);
+        // Handle file uploads - check all possible ways files might be accessible
+        $photoFile = $request->file('photo');
+        $photoMobileFile = $request->file('photo_mobile');
+
+        // If not found, try accessing directly from files bag
+        if (!$photoFile && $request->files->has('photo')) {
+            $photoFile = $request->files->get('photo');
+        }
+        if (!$photoMobileFile && $request->files->has('photo_mobile')) {
+            $photoMobileFile = $request->files->get('photo_mobile');
         }
 
-        // Handle file uploads (only if new files are uploaded)
-        if ($request->hasFile('photo')) {
-            // Delete old photo if exists
-            if ($occassion->photo && file_exists(public_path('uploads/occassion/' . $occassion->photo))) {
-                unlink(public_path('uploads/occassion/' . $occassion->photo));
-            }
-            $photo = $request->file('photo');
-            $photoName = time() . '_' . $photo->getClientOriginalName();
-            $photo->move($uploadPath, $photoName);
-            $validated['photo'] = $photoName;
+        // Upload photo if found
+        if ($photoFile && $photoFile->isValid()) {
+            $validated['photo'] = $this->uploadImage($photoFile, $occassion->photo, 'occassion');
         }
 
-        if ($request->hasFile('photo_mobile')) {
-            // Delete old photo if exists
-            if ($occassion->photo_mobile && file_exists(public_path('uploads/occassion/' . $occassion->photo_mobile))) {
-                unlink(public_path('uploads/occassion/' . $occassion->photo_mobile));
-            }
-            $photoMobile = $request->file('photo_mobile');
-            $photoMobileName = time() . '_mobile_' . $photoMobile->getClientOriginalName();
-            $photoMobile->move($uploadPath, $photoMobileName);
-            $validated['photo_mobile'] = $photoMobileName;
+        // Upload photo_mobile if found
+        if ($photoMobileFile && $photoMobileFile->isValid()) {
+            $validated['photo_mobile'] = $this->uploadImage($photoMobileFile, $occassion->photo_mobile, 'occassion');
         }
 
         try {
@@ -364,11 +396,11 @@ class OccassionController extends Controller
 
         try {
             // Delete photos if they exist
-            if ($occassion->photo && file_exists(public_path('uploads/occassion/' . $occassion->photo))) {
-                unlink(public_path('uploads/occassion/' . $occassion->photo));
+            if ($occassion->photo) {
+                $this->deleteImage($occassion->photo, 'occassion');
             }
-            if ($occassion->photo_mobile && file_exists(public_path('uploads/occassion/' . $occassion->photo_mobile))) {
-                unlink(public_path('uploads/occassion/' . $occassion->photo_mobile));
+            if ($occassion->photo_mobile) {
+                $this->deleteImage($occassion->photo_mobile, 'occassion');
             }
 
             $occassion->delete();
@@ -394,5 +426,34 @@ class OccassionController extends Controller
 
             return back()->withErrors(['error' => 'An error occurred while deleting the occasion.']);
         }
+    }
+
+    /**
+     * Remove image from occasion (via AJAX with confirmation)
+     *
+     * @param Request $request
+     * @param int $id
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function removeImage(Request $request, $id)
+    {
+        $occassion = Occassion::findOrFail($id);
+        $column = $request->input('column'); // 'photo' or 'photo_mobile'
+
+        // Validate column name
+        if (!in_array($column, ['photo', 'photo_mobile'])) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Invalid column name'
+            ], 400);
+        }
+
+        // Remove image using trait
+        $this->removeImageFromModel($occassion, $column, 'occassion');
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Image removed successfully'
+        ]);
     }
 }

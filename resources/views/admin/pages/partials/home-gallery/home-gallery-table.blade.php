@@ -37,9 +37,9 @@
                 <td>{{ $homeGallery->title }}</td>
                 <td>
                     @if($homeGallery->photo)
-                        <img src="{{ asset('uploads/homegallery/' . $homeGallery->photo) }}" 
+                        <img src="{{ asset('storage/upload/homegallery/' . $homeGallery->photo) }}" 
                              alt="{{ $homeGallery->title }}" 
-                             style="width: 50px; height: 50px; object-fit: cover; border-radius: 4px;">
+                             style="width: 100px; height: 100px; object-fit: cover; border-radius: 4px;">
                     @else
                         <span class="text-muted">No Photo</span>
                     @endif

@@ -4,12 +4,15 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\HomeGallery;
+use App\Traits\ImageUploadTrait;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rule;
+use Illuminate\Http\UploadedFile;
 
 class HomeGalleryController extends Controller
 {
+    use ImageUploadTrait;
     public function index(Request $request)
     {
         $query = HomeGallery::query();
@@ -28,9 +31,9 @@ class HomeGalleryController extends Controller
             $query->where('ispublished', $request->published);
         }
 
-        // Sorting
-        $sortColumn = $request->get('sort', 'displayorder');
-        $sortDirection = $request->get('direction', 'asc');
+        // Sorting - default to newest first
+        $sortColumn = $request->get('sort', 'homegalleryid');
+        $sortDirection = $request->get('direction', 'desc');
         $query->orderBy($sortColumn, $sortDirection);
 
         $perPage = $request->get('per_page', 25);
@@ -69,10 +72,10 @@ class HomeGalleryController extends Controller
             'descr' => 'nullable|string|max:5000',
             'descrAR' => 'nullable|string|max:1500',
             'link' => 'nullable|string|max:500',
-            'photo' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
-            'photo_mobile' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
-            'photo_ar' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
-            'photo_mobile_ar' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+            'photo' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:10240',
+            'photo_mobile' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:10240',
+            'photo_ar' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:10240',
+            'photo_mobile_ar' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:10240',
             'videourl' => 'nullable|string|max:500',
             'displayorder' => 'nullable|integer|min:0',
             'ispublished' => 'nullable',
@@ -110,39 +113,21 @@ class HomeGalleryController extends Controller
         $validated['updateddate'] = now()->format('Y-m-d');
         $validated['updatedby'] = auth()->id() ?? 1;
 
-        // Create uploads directory if it doesn't exist
-        $uploadPath = public_path('uploads/homegallery');
-        if (!file_exists($uploadPath)) {
-            mkdir($uploadPath, 0755, true);
-        }
-
-        // Handle file uploads
+        // Handle file uploads using trait
         if ($request->hasFile('photo')) {
-            $photo = $request->file('photo');
-            $photoName = time() . '_' . $photo->getClientOriginalName();
-            $photo->move($uploadPath, $photoName);
-            $validated['photo'] = $photoName;
+            $validated['photo'] = $this->uploadImage($request->file('photo'), null, 'homegallery');
         }
 
         if ($request->hasFile('photo_mobile')) {
-            $photoMobile = $request->file('photo_mobile');
-            $photoMobileName = time() . '_mobile_' . $photoMobile->getClientOriginalName();
-            $photoMobile->move($uploadPath, $photoMobileName);
-            $validated['photo_mobile'] = $photoMobileName;
+            $validated['photo_mobile'] = $this->uploadImage($request->file('photo_mobile'), null, 'homegallery');
         }
 
         if ($request->hasFile('photo_ar')) {
-            $photoAr = $request->file('photo_ar');
-            $photoArName = time() . '_ar_' . $photoAr->getClientOriginalName();
-            $photoAr->move($uploadPath, $photoArName);
-            $validated['photo_ar'] = $photoArName;
+            $validated['photo_ar'] = $this->uploadImage($request->file('photo_ar'), null, 'homegallery');
         }
 
         if ($request->hasFile('photo_mobile_ar')) {
-            $photoMobileAr = $request->file('photo_mobile_ar');
-            $photoMobileArName = time() . '_mobile_ar_' . $photoMobileAr->getClientOriginalName();
-            $photoMobileAr->move($uploadPath, $photoMobileArName);
-            $validated['photo_mobile_ar'] = $photoMobileArName;
+            $validated['photo_mobile_ar'] = $this->uploadImage($request->file('photo_mobile_ar'), null, 'homegallery');
         }
 
         try {
@@ -244,9 +229,9 @@ class HomeGalleryController extends Controller
     {
         $homeGallery = HomeGallery::findOrFail($id);
 
-        // Fix for PUT requests with FormData
+        // Fix for PUT requests with FormData - handle file uploads
         if (
-            $request->isMethod('put') && empty($request->all()) &&
+            $request->isMethod('put') &&
             $request->header('Content-Type') &&
             str_contains($request->header('Content-Type'), 'multipart/form-data')
         ) {
@@ -260,9 +245,35 @@ class HomeGalleryController extends Controller
             if ($boundary && $content) {
                 $parts = explode($boundary, $content);
                 $parsedData = [];
+                $files = [];
 
                 foreach ($parts as $part) {
-                    if (preg_match('/Content-Disposition:\s*form-data;\s*name="([^"]+)"\s*\r?\n\r?\n(.*?)(?=\r?\n--|$)/s', $part, $matches)) {
+                    // Handle file fields
+                    if (preg_match('/Content-Disposition:\s*form-data;\s*name="([^"]+)";\s*filename="([^"]+)"\s*\r?\nContent-Type:\s*([^\r\n]+)\s*\r?\n\r?\n(.*?)(?=\r?\n--|$)/s', $part, $fileMatches)) {
+                        $fieldName = $fileMatches[1];
+                        $fileName = $fileMatches[2];
+                        $contentType = $fileMatches[3];
+                        $fileContent = $fileMatches[4];
+
+                        if (!empty($fileContent) && $fileContent !== "\r\n") {
+                            // Create temporary file
+                            $tempPath = sys_get_temp_dir() . '/' . uniqid() . '_' . $fileName;
+                            file_put_contents($tempPath, $fileContent);
+                            
+                            // Create UploadedFile instance
+                            $uploadedFile = new UploadedFile(
+                                $tempPath,
+                                $fileName,
+                                $contentType,
+                                null,
+                                true
+                            );
+                            
+                            $files[$fieldName] = $uploadedFile;
+                        }
+                    }
+                    // Handle regular form fields
+                    elseif (preg_match('/Content-Disposition:\s*form-data;\s*name="([^"]+)"\s*\r?\n\r?\n(.*?)(?=\r?\n--|$)/s', $part, $matches)) {
                         $fieldName = $matches[1];
                         $fieldValue = trim($matches[2], "\r\n");
 
@@ -274,6 +285,10 @@ class HomeGalleryController extends Controller
 
                 if (!empty($parsedData)) {
                     $request->merge($parsedData);
+                }
+                
+                if (!empty($files)) {
+                    $request->files->add($files);
                 }
             }
         }
@@ -324,46 +339,37 @@ class HomeGalleryController extends Controller
             $validated['updateddate'] = now()->format('Y-m-d');
             $validated['updatedby'] = auth()->id() ?? 1;
 
-        // Handle file uploads (only if new files are uploaded)
-        if ($request->hasFile('photo')) {
-            // Delete old photo if exists
-            if ($homeGallery->photo && file_exists(public_path('uploads/homegallery/' . $homeGallery->photo))) {
-                unlink(public_path('uploads/homegallery/' . $homeGallery->photo));
-            }
-            $photo = $request->file('photo');
-            $photoName = time() . '_' . $photo->getClientOriginalName();
-            $photo->move(public_path('uploads/homegallery'), $photoName);
-            $validated['photo'] = $photoName;
+        // Handle file uploads using trait
+        $photoFile = $request->file('photo');
+        if (!$photoFile && $request->files->has('photo')) {
+            $photoFile = $request->files->get('photo');
+        }
+        if ($photoFile) {
+            $validated['photo'] = $this->uploadImage($photoFile, $homeGallery->photo, 'homegallery');
         }
 
-        if ($request->hasFile('photo_mobile')) {
-            if ($homeGallery->photo_mobile && file_exists(public_path('uploads/homegallery/' . $homeGallery->photo_mobile))) {
-                unlink(public_path('uploads/homegallery/' . $homeGallery->photo_mobile));
-            }
-            $photoMobile = $request->file('photo_mobile');
-            $photoMobileName = time() . '_mobile_' . $photoMobile->getClientOriginalName();
-            $photoMobile->move(public_path('uploads/homegallery'), $photoMobileName);
-            $validated['photo_mobile'] = $photoMobileName;
+        $photoMobileFile = $request->file('photo_mobile');
+        if (!$photoMobileFile && $request->files->has('photo_mobile')) {
+            $photoMobileFile = $request->files->get('photo_mobile');
+        }
+        if ($photoMobileFile) {
+            $validated['photo_mobile'] = $this->uploadImage($photoMobileFile, $homeGallery->photo_mobile, 'homegallery');
         }
 
-        if ($request->hasFile('photo_ar')) {
-            if ($homeGallery->photo_ar && file_exists(public_path('uploads/homegallery/' . $homeGallery->photo_ar))) {
-                unlink(public_path('uploads/homegallery/' . $homeGallery->photo_ar));
-            }
-            $photoAr = $request->file('photo_ar');
-            $photoArName = time() . '_ar_' . $photoAr->getClientOriginalName();
-            $photoAr->move(public_path('uploads/homegallery'), $photoArName);
-            $validated['photo_ar'] = $photoArName;
+        $photoArFile = $request->file('photo_ar');
+        if (!$photoArFile && $request->files->has('photo_ar')) {
+            $photoArFile = $request->files->get('photo_ar');
+        }
+        if ($photoArFile) {
+            $validated['photo_ar'] = $this->uploadImage($photoArFile, $homeGallery->photo_ar, 'homegallery');
         }
 
-        if ($request->hasFile('photo_mobile_ar')) {
-            if ($homeGallery->photo_mobile_ar && file_exists(public_path('uploads/homegallery/' . $homeGallery->photo_mobile_ar))) {
-                unlink(public_path('uploads/homegallery/' . $homeGallery->photo_mobile_ar));
-            }
-            $photoMobileAr = $request->file('photo_mobile_ar');
-            $photoMobileArName = time() . '_mobile_ar_' . $photoMobileAr->getClientOriginalName();
-            $photoMobileAr->move(public_path('uploads/homegallery'), $photoMobileArName);
-            $validated['photo_mobile_ar'] = $photoMobileArName;
+        $photoMobileArFile = $request->file('photo_mobile_ar');
+        if (!$photoMobileArFile && $request->files->has('photo_mobile_ar')) {
+            $photoMobileArFile = $request->files->get('photo_mobile_ar');
+        }
+        if ($photoMobileArFile) {
+            $validated['photo_mobile_ar'] = $this->uploadImage($photoMobileArFile, $homeGallery->photo_mobile_ar, 'homegallery');
         }
 
         try {
@@ -394,23 +400,43 @@ class HomeGalleryController extends Controller
         }
     }
 
+    public function removeImage(Request $request, $id)
+    {
+        $homeGallery = HomeGallery::findOrFail($id);
+        $column = $request->input('column'); // 'photo', 'photo_mobile', 'photo_ar', 'photo_mobile_ar'
+
+        if (!$column) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Column name is required'
+            ], 422);
+        }
+
+        $validColumns = ['photo', 'photo_mobile', 'photo_ar', 'photo_mobile_ar'];
+        if (!in_array($column, $validColumns)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Invalid column name'
+            ], 422);
+        }
+
+        $this->removeImageFromModel($homeGallery, $column, 'homegallery');
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Image removed successfully'
+        ]);
+    }
+
     public function destroy(Request $request, $id)
     {
         $homeGallery = HomeGallery::findOrFail($id);
 
-        // Delete associated files
-        if ($homeGallery->photo && file_exists(public_path('uploads/homegallery/' . $homeGallery->photo))) {
-            unlink(public_path('uploads/homegallery/' . $homeGallery->photo));
-        }
-        if ($homeGallery->photo_mobile && file_exists(public_path('uploads/homegallery/' . $homeGallery->photo_mobile))) {
-            unlink(public_path('uploads/homegallery/' . $homeGallery->photo_mobile));
-        }
-        if ($homeGallery->photo_ar && file_exists(public_path('uploads/homegallery/' . $homeGallery->photo_ar))) {
-            unlink(public_path('uploads/homegallery/' . $homeGallery->photo_ar));
-        }
-        if ($homeGallery->photo_mobile_ar && file_exists(public_path('uploads/homegallery/' . $homeGallery->photo_mobile_ar))) {
-            unlink(public_path('uploads/homegallery/' . $homeGallery->photo_mobile_ar));
-        }
+        // Delete associated files using trait
+        $this->deleteImage($homeGallery->photo, 'homegallery');
+        $this->deleteImage($homeGallery->photo_mobile, 'homegallery');
+        $this->deleteImage($homeGallery->photo_ar, 'homegallery');
+        $this->deleteImage($homeGallery->photo_mobile_ar, 'homegallery');
 
         $homeGallery->delete();
 

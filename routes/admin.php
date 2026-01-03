@@ -53,6 +53,7 @@ Route::middleware(['admin'])->prefix('admin')->name('admin.')->group(function ()
     Route::get('category/{id}', [\App\Http\Controllers\Admin\CategoryController::class, 'show'])->name('category.show');
     Route::get('category/{id}/edit', [\App\Http\Controllers\Admin\CategoryController::class, 'edit'])->name('category.edit');
     Route::put('category/{id}', [\App\Http\Controllers\Admin\CategoryController::class, 'update'])->name('category.update');
+    Route::post('category/{id}/remove-image', [\App\Http\Controllers\Admin\CategoryController::class, 'removeImage'])->name('category.remove-image');
     Route::delete('category/{id}', [\App\Http\Controllers\Admin\CategoryController::class, 'destroy'])->name('category.destroy');
     Route::get('occassion', [\App\Http\Controllers\Admin\OccassionController::class, 'index'])->name('occassion');
     Route::get('occassion/create', [\App\Http\Controllers\Admin\OccassionController::class, 'create'])->name('occassion.create');
@@ -60,6 +61,7 @@ Route::middleware(['admin'])->prefix('admin')->name('admin.')->group(function ()
     Route::get('occassion/{id}', [\App\Http\Controllers\Admin\OccassionController::class, 'show'])->name('occassion.show');
     Route::get('occassion/{id}/edit', [\App\Http\Controllers\Admin\OccassionController::class, 'edit'])->name('occassion.edit');
     Route::put('occassion/{id}', [\App\Http\Controllers\Admin\OccassionController::class, 'update'])->name('occassion.update');
+    Route::post('occassion/{id}/remove-image', [\App\Http\Controllers\Admin\OccassionController::class, 'removeImage'])->name('occassion.remove-image');
     Route::delete('occassion/{id}', [\App\Http\Controllers\Admin\OccassionController::class, 'destroy'])->name('occassion.destroy');
     Route::get('products', [\App\Http\Controllers\Admin\ProductController::class, 'index'])->name('products');
     Route::get('products/create', [\App\Http\Controllers\Admin\ProductController::class, 'create'])->name('products.create');
@@ -67,6 +69,7 @@ Route::middleware(['admin'])->prefix('admin')->name('admin.')->group(function ()
     Route::get('products/{id}', [\App\Http\Controllers\Admin\ProductController::class, 'show'])->name('products.show');
     Route::get('products/{id}/edit', [\App\Http\Controllers\Admin\ProductController::class, 'edit'])->name('products.edit');
     Route::put('products/{id}', [\App\Http\Controllers\Admin\ProductController::class, 'update'])->name('products.update');
+    Route::post('products/{id}/remove-image', [\App\Http\Controllers\Admin\ProductController::class, 'removeImage'])->name('products.remove-image');
     Route::delete('products/{id}', [\App\Http\Controllers\Admin\ProductController::class, 'destroy'])->name('products.destroy');
     Route::get('giftproducts', [\App\Http\Controllers\Admin\GiftProductController::class, 'index'])->name('gift-products');
     Route::get('giftproducts/create', [\App\Http\Controllers\Admin\GiftProductController::class, 'create'])->name('gift-products.create');
@@ -74,6 +77,7 @@ Route::middleware(['admin'])->prefix('admin')->name('admin.')->group(function ()
     Route::get('giftproducts/{id}', [\App\Http\Controllers\Admin\GiftProductController::class, 'show'])->name('gift-products.show');
     Route::get('giftproducts/{id}/edit', [\App\Http\Controllers\Admin\GiftProductController::class, 'edit'])->name('gift-products.edit');
     Route::put('giftproducts/{id}', [\App\Http\Controllers\Admin\GiftProductController::class, 'update'])->name('gift-products.update');
+    Route::post('giftproducts/{id}/remove-image', [\App\Http\Controllers\Admin\GiftProductController::class, 'removeImage'])->name('gift-products.remove-image');
     Route::delete('giftproducts/{id}', [\App\Http\Controllers\Admin\GiftProductController::class, 'destroy'])->name('gift-products.destroy');
 
     // Reports
@@ -168,6 +172,7 @@ Route::middleware(['admin'])->prefix('admin')->name('admin.')->group(function ()
     Route::get('homegallery/{id}', [\App\Http\Controllers\Admin\HomeGalleryController::class, 'show'])->name('home-gallery.show');
     Route::get('homegallery/{id}/edit', [\App\Http\Controllers\Admin\HomeGalleryController::class, 'edit'])->name('home-gallery.edit');
     Route::put('homegallery/{id}', [\App\Http\Controllers\Admin\HomeGalleryController::class, 'update'])->name('home-gallery.update');
+    Route::post('homegallery/{id}/remove-image', [\App\Http\Controllers\Admin\HomeGalleryController::class, 'removeImage'])->name('home-gallery.remove-image');
     Route::delete('homegallery/{id}', [\App\Http\Controllers\Admin\HomeGalleryController::class, 'destroy'])->name('home-gallery.destroy');
     Route::get('pages/home', [\App\Http\Controllers\Admin\PageController::class, 'edit'])->defaults('pagename', 'home')->name('pages.home');
     Route::put('pages/home', [\App\Http\Controllers\Admin\PageController::class, 'update'])->defaults('pagename', 'home')->name('pages.home.update');

@@ -8,9 +8,12 @@ use App\Models\Category;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rule;
+use App\Traits\ImageUploadTrait;
+use Illuminate\Http\UploadedFile;
 
 class GiftProductController extends Controller
 {
+    use ImageUploadTrait;
     public function index(Request $request)
     {
         $query = Product::with('category')->where('isgift', 1);
@@ -105,11 +108,11 @@ class GiftProductController extends Controller
             'metakeywordAR' => 'nullable|string|max:1000',
             'metadescr' => 'nullable|string|max:1500',
             'metadescrAR' => 'nullable|string|max:1000',
-            'photo1' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:5120',
-            'photo2' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:5120',
-            'photo3' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:5120',
-            'photo4' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:5120',
-            'photo5' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:5120',
+            'photo1' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:10240',
+            'photo2' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:10240',
+            'photo3' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:10240',
+            'photo4' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:10240',
+            'photo5' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:10240',
             'video' => 'nullable|string|max:500',
             'videoposter' => 'nullable|string|max:500',
             'ispublished' => 'nullable',
@@ -144,19 +147,10 @@ class GiftProductController extends Controller
         $validated['updatedby'] = auth()->id() ?? 1;
         $validated['updateddate'] = now();
 
-        // Create uploads directory if it doesn't exist
-        $uploadPath = public_path('uploads/products');
-        if (!file_exists($uploadPath)) {
-            mkdir($uploadPath, 0755, true);
-        }
-
-        // Handle file uploads (photo1-5)
+        // Handle file uploads (photo1-5) using trait
         for ($i = 1; $i <= 5; $i++) {
             if ($request->hasFile("photo{$i}")) {
-                $photo = $request->file("photo{$i}");
-                $photoName = time() . '_' . uniqid() . '_photo' . $i . '.' . $photo->getClientOriginalExtension();
-                $photo->move($uploadPath, $photoName);
-                $validated["photo{$i}"] = $photoName;
+                $validated["photo{$i}"] = $this->uploadImage($request->file("photo{$i}"), null, 'product');
             } else {
                 $validated["photo{$i}"] = '';
             }
@@ -257,9 +251,10 @@ class GiftProductController extends Controller
     {
         $product = Product::where('isgift', 1)->findOrFail($id);
 
-        // Fix for PUT requests with FormData
+        // Fix for PUT requests with FormData - PHP doesn't populate $_POST or $_FILES for PUT
+        // We need to manually parse multipart/form-data to extract both text fields and files
         if (
-            $request->isMethod('put') && empty($request->all()) &&
+            $request->isMethod('put') &&
             $request->header('Content-Type') &&
             str_contains($request->header('Content-Type'), 'multipart/form-data')
         ) {
@@ -273,11 +268,50 @@ class GiftProductController extends Controller
             if ($boundary && $content) {
                 $parts = explode($boundary, $content);
                 $parsedData = [];
+                $parsedFiles = [];
 
-                foreach ($parts as $part) {
-                    if (preg_match('/Content-Disposition:\s*form-data;\s*name="([^"]+)"\s*\r?\n\r?\n(.*?)(?=\r?\n--|$)/s', $part, $matches)) {
-                        $fieldName = $matches[1];
-                        $fieldValue = trim($matches[2], "\r\n");
+                foreach ($parts as $index => $part) {
+                    $part = trim($part);
+                    if (empty($part) || $part === '--') {
+                        continue;
+                    }
+
+                    // Check if this is a file upload (has filename attribute)
+                    if (preg_match('/Content-Disposition:\s*form-data;\s*name="([^"]+)";\s*filename="([^"]+)"(?:\s*\r?\nContent-Type:\s*([^\r\n]+))?\s*\r?\n\r?\n(.*)/s', $part, $fileMatches)) {
+                        $fieldName = $fileMatches[1];
+                        $fileName = $fileMatches[2];
+                        $contentType = isset($fileMatches[3]) && !empty($fileMatches[3]) ? trim($fileMatches[3]) : 'application/octet-stream';
+                        $fileContent = $fileMatches[4];
+                        
+                        // Remove trailing boundary if present
+                        $fileContent = preg_replace('/\r?\n--.*$/s', '', $fileContent);
+                        $fileContent = rtrim($fileContent, "\r\n");
+
+                        if (strlen($fileContent) > 0) {
+                            // Create temporary file
+                            $tempFile = tempnam(sys_get_temp_dir(), 'laravel_upload_');
+                            file_put_contents($tempFile, $fileContent);
+
+                            // Create UploadedFile instance
+                            $uploadedFile = new UploadedFile(
+                                $tempFile,
+                                $fileName,
+                                $contentType,
+                                null,
+                                true // test mode
+                            );
+
+                            $parsedFiles[$fieldName] = $uploadedFile;
+                        }
+                    }
+                    // Check if this is a regular text field (no filename attribute)
+                    elseif (preg_match('/Content-Disposition:\s*form-data;\s*name="([^"]+)"\s*\r?\n\r?\n(.*)/s', $part, $textMatches)) {
+                        $fieldName = $textMatches[1];
+                        $fieldValue = $textMatches[2];
+                        
+                        // Remove trailing boundary if present
+                        $fieldValue = preg_replace('/\r?\n--.*$/s', '', $fieldValue);
+                        $fieldValue = trim($fieldValue, "\r\n");
 
                         if ($fieldName !== '_method') {
                             $parsedData[$fieldName] = $fieldValue;
@@ -285,8 +319,16 @@ class GiftProductController extends Controller
                     }
                 }
 
+                // Merge parsed data
                 if (!empty($parsedData)) {
                     $request->merge($parsedData);
+                }
+
+                // Add files to request
+                if (!empty($parsedFiles)) {
+                    foreach ($parsedFiles as $key => $file) {
+                        $request->files->set($key, $file);
+                    }
                 }
             }
         }
@@ -324,11 +366,11 @@ class GiftProductController extends Controller
             'metakeywordAR' => 'nullable|string|max:1000',
             'metadescr' => 'nullable|string|max:1500',
             'metadescrAR' => 'nullable|string|max:1000',
-            'photo1' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:5120',
-            'photo2' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:5120',
-            'photo3' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:5120',
-            'photo4' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:5120',
-            'photo5' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:5120',
+            'photo1' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:10240',
+            'photo2' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:10240',
+            'photo3' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:10240',
+            'photo4' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:10240',
+            'photo5' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:10240',
             'video' => 'nullable|string|max:500',
             'videoposter' => 'nullable|string|max:500',
             'ispublished' => 'nullable',
@@ -363,23 +405,18 @@ class GiftProductController extends Controller
         $validated['updatedby'] = auth()->id() ?? 1;
         $validated['updateddate'] = now();
 
-        // Create uploads directory if it doesn't exist
-        $uploadPath = public_path('uploads/products');
-        if (!file_exists($uploadPath)) {
-            mkdir($uploadPath, 0755, true);
-        }
-
-        // Handle file uploads (only if new files are uploaded)
+        // Handle file uploads - check all possible ways files might be accessible
+        // Handle photo1-5 uploads using trait
         for ($i = 1; $i <= 5; $i++) {
-            if ($request->hasFile("photo{$i}")) {
-                // Delete old photo if exists
-                if ($product->{"photo{$i}"} && file_exists(public_path('uploads/products/' . $product->{"photo{$i}"}))) {
-                    unlink(public_path('uploads/products/' . $product->{"photo{$i}"}));
-                }
-                $photo = $request->file("photo{$i}");
-                $photoName = time() . '_' . uniqid() . '_photo' . $i . '.' . $photo->getClientOriginalExtension();
-                $photo->move($uploadPath, $photoName);
-                $validated["photo{$i}"] = $photoName;
+            $photoFile = $request->file("photo{$i}");
+            
+            // If not found, try accessing directly from files bag
+            if (!$photoFile && $request->files->has("photo{$i}")) {
+                $photoFile = $request->files->get("photo{$i}");
+            }
+            
+            if ($photoFile && $photoFile->isValid()) {
+                $validated["photo{$i}"] = $this->uploadImage($photoFile, $product->{"photo{$i}"}, 'product');
             } else {
                 // Keep existing photo if not uploading new one
                 $validated["photo{$i}"] = $product->{"photo{$i}"} ?? '';
@@ -454,8 +491,8 @@ class GiftProductController extends Controller
             // Delete photos if they exist
             for ($i = 1; $i <= 5; $i++) {
                 $photoField = "photo{$i}";
-                if ($product->$photoField && file_exists(public_path('uploads/products/' . $product->$photoField))) {
-                    unlink(public_path('uploads/products/' . $product->$photoField));
+                if ($product->$photoField) {
+                    $this->deleteImage($product->$photoField, 'product');
                 }
             }
 
@@ -484,5 +521,35 @@ class GiftProductController extends Controller
 
             return back()->withErrors(['error' => 'An error occurred while removing the gift product.']);
         }
+    }
+
+    /**
+     * Remove image from gift product (via AJAX with confirmation)
+     *
+     * @param Request $request
+     * @param int $id
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function removeImage(Request $request, $id)
+    {
+        $product = Product::where('isgift', 1)->findOrFail($id);
+        $column = $request->input('column'); // 'photo1', 'photo2', 'photo3', 'photo4', 'photo5'
+
+        // Validate column name
+        $validColumns = ['photo1', 'photo2', 'photo3', 'photo4', 'photo5'];
+        if (!in_array($column, $validColumns)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Invalid column name'
+            ], 400);
+        }
+
+        // Remove image using trait
+        $this->removeImageFromModel($product, $column, 'product');
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Image removed successfully'
+        ]);
     }
 }
