@@ -1,9 +1,14 @@
 /**
  * Home Page Editor - Quill Editor Setup
+ * Also handles Product Long Description editors
  */
 import Quill from 'quill'
 
-if (typeof Quill != 'undefined') {
+// Wait for DOM to be ready
+function initQuillEditors() {
+    if (typeof Quill === 'undefined') {
+        return;
+    }
     // Import Quill's built-in icons
     const icons = Quill.import('ui/icons');
 
@@ -90,5 +95,81 @@ if (typeof Quill != 'undefined') {
             window.detailsARQuill.root.innerHTML = detailsARInput.value;
         }
     }
+
+    // Initialize Quill editor for Product Long Description (EN)
+    const longdescrEditor = document.getElementById('longdescr-editor')
+    if (longdescrEditor) {
+        // Get content from textarea before initializing
+        const longdescrInput = document.getElementById('longdescr');
+        const longdescrContent = longdescrInput ? longdescrInput.value : '';
+        
+        // Clear the editor div content before initializing Quill
+        longdescrEditor.innerHTML = '';
+        
+        window.longdescrQuill = new Quill(longdescrEditor, {
+            theme: 'snow',
+            modules: {
+                'toolbar': [
+                    [{'font': []}],
+                    ['bold', 'italic', 'underline', 'strike'],
+                    [{'color': []}, {'background': []}],
+                    [{'script': 'super'}, {'script': 'sub'}],
+                    [{'header': [false, 1, 2, 3, 4, 5, 6]}],
+                    ['blockquote', 'code-block'],
+                    [{'list': 'ordered'}, {'list': 'bullet'}, {'indent': '-1'}, {'indent': '+1'}],
+                    [{'align': []}],
+                    ['link', 'image', 'video'],
+                    ['clean']
+                ]
+            }
+        });
+
+        // Set initial content if exists
+        if (longdescrContent) {
+            window.longdescrQuill.root.innerHTML = longdescrContent;
+        }
+    }
+
+    // Initialize Quill editor for Product Long Description (AR)
+    const longdescrAREditor = document.getElementById('longdescrAR-editor')
+    if (longdescrAREditor) {
+        // Get content from textarea before initializing
+        const longdescrARInput = document.getElementById('longdescrAR');
+        const longdescrARContent = longdescrARInput ? longdescrARInput.value : '';
+        
+        // Clear the editor div content before initializing Quill
+        longdescrAREditor.innerHTML = '';
+        
+        window.longdescrARQuill = new Quill(longdescrAREditor, {
+            theme: 'snow',
+            modules: {
+                'toolbar': [
+                    [{'font': []}],
+                    ['bold', 'italic', 'underline', 'strike'],
+                    [{'color': []}, {'background': []}],
+                    [{'script': 'super'}, {'script': 'sub'}],
+                    [{'header': [false, 1, 2, 3, 4, 5, 6]}],
+                    ['blockquote', 'code-block'],
+                    [{'list': 'ordered'}, {'list': 'bullet'}, {'indent': '-1'}, {'indent': '+1'}],
+                    [{'align': []}],
+                    ['link', 'image', 'video'],
+                    ['clean']
+                ]
+            }
+        });
+
+        // Set initial content if exists
+        if (longdescrARContent) {
+            window.longdescrARQuill.root.innerHTML = longdescrARContent;
+        }
+    }
+}
+
+// Initialize when DOM is ready
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initQuillEditors);
+} else {
+    // DOM is already ready
+    initQuillEditors();
 }
 

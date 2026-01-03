@@ -40,7 +40,7 @@
 @endsection
 
 @section('scripts')
-    <script src="https://cdn.ckeditor.com/4.22.1/standard/ckeditor.js"></script>
+    @vite(['node_modules/quill/dist/quill.core.css', 'node_modules/quill/dist/quill.snow.css', 'resources/js/pages/home-page-editor.js'])
     <script>
         // Wait for jQuery to be available
         (function() {
@@ -53,16 +53,6 @@
                 const $ = jQuery;
 
                 $(document).ready(function() {
-                    // Initialize CKEditor for long descriptions
-                    if (typeof CKEDITOR !== 'undefined') {
-                        CKEDITOR.replace('longdescr', {
-                            height: 300
-                        });
-                        CKEDITOR.replace('longdescrAR', {
-                            height: 300
-                        });
-                    }
-
                     // Setup validation
                     setupProductValidation();
                 });
@@ -127,12 +117,17 @@
                         error.insertAfter(element);
                     },
                     submitHandler: function(form) {
-                        // Get CKEditor content before submit
-                        if (typeof CKEDITOR !== 'undefined') {
-                            for (var instance in CKEDITOR.instances) {
-                                CKEDITOR.instances[instance].updateElement();
-                            }
+                        // Update Quill editor content before submitting
+                        if (window.longdescrQuill) {
+                            const longdescrContent = window.longdescrQuill.root.innerHTML;
+                            document.getElementById('longdescr').value = longdescrContent;
                         }
+
+                        if (window.longdescrARQuill) {
+                            const longdescrARContent = window.longdescrARQuill.root.innerHTML;
+                            document.getElementById('longdescrAR').value = longdescrARContent;
+                        }
+
                         form.submit();
                     }
                 });

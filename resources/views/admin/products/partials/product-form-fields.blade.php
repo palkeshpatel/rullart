@@ -125,7 +125,9 @@
     <div class="col-md-6">
         <div class="mb-3">
             <label class="form-label">Details [EN]</label>
-            <textarea name="longdescr" id="longdescr" class="form-control" rows="10">{{ old('longdescr', $product ? $product->longdescr : '') }}</textarea>
+            <div id="longdescr-editor" style="height: 300px;"></div>
+            <textarea name="longdescr" id="longdescr" class="form-control d-none" style="display: none;">{{ old('longdescr', $product ? $product->longdescr : '') }}</textarea>
+            <div class="invalid-feedback"></div>
             @error('longdescr')
                 <div class="text-danger">{{ $message }}</div>
             @enderror
@@ -134,7 +136,9 @@
     <div class="col-md-6">
         <div class="mb-3">
             <label class="form-label">Details [AR]</label>
-            <textarea name="longdescrAR" id="longdescrAR" class="form-control" rows="10">{{ old('longdescrAR', $product ? $product->longdescrAR : '') }}</textarea>
+            <div id="longdescrAR-editor" style="height: 300px;"></div>
+            <textarea name="longdescrAR" id="longdescrAR" class="form-control d-none" style="display: none;">{{ old('longdescrAR', $product ? $product->longdescrAR : '') }}</textarea>
+            <div class="invalid-feedback"></div>
             @error('longdescrAR')
                 <div class="text-danger">{{ $message }}</div>
             @enderror
