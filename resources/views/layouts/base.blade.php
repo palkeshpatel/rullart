@@ -10,7 +10,7 @@
     <meta name="keywords" content="admin dashboard">
 
     <!-- App favicon -->
-    <link rel="shortcut icon" href="/images/favicon.ico">        
+    <link rel="shortcut icon" href="http://127.0.0.1:8000/favicon-16x16.png">        
 
     @include('layouts.partials/head-css')
 
