@@ -132,4 +132,48 @@ class AdminLoginController extends Controller
 
         return redirect()->route('admin.login');
     }
+
+    /**
+     * Update admin password.
+     */
+    public function changePassword(Request $request)
+    {
+        $request->validate([
+            'current_password' => ['required', 'string'],
+            'new_password' => ['required', 'string', 'min:6'],
+            'confirm_password' => ['required', 'string', 'same:new_password'],
+        ]);
+
+        $admin = Auth::guard('admin')->user();
+
+        // Check current password
+        if (md5($request->current_password) !== $admin->pass) {
+            if ($request->ajax() || $request->expectsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Current password is incorrect.',
+                    'errors' => ['current_password' => ['Current password is incorrect.']]
+                ], 422);
+            }
+            return back()->withErrors(['current_password' => 'Current password is incorrect.'])->withInput();
+        }
+
+        // Update password
+        $admin->pass = md5($request->new_password);
+        $admin->save();
+
+        Log::info('Admin Password Changed', [
+            'admin_id' => $admin->id,
+            'username' => $admin->user,
+        ]);
+
+        if ($request->ajax() || $request->expectsJson()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Password changed successfully.'
+            ]);
+        }
+
+        return back()->with('success', 'Password changed successfully.');
+    }
 }

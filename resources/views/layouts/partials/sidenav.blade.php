@@ -2,7 +2,7 @@
 <div class="sidenav-menu">
 
     <!-- Brand Logo -->
-    <a href="/" class="logo">
+    <a href="{{ route('admin.dashboard') }}" class="logo">
         <span class="logo logo-light">
             <span class="logo-lg"><span class="text-white fw-bold fs-18">Rullart</span></span>
             <span class="logo-sm"><span class="text-white fw-bold">Rullart</span></span>
@@ -30,8 +30,9 @@
         <div class="sidenav-user">
             <div class="d-flex justify-content-between align-items-center">
                 <div>
-                    <a href="javascript:void(0);" class="link-reset">
-                        <img src="/images/users/user-2.jpg" alt="user-image" class="rounded-circle mb-2 avatar-md">
+                    <a href="{{ route('admin.dashboard') }}" class="link-reset">
+                        <img src="{{ asset('resources/images/rullart-logo.svg') }}" alt="Rullart Logo" class="mb-2"
+                            style="height: 50px; width: auto; max-width: 100%; object-fit: contain;">
                         <span
                             class="sidenav-user-name fw-bold">{{ Auth::guard('admin')->user()->name ?? 'Admin' }}</span>
                         <span class="fs-12 fw-semibold"
@@ -46,49 +47,14 @@
                     </a>
 
                     <div class="dropdown-menu">
-                        <!-- Header -->
-                        <div class="dropdown-header noti-title">
-                            <h6 class="text-overflow m-0">Welcome back!</h6>
-                        </div>
-
-                        <!-- My Profile -->
-                        <a href="javascript:void(0);" class="dropdown-item">
-                            <i class="ti ti-user-circle me-2 fs-17 align-middle"></i>
-                            <span class="align-middle">Profile</span>
-                        </a>
-
-                        <!-- Notifications -->
-                        <a href="javascript:void(0);" class="dropdown-item">
-                            <i class="ti ti-bell-ringing me-2 fs-17 align-middle"></i>
-                            <span class="align-middle">Notifications</span>
-                        </a>
-
-                        <!-- Wallet -->
-                        <a href="javascript:void(0);" class="dropdown-item">
-                            <i class="ti ti-credit-card me-2 fs-17 align-middle"></i>
-                            <span class="align-middle">Balance: <span class="fw-semibold">$985.25</span></span>
-                        </a>
-
-                        <!-- Settings -->
-                        <a href="javascript:void(0);" class="dropdown-item">
-                            <i class="ti ti-settings-2 me-2 fs-17 align-middle"></i>
-                            <span class="align-middle">Account Settings</span>
-                        </a>
-
-                        <!-- Support -->
-                        <a href="javascript:void(0);" class="dropdown-item">
-                            <i class="ti ti-headset me-2 fs-17 align-middle"></i>
-                            <span class="align-middle">Support Center</span>
+                        <!-- Change Password -->
+                        <a href="javascript:void(0);" class="dropdown-item" id="changePasswordBtn">
+                            <i class="ti ti-key me-2 fs-17 align-middle"></i>
+                            <span class="align-middle">Change Password</span>
                         </a>
 
                         <!-- Divider -->
                         <div class="dropdown-divider"></div>
-
-                        <!-- Lock -->
-                        <a href="javascript:void(0);" class="dropdown-item">
-                            <i class="ti ti-lock me-2 fs-17 align-middle"></i>
-                            <span class="align-middle">Lock Screen</span>
-                        </a>
 
                         <!-- Logout -->
                         <form method="POST" action="{{ route('admin.logout') }}">
@@ -106,7 +72,7 @@
 
         <!--- Sidenav Menu -->
         <ul class="side-nav">
-            <li class="side-nav-title">MAIN NAVIGATION</li>
+
 
             <li class="side-nav-item">
                 <a href="{{ route('admin.dashboard') }}"
@@ -418,3 +384,175 @@
     </div>
 </div>
 <!-- Sidenav Menu End -->
+
+<!-- Change Password Modal -->
+<div class="modal fade" id="changePasswordModal" tabindex="-1" aria-labelledby="changePasswordModalLabel"
+    aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="changePasswordModalLabel">Change Password</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="changePasswordForm" method="POST" action="{{ route('admin.change-password') }}" novalidate>
+                @csrf
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Current Password <span class="text-danger">*</span></label>
+                        <input type="password" name="current_password" class="form-control" required>
+                        <div class="invalid-feedback"></div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">New Password <span class="text-danger">*</span></label>
+                        <input type="password" name="new_password" class="form-control" required minlength="6">
+                        <div class="invalid-feedback"></div>
+                        <small class="text-muted">Minimum 6 characters</small>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Confirm New Password <span class="text-danger">*</span></label>
+                        <input type="password" name="confirm_password" class="form-control" required minlength="6">
+                        <div class="invalid-feedback"></div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="ti ti-device-floppy me-1"></i> Change Password
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    (function() {
+        function initChangePasswordScript() {
+            if (typeof jQuery === 'undefined' || typeof jQuery.fn.validate === 'undefined') {
+                setTimeout(initChangePasswordScript, 50);
+                return;
+            }
+
+            const $ = jQuery;
+
+            // Open Change Password Modal (from sidebar or topbar)
+            $(document).on('click', '#changePasswordBtn, #changePasswordBtnTopbar', function(e) {
+                e.preventDefault();
+                const modal = new bootstrap.Modal(document.getElementById('changePasswordModal'));
+                modal.show();
+                setupChangePasswordValidation();
+            });
+
+            // Setup Validation
+            function setupChangePasswordValidation() {
+                const $form = $('#changePasswordForm');
+                if (!$form.length || $form.data('validator')) {
+                    return;
+                }
+
+                $form.validate({
+                    rules: {
+                        current_password: {
+                            required: true
+                        },
+                        new_password: {
+                            required: true,
+                            minlength: 6
+                        },
+                        confirm_password: {
+                            required: true,
+                            minlength: 6,
+                            equalTo: '[name="new_password"]'
+                        }
+                    },
+                    messages: {
+                        current_password: 'Current password is required.',
+                        new_password: 'New password is required and must be at least 6 characters.',
+                        confirm_password: 'Password confirmation is required and must match new password.'
+                    },
+                    errorElement: 'div',
+                    errorClass: 'invalid-feedback',
+                    highlight(el) {
+                        $(el).addClass('is-invalid');
+                    },
+                    unhighlight(el) {
+                        $(el).removeClass('is-invalid').addClass('is-valid');
+                    },
+                    errorPlacement(error, element) {
+                        error.insertAfter(element);
+                    },
+                    submitHandler(form) {
+                        submitChangePasswordForm(form);
+                    }
+                });
+            }
+
+            // Submit Change Password Form
+            function submitChangePasswordForm(form) {
+                const formData = new FormData(form);
+                const url = form.action;
+                const submitBtn = form.querySelector('button[type="submit"]');
+                const originalText = submitBtn.innerHTML;
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Changing...';
+
+                fetch(url, {
+                        method: 'POST',
+                        body: formData,
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest',
+                            'Accept': 'application/json'
+                        }
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            if (typeof showToast !== 'undefined') {
+                                showToast(data.message || 'Password changed successfully', 'success');
+                            } else {
+                                alert(data.message || 'Password changed successfully');
+                            }
+                            const modal = bootstrap.Modal.getInstance(document.getElementById(
+                                'changePasswordModal'));
+                            if (modal) modal.hide();
+                            form.reset();
+                            $('#changePasswordForm').find('.is-invalid').removeClass('is-invalid');
+                            $('#changePasswordForm').find('.is-valid').removeClass('is-valid');
+                        } else {
+                            if (data.errors) {
+                                const $form = $('#changePasswordForm');
+                                $form.find('.is-invalid').removeClass('is-invalid');
+                                Object.keys(data.errors).forEach(field => {
+                                    const input = $form.find(`[name="${field}"]`);
+                                    input.addClass('is-invalid');
+                                    const feedback = input.siblings('.invalid-feedback');
+                                    if (feedback.length) {
+                                        feedback.text(Array.isArray(data.errors[field]) ? data.errors[
+                                            field][0] : data.errors[field]);
+                                    }
+                                });
+                            }
+                            if (typeof showToast !== 'undefined') {
+                                showToast(data.message || 'Failed to change password', 'error');
+                            } else {
+                                alert(data.message || 'Failed to change password');
+                            }
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        if (typeof showToast !== 'undefined') {
+                            showToast('An error occurred while changing password', 'error');
+                        } else {
+                            alert('An error occurred while changing password');
+                        }
+                    })
+                    .finally(() => {
+                        submitBtn.disabled = false;
+                        submitBtn.innerHTML = originalText;
+                    });
+            }
+        }
+        initChangePasswordScript();
+    })();
+</script>

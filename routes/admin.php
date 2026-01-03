@@ -22,6 +22,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
 // Admin Protected Routes
 Route::middleware(['admin'])->prefix('admin')->name('admin.')->group(function () {
     Route::post('logout', [AdminLoginController::class, 'destroy'])->name('logout');
+    Route::post('change-password', [AdminLoginController::class, 'changePassword'])->name('change-password');
 
     // Dashboard
     Route::get('', [\App\Http\Controllers\Admin\DashboardController::class, 'index'])->name('dashboard');

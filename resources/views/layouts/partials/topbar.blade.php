@@ -7,20 +7,20 @@
                 <!-- Logo light -->
                 <a href="{{ route('admin.dashboard') }}" class="logo-light">
                     <span class="logo-lg">
-                        <span class="text-white fw-bold fs-18">Rullart</span>
+                        <img src="{{ asset('resources/images/rullart-logo.svg') }}" alt="Rullart Logo" style="height: 40px;">
                     </span>
                     <span class="logo-sm">
-                        <span class="text-white fw-bold">Rullart</span>
+                        <img src="{{ asset('resources/images/rullart-logo.svg') }}" alt="Rullart Logo" style="height: 32px;">
                     </span>
                 </a>
 
                 <!-- Logo Dark -->
                 <a href="{{ route('admin.dashboard') }}" class="logo-dark">
                     <span class="logo-lg">
-                        <span class="text-dark fw-bold fs-18">Rullart</span>
+                        <img src="{{ asset('resources/images/rullart-logo.svg') }}" alt="Rullart Logo" style="height: 40px;">
                     </span>
                     <span class="logo-sm">
-                        <span class="text-dark fw-bold">Rullart</span>
+                        <img src="{{ asset('resources/images/rullart-logo.svg') }}" alt="Rullart Logo" style="height: 32px;">
                     </span>
                 </a>
             </div>
@@ -66,55 +66,24 @@
                         </div>
                     </a>
                     <div class="dropdown-menu dropdown-menu-end">
-                        <!-- Header -->
-                        <div class="dropdown-header noti-title">
-                            <h6 class="text-overflow m-0">Welcome back!</h6>
-                        </div>
-
-                        <!-- My Profile -->
-                        <a href="javascript:void(0);" class="dropdown-item">
-                            <i class="ti ti-user-circle me-2 fs-17 align-middle"></i>
-                            <span class="align-middle">Profile</span>
-                        </a>
-
-                        <!-- Notifications -->
-                        <a href="javascript:void(0);" class="dropdown-item">
-                            <i class="ti ti-bell-ringing me-2 fs-17 align-middle"></i>
-                            <span class="align-middle">Notifications</span>
-                        </a>
-
-                        <!-- Wallet -->
-                        <a href="javascript:void(0);" class="dropdown-item">
-                            <i class="ti ti-credit-card me-2 fs-17 align-middle"></i>
-                            <span class="align-middle">Balance: <span class="fw-semibold">$985.25</span></span>
-                        </a>
-
-                        <!-- Settings -->
-                        <a href="javascript:void(0);" class="dropdown-item">
-                            <i class="ti ti-settings-2 me-2 fs-17 align-middle"></i>
-                            <span class="align-middle">Account Settings</span>
-                        </a>
-
-                        <!-- Support -->
-                        <a href="javascript:void(0);" class="dropdown-item">
-                            <i class="ti ti-headset me-2 fs-17 align-middle"></i>
-                            <span class="align-middle">Support Center</span>
+                        <!-- Change Password -->
+                        <a href="javascript:void(0);" class="dropdown-item" id="changePasswordBtnTopbar">
+                            <i class="ti ti-key me-2 fs-17 align-middle"></i>
+                            <span class="align-middle">Change Password</span>
                         </a>
 
                         <!-- Divider -->
                         <div class="dropdown-divider"></div>
 
-                        <!-- Lock -->
-                        <a href="javascript:void(0);" class="dropdown-item">
-                            <i class="ti ti-lock me-2 fs-17 align-middle"></i>
-                            <span class="align-middle">Lock Screen</span>
-                        </a>
-
                         <!-- Logout -->
-                        <a href="javascript:void(0);" class="dropdown-item text-danger fw-semibold">
-                            <i class="ti ti-logout-2 me-2 fs-17 align-middle"></i>
-                            <span class="align-middle">Log Out</span>
-                        </a>
+                        <form method="POST" action="{{ route('admin.logout') }}">
+                            @csrf
+                            <button type="submit"
+                                class="dropdown-item text-danger fw-semibold w-100 text-start border-0 bg-transparent">
+                                <i class="ti ti-logout-2 me-2 fs-17 align-middle"></i>
+                                <span class="align-middle">Log Out</span>
+                            </button>
+                        </form>
                     </div>
 
                 </div>
