@@ -7,6 +7,8 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
+use GuzzleHttp\Client;
+use GuzzleHttp\Promise\Utils;
 
 class DownloadMissingImages extends Command
 {
@@ -18,7 +20,8 @@ class DownloadMissingImages extends Command
     protected $signature = 'images:download
                             {--source=https://www.rullart.com : Source URL to download from}
                             {--check-only : Only check which images are missing, don\'t download}
-                            {--type=products : Type of images to download (all, products, homegallery, category)}';
+                            {--type=products : Type of images to download (all, products, homegallery, category)}
+                            {--chunk-size=10 : Number of images to download concurrently}';
 
     /**
      * The console command description.
@@ -114,11 +117,12 @@ class DownloadMissingImages extends Command
             $this->info("Created directory: {$storagePath}");
         }
 
+        // Filter out existing files first
+        $imagesToDownload = [];
         foreach ($images as $image) {
             $filename = $image['filename'];
             $localPath = $storagePath . '/' . $filename;
 
-            // Check if file already exists
             if (File::exists($localPath)) {
                 $this->skipped++;
                 $bar->advance();
@@ -133,47 +137,15 @@ class DownloadMissingImages extends Command
                 continue;
             }
 
-            // URL encode the filename for the source URL (handles spaces, special chars)
-            $encodedFilename = rawurlencode($filename);
-            
-            // Try multiple source paths (try most common first)
-            $sourceUrls = [
-                // Old path on live site: /resources/storage/filename (most common)
-                $this->sourceUrl . '/resources/storage/' . $encodedFilename,
-                $this->sourceUrl . '/resources/storage/' . $filename,
-                // New path: /storage/upload/product/filename
-                $this->sourceUrl . '/storage/upload/' . $subdirectory . '/' . $encodedFilename,
-                $this->sourceUrl . '/storage/upload/' . $subdirectory . '/' . $filename,
-            ];
+            $imagesToDownload[] = $image;
+        }
 
-            $downloaded = false;
-            $lastError = '';
+        // Process in chunks for parallel downloads
+        $chunkSize = (int) $this->option('chunk-size');
+        $chunks = array_chunk($imagesToDownload, $chunkSize);
 
-            foreach ($sourceUrls as $index => $sourceUrl) {
-            if ($this->downloadImage($sourceUrl, $localPath, $filename)) {
-                    $this->downloaded++;
-                    $downloaded = true;
-                    $this->line("  ✓ Downloaded: {$filename}");
-                    break;
-                } else {
-                    // Try to get more info on last attempt
-                    if ($index === count($sourceUrls) - 1) {
-                        try {
-                            $response = \Illuminate\Support\Facades\Http::timeout(5)->get($sourceUrl);
-                            $lastError = " (HTTP {$response->status()})";
-                        } catch (\Exception $e) {
-                            $lastError = " (" . $e->getMessage() . ")";
-                        }
-                    }
-                }
-            }
-
-            if (!$downloaded) {
-                $this->line("  ✗ Failed: {$filename}{$lastError}");
-                $this->failed++;
-            }
-
-            $bar->advance();
+        foreach ($chunks as $chunk) {
+            $this->downloadImagesInParallel($chunk, $subdirectory, $storagePath, $bar);
         }
 
         $bar->finish();
@@ -218,6 +190,8 @@ class DownloadMissingImages extends Command
             $this->info("Created directory: {$storagePath}");
         }
 
+        // Filter out existing files first
+        $imagesToDownload = [];
         foreach ($images as $image) {
             $filename = $image['filename'];
             $localPath = $storagePath . '/' . $filename;
@@ -236,27 +210,15 @@ class DownloadMissingImages extends Command
                 continue;
             }
 
-            $sourceUrl = $this->sourceUrl . '/storage/upload/' . $subdirectory . '/' . $filename;
-            $oldSourceUrl = $this->sourceUrl . '/resources/storage/' . $filename;
+            $imagesToDownload[] = $image;
+        }
 
-            $downloaded = false;
+        // Process in chunks for parallel downloads
+        $chunkSize = (int) $this->option('chunk-size');
+        $chunks = array_chunk($imagesToDownload, $chunkSize);
 
-            if ($this->downloadImage($sourceUrl, $localPath, $filename)) {
-                $this->downloaded++;
-                $downloaded = true;
-            } else {
-                $this->line("  Trying old path for: {$filename}");
-                if ($this->downloadImage($oldSourceUrl, $localPath, $filename)) {
-                    $this->downloaded++;
-                    $downloaded = true;
-                }
-            }
-
-            if (!$downloaded) {
-                $this->failed++;
-            }
-
-            $bar->advance();
+        foreach ($chunks as $chunk) {
+            $this->downloadHomeGalleryImagesInParallel($chunk, $subdirectory, $storagePath, $bar);
         }
 
         $bar->finish();
@@ -306,6 +268,8 @@ class DownloadMissingImages extends Command
             $this->info("Created directory: {$storagePath}");
         }
 
+        // Filter out existing files first
+        $imagesToDownload = [];
         foreach ($images as $image) {
             $filename = $image['filename'];
             $localPath = $storagePath . '/' . $filename;
@@ -325,36 +289,251 @@ class DownloadMissingImages extends Command
                 continue;
             }
 
-            // Try new path first: /storage/upload/category/filename
-            $sourceUrl = $this->sourceUrl . '/storage/upload/' . $subdirectory . '/' . $filename;
+            $imagesToDownload[] = $image;
+        }
 
-            // If that fails, try old path: /resources/storage/filename
-            $oldSourceUrl = $this->sourceUrl . '/resources/storage/' . $filename;
+        // Process in chunks for parallel downloads
+        $chunkSize = (int) $this->option('chunk-size');
+        $chunks = array_chunk($imagesToDownload, $chunkSize);
 
-            $downloaded = false;
-
-            // Try new path first
-            if ($this->downloadImage($sourceUrl, $localPath, $filename)) {
-                $this->downloaded++;
-                $downloaded = true;
-            } else {
-                // Fallback to old path
-                $this->line("  Trying old path for: {$filename}");
-                if ($this->downloadImage($oldSourceUrl, $localPath, $filename)) {
-                    $this->downloaded++;
-                    $downloaded = true;
-                }
-            }
-
-            if (!$downloaded) {
-                $this->failed++;
-            }
-
-            $bar->advance();
+        foreach ($chunks as $chunk) {
+            $this->downloadCategoryImagesInParallel($chunk, $subdirectory, $storagePath, $bar);
         }
 
         $bar->finish();
         $this->newLine(2);
+    }
+
+    protected function downloadHomeGalleryImagesInParallel($images, $subdirectory, $storagePath, $progressBar)
+    {
+        $client = new Client([
+            'timeout' => 30,
+            'verify' => false,
+            'allow_redirects' => true,
+        ]);
+
+        $promises = [];
+        $imageData = [];
+
+        foreach ($images as $image) {
+            $filename = $image['filename'];
+            $localPath = $storagePath . '/' . $filename;
+            $sourceUrl = $this->sourceUrl . '/storage/upload/' . $subdirectory . '/' . $filename;
+            $oldSourceUrl = $this->sourceUrl . '/resources/storage/' . $filename;
+
+            $promiseKey = $filename;
+            $promises[$promiseKey] = $client->getAsync($sourceUrl, [
+                'http_errors' => false
+            ]);
+            
+            $imageData[$promiseKey] = [
+                'image' => $image,
+                'filename' => $filename,
+                'localPath' => $localPath,
+                'oldSourceUrl' => $oldSourceUrl,
+            ];
+        }
+
+        // Wait for all promises to complete
+        $results = Utils::settle($promises)->wait();
+
+        // Process results
+        foreach ($results as $promiseKey => $result) {
+            $data = $imageData[$promiseKey];
+            $filename = $data['filename'];
+            $localPath = $data['localPath'];
+            $downloaded = false;
+
+            // Check if first URL worked
+            if ($result['state'] === 'fulfilled') {
+                $response = $result['value'];
+                if ($response->getStatusCode() === 200) {
+                    $body = $response->getBody()->getContents();
+                    $contentType = $response->getHeader('Content-Type');
+                    $contentType = is_array($contentType) ? ($contentType[0] ?? '') : $contentType;
+                    if ($this->saveImage($body, $localPath, $contentType)) {
+                        $this->downloaded++;
+                        $downloaded = true;
+                        $this->line("  ✓ Downloaded: {$filename}");
+                    }
+                }
+            }
+
+            // If first URL failed, try old path
+            if (!$downloaded) {
+                if ($this->downloadImage($data['oldSourceUrl'], $localPath, $filename)) {
+                    $this->downloaded++;
+                    $downloaded = true;
+                    $this->line("  ✓ Downloaded: {$filename}");
+                }
+            }
+
+            if (!$downloaded) {
+                $this->line("  ✗ Failed: {$filename}");
+                $this->failed++;
+            }
+
+            $progressBar->advance();
+        }
+    }
+
+    protected function downloadCategoryImagesInParallel($images, $subdirectory, $storagePath, $progressBar)
+    {
+        $client = new Client([
+            'timeout' => 30,
+            'verify' => false,
+            'allow_redirects' => true,
+        ]);
+
+        $promises = [];
+        $imageData = [];
+
+        foreach ($images as $image) {
+            $filename = $image['filename'];
+            $localPath = $storagePath . '/' . $filename;
+            $sourceUrl = $this->sourceUrl . '/storage/upload/' . $subdirectory . '/' . $filename;
+            $oldSourceUrl = $this->sourceUrl . '/resources/storage/' . $filename;
+
+            $promiseKey = $filename;
+            $promises[$promiseKey] = $client->getAsync($sourceUrl, [
+                'http_errors' => false
+            ]);
+            
+            $imageData[$promiseKey] = [
+                'image' => $image,
+                'filename' => $filename,
+                'localPath' => $localPath,
+                'oldSourceUrl' => $oldSourceUrl,
+            ];
+        }
+
+        // Wait for all promises to complete
+        $results = Utils::settle($promises)->wait();
+
+        // Process results
+        foreach ($results as $promiseKey => $result) {
+            $data = $imageData[$promiseKey];
+            $filename = $data['filename'];
+            $localPath = $data['localPath'];
+            $downloaded = false;
+
+            // Check if first URL worked
+            if ($result['state'] === 'fulfilled') {
+                $response = $result['value'];
+                if ($response->getStatusCode() === 200) {
+                    $body = $response->getBody()->getContents();
+                    $contentType = $response->getHeader('Content-Type');
+                    $contentType = is_array($contentType) ? ($contentType[0] ?? '') : $contentType;
+                    if ($this->saveImage($body, $localPath, $contentType)) {
+                $this->downloaded++;
+                $downloaded = true;
+                        $this->line("  ✓ Downloaded: {$filename}");
+                    }
+                }
+            }
+
+            // If first URL failed, try old path
+            if (!$downloaded) {
+                if ($this->downloadImage($data['oldSourceUrl'], $localPath, $filename)) {
+                    $this->downloaded++;
+                    $downloaded = true;
+                    $this->line("  ✓ Downloaded: {$filename}");
+                }
+            }
+
+            if (!$downloaded) {
+                $this->line("  ✗ Failed: {$filename}");
+                $this->failed++;
+            }
+
+            $progressBar->advance();
+        }
+    }
+
+    protected function downloadImagesInParallel($images, $subdirectory, $storagePath, $progressBar)
+    {
+        $client = new Client([
+            'timeout' => 30,
+            'verify' => false,
+            'allow_redirects' => true,
+        ]);
+
+        $promises = [];
+        $imageData = [];
+
+        foreach ($images as $image) {
+            $filename = $image['filename'];
+            $localPath = $storagePath . '/' . $filename;
+            $encodedFilename = rawurlencode($filename);
+            
+            // Try multiple source paths (try most common first)
+            $sourceUrls = [
+                // Old path on live site: /resources/storage/filename (most common)
+                $this->sourceUrl . '/resources/storage/' . $encodedFilename,
+                $this->sourceUrl . '/resources/storage/' . $filename,
+                // New path: /storage/upload/product/filename
+                $this->sourceUrl . '/storage/upload/' . $subdirectory . '/' . $encodedFilename,
+                $this->sourceUrl . '/storage/upload/' . $subdirectory . '/' . $filename,
+            ];
+
+            // Try first URL, if it fails we'll try others sequentially
+            $promiseKey = $filename;
+            $promises[$promiseKey] = $client->getAsync($sourceUrls[0], [
+                'http_errors' => false
+            ]);
+            
+            $imageData[$promiseKey] = [
+                'image' => $image,
+                'filename' => $filename,
+                'localPath' => $localPath,
+                'sourceUrls' => $sourceUrls,
+            ];
+        }
+
+        // Wait for all promises to complete
+        $results = Utils::settle($promises)->wait();
+
+        // Process results
+        foreach ($results as $promiseKey => $result) {
+            $data = $imageData[$promiseKey];
+            $filename = $data['filename'];
+            $localPath = $data['localPath'];
+            $downloaded = false;
+
+            // Check if first URL worked
+            if ($result['state'] === 'fulfilled') {
+                $response = $result['value'];
+                if ($response->getStatusCode() === 200) {
+                    $body = $response->getBody()->getContents();
+                    $contentType = $response->getHeader('Content-Type');
+                    $contentType = is_array($contentType) ? ($contentType[0] ?? '') : $contentType;
+                    if ($this->saveImage($body, $localPath, $contentType)) {
+                        $this->downloaded++;
+                        $downloaded = true;
+                        $this->line("  ✓ Downloaded: {$filename}");
+                    }
+                }
+            }
+
+            // If first URL failed, try other URLs sequentially
+            if (!$downloaded) {
+                foreach (array_slice($data['sourceUrls'], 1) as $sourceUrl) {
+                    if ($this->downloadImage($sourceUrl, $localPath, $filename)) {
+                        $this->downloaded++;
+                        $downloaded = true;
+                        $this->line("  ✓ Downloaded: {$filename}");
+                        break;
+                    }
+                }
+            }
+
+            if (!$downloaded) {
+                $this->line("  ✗ Failed: {$filename}");
+                $this->failed++;
+            }
+
+            $progressBar->advance();
+        }
     }
 
     protected function downloadImage($sourceUrl, $localPath, $filename)
@@ -371,6 +550,18 @@ class DownloadMissingImages extends Command
                 $contentType = $response->header('Content-Type', '');
                 $body = $response->body();
                 
+                return $this->saveImage($body, $localPath, $contentType);
+            }
+            
+            return false;
+        } catch (\Exception $e) {
+            // Don't log every error to avoid spam, just return false
+            return false;
+        }
+    }
+
+    protected function saveImage($body, $localPath, $contentType)
+    {
                 // Check if we got actual content (not empty)
                 if (empty($body)) {
                     return false;
@@ -407,13 +598,8 @@ class DownloadMissingImages extends Command
                     
                     File::put($localPath, $body);
                 return true;
-                }
             }
             
             return false;
-        } catch (\Exception $e) {
-            // Don't log every error to avoid spam, just return false
-            return false;
-        }
     }
 }
