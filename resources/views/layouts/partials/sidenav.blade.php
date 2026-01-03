@@ -35,8 +35,6 @@
                             style="height: 50px; width: auto; max-width: 100%; object-fit: contain;">
                         <span
                             class="sidenav-user-name fw-bold">{{ Auth::guard('admin')->user()->name ?? 'Admin' }}</span>
-                        <span class="fs-12 fw-semibold"
-                            data-lang="user-role">{{ Auth::guard('admin')->user()->user ?? 'Admin User' }}</span>
                     </a>
                 </div>
                 <div>

@@ -58,10 +58,8 @@
                 <div class="dropdown">
                     <a class="topbar-link dropdown-toggle drop-arrow-none px-2" data-bs-toggle="dropdown"
                         data-bs-offset="0,16" href="#!" aria-haspopup="false" aria-expanded="false">
-                        <img src="/images/users/user-2.jpg" width="32" class="rounded-circle me-lg-2 d-flex"
-                            alt="user-image">
-                        <div class="d-lg-flex align-items-center gap-1 d-none">
-                            <h5 class="my-0">Damian D.</h5>
+                        <div class="d-lg-flex align-items-center gap-1">
+                            <h5 class="my-0">{{ Auth::guard('admin')->user()->name ?? 'Admin' }}</h5>
                             <i class="ti ti-chevron-down align-middle"></i>
                         </div>
                     </a>
