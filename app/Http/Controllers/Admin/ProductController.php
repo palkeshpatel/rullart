@@ -61,7 +61,7 @@ class ProductController extends Controller
     {
         // Get categories for dropdown
         $categories = Category::orderBy('category')->get();
-        
+
         // Get colors (filtervalues where fkfilterid = 2)
         $colors = DB::table('filtervalues')
             ->where('fkfilterid', 2)
@@ -69,7 +69,7 @@ class ProductController extends Controller
             ->orderBy('displayorder')
             ->orderBy('filtervalue')
             ->get();
-        
+
         // Get sizes (filtervalues where fkfilterid = 3)
         $sizes = DB::table('filtervalues')
             ->where('fkfilterid', 3)
@@ -77,7 +77,7 @@ class ProductController extends Controller
             ->orderBy('displayorder')
             ->orderBy('filtervalue')
             ->get();
-        
+
         // Get occasions
         $occasions = \App\Models\Occassion::where('ispublished', 1)
             ->orderBy('occassion')
@@ -88,7 +88,7 @@ class ProductController extends Controller
             return response()->json([
                 'success' => true,
                 'html' => view('admin.products.partials.product-form', [
-                    'product' => null, 
+                    'product' => null,
                     'categories' => $categories,
                     'colors' => $colors,
                     'sizes' => $sizes,
@@ -193,7 +193,7 @@ class ProductController extends Controller
             $videoFile->storeAs('upload/product', $videoName, 'public');
             $validated['video'] = $videoName;
         }
-        
+
         // Handle video poster file upload
         if ($request->hasFile('videoposter_file')) {
             $validated['videoposter'] = $this->uploadImage($request->file('videoposter_file'), null, 'product');
@@ -201,10 +201,10 @@ class ProductController extends Controller
 
         try {
             $product = Product::create($validated);
-            
+
             // Handle productsfilter (sizes, colors, occasions)
             $storeId = 1; // Default store ID
-            
+
             // Save sizes with quantities
             if ($request->has('sizes')) {
                 $sizes = $request->input('sizes', []);
@@ -221,7 +221,7 @@ class ProductController extends Controller
                     }
                 }
             }
-            
+
             // Save color
             if ($request->has('color') && $request->color) {
                 \DB::table('productsfilter')->insert([
@@ -233,7 +233,7 @@ class ProductController extends Controller
                     'barcode' => null,
                 ]);
             }
-            
+
             // Save occasions
             if ($request->has('occasions') && is_array($request->occasions)) {
                 foreach ($request->occasions as $occasionId) {
@@ -324,7 +324,7 @@ class ProductController extends Controller
     {
         $product = Product::findOrFail($id);
         $categories = Category::orderBy('category')->get();
-        
+
         // Get colors (filtervalues where fkfilterid = 2)
         $colors = DB::table('filtervalues')
             ->where('fkfilterid', 2)
@@ -332,7 +332,7 @@ class ProductController extends Controller
             ->orderBy('displayorder')
             ->orderBy('filtervalue')
             ->get();
-        
+
         // Get sizes (filtervalues where fkfilterid = 3)
         $sizes = DB::table('filtervalues')
             ->where('fkfilterid', 3)
@@ -340,18 +340,18 @@ class ProductController extends Controller
             ->orderBy('displayorder')
             ->orderBy('filtervalue')
             ->get();
-        
+
         // Get occasions
         $occasions = \App\Models\Occassion::where('ispublished', 1)
             ->orderBy('occassion')
             ->get();
-        
+
         // Get product filters (sizes, colors, occasions)
         $productFilters = DB::table('productsfilter')
             ->where('fkproductid', $id)
             ->get()
             ->groupBy('filtercode');
-        
+
         // Get product sizes with quantities
         $productSizes = DB::table('productsfilter as pf')
             ->join('filtervalues as fv', 'fv.filtervalueid', '=', 'pf.fkfiltervalueid')
@@ -365,7 +365,7 @@ class ProductController extends Controller
             return response()->json([
                 'success' => true,
                 'html' => view('admin.products.partials.product-form', [
-                    'product' => $product, 
+                    'product' => $product,
                     'categories' => $categories,
                     'colors' => $colors,
                     'sizes' => $sizes,
@@ -379,319 +379,207 @@ class ProductController extends Controller
         return view('admin.products.edit', compact('product', 'categories', 'colors', 'sizes', 'occasions', 'productFilters', 'productSizes'));
     }
 
+
+
     public function update(Request $request, $id)
     {
-        $product = Product::findOrFail($id);
+        $product = Product::where('productid', $id)->firstOrFail();
 
-        // Fix for PUT requests with FormData - PHP doesn't populate $_POST or $_FILES for PUT
-        // We need to manually parse multipart/form-data to extract both text fields and files
-        if (
-            $request->isMethod('put') &&
-            $request->header('Content-Type') &&
-            str_contains($request->header('Content-Type'), 'multipart/form-data')
-        ) {
-            $content = $request->getContent();
-            $boundary = null;
+        /* -------------------------------------------------
+     | Normalize inputs (important for AR / encoding)
+     |--------------------------------------------------*/
+        $request->merge([
+            'title'     => trim($request->title),
+            'titleAR'   => trim(preg_replace('/\s+/u', ' ', $request->titleAR)),
+            'productcode' => trim($request->productcode),
+        ]);
 
-            if (preg_match('/boundary=([^;]+)/', $request->header('Content-Type'), $matches)) {
-                $boundary = '--' . trim($matches[1]);
-            }
-
-            if ($boundary && $content) {
-                $parts = explode($boundary, $content);
-                $parsedData = [];
-                $parsedFiles = [];
-
-                foreach ($parts as $index => $part) {
-                    $part = trim($part);
-                    if (empty($part) || $part === '--') {
-                        continue;
-                    }
-
-                    // Check if this is a file upload (has filename attribute)
-                    if (preg_match('/Content-Disposition:\s*form-data;\s*name="([^"]+)";\s*filename="([^"]+)"(?:\s*\r?\nContent-Type:\s*([^\r\n]+))?\s*\r?\n\r?\n(.*)/s', $part, $fileMatches)) {
-                        $fieldName = $fileMatches[1];
-                        $fileName = $fileMatches[2];
-                        $contentType = isset($fileMatches[3]) && !empty($fileMatches[3]) ? trim($fileMatches[3]) : 'application/octet-stream';
-                        $fileContent = $fileMatches[4];
-                        
-                        // Remove trailing boundary if present
-                        $fileContent = preg_replace('/\r?\n--.*$/s', '', $fileContent);
-                        $fileContent = rtrim($fileContent, "\r\n");
-
-                        if (strlen($fileContent) > 0) {
-                            // Create temporary file
-                            $tempFile = tempnam(sys_get_temp_dir(), 'laravel_upload_');
-                            file_put_contents($tempFile, $fileContent);
-
-                            // Create UploadedFile instance
-                            $uploadedFile = new UploadedFile(
-                                $tempFile,
-                                $fileName,
-                                $contentType,
-                                null,
-                                true // test mode
-                            );
-
-                            $parsedFiles[$fieldName] = $uploadedFile;
-                        }
-                    }
-                    // Check if this is a regular text field (no filename attribute)
-                    elseif (preg_match('/Content-Disposition:\s*form-data;\s*name="([^"]+)"\s*\r?\n\r?\n(.*)/s', $part, $textMatches)) {
-                        $fieldName = $textMatches[1];
-                        $fieldValue = $textMatches[2];
-                        
-                        // Remove trailing boundary if present
-                        $fieldValue = preg_replace('/\r?\n--.*$/s', '', $fieldValue);
-                        $fieldValue = trim($fieldValue, "\r\n");
-
-                        if ($fieldName !== '_method') {
-                            $parsedData[$fieldName] = $fieldValue;
-                        }
-                    }
-                }
-
-                // Merge parsed data
-                if (!empty($parsedData)) {
-                    $request->merge($parsedData);
-                }
-
-                // Add files to request
-                if (!empty($parsedFiles)) {
-                    foreach ($parsedFiles as $key => $file) {
-                        $request->files->set($key, $file);
-                    }
-                }
-            }
-        }
-
+        /* -------------------------------------------------
+     | Validation
+     |--------------------------------------------------*/
         $validated = $request->validate([
             'fkcategoryid' => 'required|integer|exists:category,categoryid',
+
             'title' => [
                 'required',
                 'string',
                 'max:255',
-                Rule::unique('products', 'title')->ignore($product->productid, 'productid')
+                Rule::unique('products', 'title')
+                    ->ignore($product->productid, 'productid'),
             ],
+
             'titleAR' => [
                 'required',
                 'string',
                 'max:255',
-                Rule::unique('products', 'titleAR')->ignore($product->productid, 'productid')
+                Rule::unique('products', 'titleAR')
+                    ->ignore($product->productid, 'productid'),
             ],
+
             'productcode' => [
                 'required',
                 'string',
                 'max:255',
-                Rule::unique('products', 'productcode')->ignore($product->productid, 'productid')
+                Rule::unique('products', 'productcode')
+                    ->ignore($product->productid, 'productid'),
             ],
-            'shortdescr' => 'required|string|max:1800',
-            'shortdescrAR' => 'required|string|max:1800',
-            'longdescr' => 'nullable|string',
-            'longdescrAR' => 'nullable|string',
-            'price' => 'required|numeric|min:0',
-            'discount' => 'nullable|numeric|min:0',
-            'sellingprice' => 'required|numeric|min:0',
-            'metatitle' => 'nullable|string|max:500',
-            'metatitleAR' => 'nullable|string|max:500',
-            'metakeyword' => 'nullable|string|max:1000',
-            'metakeywordAR' => 'nullable|string|max:1000',
-            'metadescr' => 'nullable|string|max:1500',
-            'metadescrAR' => 'nullable|string|max:1000',
+
+            'shortdescr'     => 'required|string|max:1800',
+            'shortdescrAR'   => 'required|string|max:1800',
+            'longdescr'      => 'nullable|string',
+            'longdescrAR'    => 'nullable|string',
+
+            'price'          => 'required|numeric|min:0',
+            'discount'       => 'nullable|numeric|min:0',
+            'sellingprice'   => 'required|numeric|min:0',
+
             'photo1' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:10240',
             'photo2' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:10240',
             'photo3' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:10240',
             'photo4' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:10240',
             'photo5' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:10240',
-            'video_file' => 'nullable|mimes:mp4,avi,mov,wmv,flv,webm|max:102400',
+
+            'video_file'       => 'nullable|mimes:mp4,avi,mov,wmv,flv,webm|max:102400',
             'videoposter_file' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:10240',
-            'video' => 'nullable|string|max:500',
-            'videoposter' => 'nullable|string|max:500',
-            'ispublished' => 'nullable',
-            'isnew' => 'nullable',
-            'ispopular' => 'nullable',
-            'isgift' => 'nullable',
-            'internation_ship' => 'nullable',
-            'productcategoryid' => 'nullable|integer',
-            'productcategoryid2' => 'nullable|integer',
-            'productcategoryid3' => 'nullable|integer',
         ], [
-            'fkcategoryid.required' => 'Category is required.',
-            'fkcategoryid.exists' => 'Selected category does not exist.',
-            'title.required' => 'Product title (EN) is required.',
-            'title.unique' => 'This product title (EN) already exists.',
-            'titleAR.required' => 'Product title (AR) is required.',
-            'titleAR.unique' => 'This product title (AR) already exists.',
-            'productcode.required' => 'Product code is required.',
+            'title.unique'     => 'This product title (EN) already exists.',
+            'titleAR.unique'   => 'This product title (AR) already exists.',
             'productcode.unique' => 'This product code already exists.',
-            'shortdescr.required' => 'Short description (EN) is required.',
-            'shortdescrAR.required' => 'Short description (AR) is required.',
-            'price.required' => 'Price is required.',
-            'sellingprice.required' => 'Selling price is required.',
         ]);
 
-        // Handle boolean fields
-        $validated['ispublished'] = $request->has('ispublished') ? 1 : 0;
-        $validated['isnew'] = $request->has('isnew') ? 1 : 0;
-        $validated['ispopular'] = $request->has('ispopular') ? 1 : 0;
-        $validated['isgift'] = $request->has('isgift') ? 1 : 0;
-        $validated['internation_ship'] = $request->has('internation_ship') ? 1 : 0;
-        $validated['discount'] = $validated['discount'] ?? 0;
-        $validated['updatedby'] = auth()->id() ?? 1;
+        /* -------------------------------------------------
+     | Boolean flags
+     |--------------------------------------------------*/
+        $validated['ispublished']      = $request->boolean('ispublished');
+        $validated['isnew']            = $request->boolean('isnew');
+        $validated['ispopular']        = $request->boolean('ispopular');
+        $validated['isgift']           = $request->boolean('isgift');
+        $validated['internation_ship'] = $request->boolean('internation_ship');
+
+        $validated['discount']    = $validated['discount'] ?? 0;
+        $validated['updatedby']   = auth()->id() ?? 1;
         $validated['updateddate'] = now();
 
-        // Handle file uploads - check all possible ways files might be accessible
-        // Handle photo1-5 uploads using trait
+        /* -------------------------------------------------
+     | Handle image uploads
+     |--------------------------------------------------*/
         for ($i = 1; $i <= 5; $i++) {
-            $photoFile = $request->file("photo{$i}");
-            
-            // If not found, try accessing directly from files bag
-            if (!$photoFile && $request->files->has("photo{$i}")) {
-                $photoFile = $request->files->get("photo{$i}");
-            }
-            
-            if ($photoFile && $photoFile->isValid()) {
-                $validated["photo{$i}"] = $this->uploadImage($photoFile, $product->{"photo{$i}"}, 'product');
+            if ($request->hasFile("photo{$i}")) {
+                $validated["photo{$i}"] = $this->uploadImage(
+                    $request->file("photo{$i}"),
+                    $product->{"photo{$i}"},
+                    'product'
+                );
             } else {
-                // Keep existing photo if not uploading new one
-                $validated["photo{$i}"] = $product->{"photo{$i}"} ?? '';
+                $validated["photo{$i}"] = $product->{"photo{$i}"};
             }
         }
 
-        // Handle video file upload
-        $videoFile = $request->file('video_file');
-        if (!$videoFile && $request->files->has('video_file')) {
-            $videoFile = $request->files->get('video_file');
-        }
-        
-        if ($videoFile && $videoFile->isValid()) {
-            // Delete old video if exists
+        /* -------------------------------------------------
+     | Video upload
+     |--------------------------------------------------*/
+        if ($request->hasFile('video_file')) {
             if ($product->video) {
                 $this->deleteImage($product->video, 'product');
             }
-            $videoName = time() . '_' . uniqid() . '_video.' . $videoFile->getClientOriginalExtension();
-            $videoFile->storeAs('upload/product', $videoName, 'public');
+
+            $videoName = time() . '_' . uniqid() . '.' .
+                $request->video_file->getClientOriginalExtension();
+
+            $request->video_file->storeAs('upload/product', $videoName, 'public');
             $validated['video'] = $videoName;
         }
-        
-        // Handle video poster file upload
-        $posterFile = $request->file('videoposter_file');
-        if (!$posterFile && $request->files->has('videoposter_file')) {
-            $posterFile = $request->files->get('videoposter_file');
+
+        if ($request->hasFile('videoposter_file')) {
+            $validated['videoposter'] = $this->uploadImage(
+                $request->videoposter_file,
+                $product->videoposter,
+                'product'
+            );
         }
-        
-        if ($posterFile && $posterFile->isValid()) {
-            $validated['videoposter'] = $this->uploadImage($posterFile, $product->videoposter, 'product');
-        }
+
+        /* -------------------------------------------------
+     | DB Transaction (important)
+     |--------------------------------------------------*/
+        DB::beginTransaction();
 
         try {
             $product->update($validated);
-            
-            // Handle productsfilter (sizes, colors, occasions)
-            $storeId = 1; // Default store ID
-            
-            // Delete existing filters
-            DB::table('productsfilter')->where('fkproductid', $product->productid)->delete();
-            
-            // Save sizes with quantities
-            if ($request->has('sizes')) {
-                $sizes = $request->input('sizes', []);
-                foreach ($sizes as $sizeData) {
-                    if (isset($sizeData['filtervalueid']) && isset($sizeData['qty'])) {
-                        DB::table('productsfilter')->insert([
-                            'fkproductid' => $product->productid,
-                            'fkfiltervalueid' => $sizeData['filtervalueid'],
-                            'filtercode' => 'size',
-                            'qty' => $sizeData['qty'] ?? 0,
-                            'fkstoreid' => $storeId,
-                            'barcode' => $sizeData['barcode'] ?? null,
-                        ]);
-                    }
-                }
-            }
-            
-            // Save color
-            if ($request->has('color') && $request->color) {
-                \DB::table('productsfilter')->insert([
-                    'fkproductid' => $product->productid,
-                    'fkfiltervalueid' => $request->color,
-                    'filtercode' => 'color',
-                    'qty' => 0,
-                    'fkstoreid' => $storeId,
-                    'barcode' => null,
-                ]);
-            }
-            
-            // Save occasions
-            if ($request->has('occasions') && is_array($request->occasions)) {
-                foreach ($request->occasions as $occasionId) {
-                    \DB::table('productsfilter')->insert([
-                        'fkproductid' => $product->productid,
-                        'fkfiltervalueid' => $occasionId,
-                        'filtercode' => 'occassion',
-                        'qty' => 0,
-                        'fkstoreid' => $storeId,
-                        'barcode' => null,
+
+            // Remove old filters
+            DB::table('productsfilter')
+                ->where('fkproductid', $product->productid)
+                ->delete();
+
+            $storeId = 1;
+
+            // Sizes
+            foreach ($request->input('sizes', []) as $size) {
+                if (!empty($size['filtervalueid'])) {
+                    DB::table('productsfilter')->insert([
+                        'fkproductid'     => $product->productid,
+                        'fkfiltervalueid' => $size['filtervalueid'],
+                        'filtercode'     => 'size',
+                        'qty'            => $size['qty'] ?? 0,
+                        'fkstoreid'      => $storeId,
+                        'barcode'        => $size['barcode'] ?? null,
                     ]);
                 }
             }
 
-            if ($request->ajax() || $request->expectsJson()) {
+            // Color
+            if ($request->filled('color')) {
+                DB::table('productsfilter')->insert([
+                    'fkproductid'     => $product->productid,
+                    'fkfiltervalueid' => $request->color,
+                    'filtercode'     => 'color',
+                    'qty'            => 0,
+                    'fkstoreid'      => $storeId,
+                ]);
+            }
+
+            // Occasions
+            foreach ((array)$request->occasions as $occasionId) {
+                DB::table('productsfilter')->insert([
+                    'fkproductid'     => $product->productid,
+                    'fkfiltervalueid' => $occasionId,
+                    'filtercode'     => 'occassion',
+                    'qty'            => 0,
+                    'fkstoreid'      => $storeId,
+                ]);
+            }
+
+            DB::commit();
+
+            // Handle both AJAX and regular form submissions
+            if ($request->ajax() || $request->wantsJson()) {
                 return response()->json([
                     'success' => true,
                     'message' => 'Product updated successfully',
-                    'data' => $product
+                    'data'    => $product->fresh(),
                 ]);
             }
 
             return redirect()->route('admin.products')
                 ->with('success', 'Product updated successfully');
-        } catch (\Illuminate\Database\QueryException $e) {
-            // Handle database constraint violations
-            $errorMessage = 'An error occurred while updating the product.';
-            $errorField = 'productcode';
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            Log::error('Product update failed', ['error' => $e->getMessage()]);
 
-            if ($e->getCode() == 23000) {
-                if (strpos($e->getMessage(), 'productcode') !== false) {
-                    $errorMessage = 'This product code already exists. Please choose a different code.';
-                    $errorField = 'productcode';
-                } elseif (strpos($e->getMessage(), 'title') !== false && strpos($e->getMessage(), 'titleAR') === false) {
-                    $errorMessage = 'This product title (EN) already exists. Please choose a different title.';
-                    $errorField = 'title';
-                } elseif (strpos($e->getMessage(), 'titleAR') !== false) {
-                    $errorMessage = 'This product title (AR) already exists. Please choose a different title.';
-                    $errorField = 'titleAR';
-                } else {
-                    $errorMessage = 'A database constraint violation occurred. Please check your input.';
-                }
-            } else {
-                Log::error('Product update error: ' . $e->getMessage());
-                $errorMessage = 'An error occurred while updating the product: ' . $e->getMessage();
-            }
-
-            if ($request->ajax() || $request->expectsJson()) {
+            // Handle both AJAX and regular form submissions
+            if ($request->ajax() || $request->wantsJson()) {
                 return response()->json([
                     'success' => false,
-                    'message' => $errorMessage,
-                    'errors' => [$errorField => [$errorMessage]]
-                ], 422);
+                    'message' => 'Failed to update product: ' . $e->getMessage(),
+                ], 500);
             }
 
-            return back()->withErrors([$errorField => $errorMessage])->withInput();
-        } catch (\Exception $e) {
-            Log::error('Product update error: ' . $e->getMessage());
-
-            if ($request->ajax() || $request->expectsJson()) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'An unexpected error occurred: ' . $e->getMessage(),
-                    'errors' => ['general' => ['An unexpected error occurred.']]
-                ], 422);
-            }
-
-            return back()->withErrors(['general' => 'An unexpected error occurred.'])->withInput();
+            return back()
+                ->withErrors(['error' => 'Failed to update product: ' . $e->getMessage()])
+                ->withInput();
         }
     }
+
 
     public function destroy(Request $request, $id)
     {
@@ -705,7 +593,7 @@ class ProductController extends Controller
                     $this->deleteImage($product->$photoField, 'product');
                 }
             }
-            
+
             // Delete video and poster if they exist
             if ($product->video) {
                 $this->deleteImage($product->video, 'product');
