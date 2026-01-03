@@ -216,7 +216,7 @@
                                         <div class="media">
                                             <a
                                                 href="{{ route('product.show', ['locale' => $locale, 'category' => $categorycode, 'product' => $productcode]) }}">
-                                                <img src="{{ $imageUrl }}storage/gallary-{{ $item->image ?? '' }}"
+                                                <img src="{{ asset('storage/upload/product/' . ($item->image ?? '')) }}"
                                                     width="80" height="93" alt="{{ $item->title ?? '' }}">
                                             </a>
                                         </div>

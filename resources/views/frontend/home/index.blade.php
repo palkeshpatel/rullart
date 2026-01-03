@@ -102,7 +102,7 @@
                                 <a
                                     href="{{ route('product.show', ['locale' => $locale, 'category' => $product->categorycode, 'product' => $product->productcode]) }}">
                                     <div class="product-image">
-                                        <img src="{{ \App\Helpers\ImageHelper::url($photo, 'thumb-') }}"
+                                        <img src="{{ asset('storage/upload/product/' . $photo) }}"
                                             alt="{{ $productTitle }}" class="img-responsive">
                                         @if ($discount > 0)
                                             <span class="discount-badge">{{ round(($discount / $price) * 100) }}%</span>

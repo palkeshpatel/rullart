@@ -16,9 +16,9 @@ class DownloadMissingImages extends Command
      * @var string
      */
     protected $signature = 'images:download
-                            {--source=https://www.rullart.com/ : Source URL to download from}
+                            {--source=https://www.rullart.com : Source URL to download from}
                             {--check-only : Only check which images are missing, don\'t download}
-                            {--type=category : Type of images to download (all, products, homegallery, category)}';
+                            {--type=products : Type of images to download (all, products, homegallery, category)}';
 
     /**
      * The console command description.
@@ -72,12 +72,13 @@ class DownloadMissingImages extends Command
         $this->info("=== Product Images ===");
 
         $products = DB::table('products')
-            ->select('productid', 'productcode', 'photo1', 'photo2', 'photo3', 'photo4', 'photo5', 'shortdescr')
+            ->select('productid', 'productcode', 'photo1', 'photo2', 'photo3', 'photo4', 'photo5', 'video', 'videoposter', 'shortdescr')
             ->where('ispublished', 1)
             ->get();
 
         $images = [];
         foreach ($products as $product) {
+            // Product photos
             for ($i = 1; $i <= 5; $i++) {
                 $photoField = 'photo' . $i;
                 if (!empty($product->$photoField)) {
@@ -88,6 +89,15 @@ class DownloadMissingImages extends Command
                         'type' => $photoField
                     ];
                 }
+            }
+            // Video poster
+            if (!empty($product->videoposter)) {
+                $images[] = [
+                    'filename' => $product->videoposter,
+                    'productid' => $product->productid,
+                    'productcode' => $product->productcode,
+                    'type' => 'videoposter'
+                ];
             }
         }
 
@@ -108,6 +118,7 @@ class DownloadMissingImages extends Command
             $filename = $image['filename'];
             $localPath = $storagePath . '/' . $filename;
 
+            // Check if file already exists
             if (File::exists($localPath)) {
                 $this->skipped++;
                 $bar->advance();
@@ -122,23 +133,43 @@ class DownloadMissingImages extends Command
                 continue;
             }
 
-            $sourceUrl = $this->sourceUrl . '/storage/upload/' . $subdirectory . '/' . $filename;
-            $oldSourceUrl = $this->sourceUrl . '/resources/storage/' . $filename;
+            // URL encode the filename for the source URL (handles spaces, special chars)
+            $encodedFilename = rawurlencode($filename);
+            
+            // Try multiple source paths (try most common first)
+            $sourceUrls = [
+                // Old path on live site: /resources/storage/filename (most common)
+                $this->sourceUrl . '/resources/storage/' . $encodedFilename,
+                $this->sourceUrl . '/resources/storage/' . $filename,
+                // New path: /storage/upload/product/filename
+                $this->sourceUrl . '/storage/upload/' . $subdirectory . '/' . $encodedFilename,
+                $this->sourceUrl . '/storage/upload/' . $subdirectory . '/' . $filename,
+            ];
 
             $downloaded = false;
+            $lastError = '';
 
+            foreach ($sourceUrls as $index => $sourceUrl) {
             if ($this->downloadImage($sourceUrl, $localPath, $filename)) {
-                $this->downloaded++;
-                $downloaded = true;
-            } else {
-                $this->line("  Trying old path for: {$filename}");
-                if ($this->downloadImage($oldSourceUrl, $localPath, $filename)) {
                     $this->downloaded++;
                     $downloaded = true;
+                    $this->line("  ✓ Downloaded: {$filename}");
+                    break;
+                } else {
+                    // Try to get more info on last attempt
+                    if ($index === count($sourceUrls) - 1) {
+                        try {
+                            $response = \Illuminate\Support\Facades\Http::timeout(5)->get($sourceUrl);
+                            $lastError = " (HTTP {$response->status()})";
+                        } catch (\Exception $e) {
+                            $lastError = " (" . $e->getMessage() . ")";
+                        }
+                    }
                 }
             }
 
             if (!$downloaded) {
+                $this->line("  ✗ Failed: {$filename}{$lastError}");
                 $this->failed++;
             }
 
@@ -329,15 +360,59 @@ class DownloadMissingImages extends Command
     protected function downloadImage($sourceUrl, $localPath, $filename)
     {
         try {
-            $response = Http::timeout(30)->get($sourceUrl);
+            $response = Http::timeout(30)
+                ->withOptions([
+                    'verify' => false, // Allow self-signed certificates
+                    'allow_redirects' => true,
+                ])
+                ->get($sourceUrl);
 
-            if ($response->successful() && $response->header('Content-Type') && strpos($response->header('Content-Type'), 'image') !== false) {
-                File::put($localPath, $response->body());
+            if ($response->successful() && $response->status() === 200) {
+                $contentType = $response->header('Content-Type', '');
+                $body = $response->body();
+                
+                // Check if we got actual content (not empty)
+                if (empty($body)) {
+                    return false;
+                }
+                
+                // Check if it's an image or video file, or if content looks like binary
+                $isImage = strpos($contentType, 'image') !== false;
+                $isVideo = strpos($contentType, 'video') !== false;
+                $isBinary = !empty($body) && strlen($body) > 100; // Binary files are usually larger
+                
+                // Check for image file signatures
+                $imageSignatures = [
+                    "\xFF\xD8\xFF", // JPEG
+                    "\x89\x50\x4E\x47", // PNG
+                    "GIF87a", // GIF
+                    "GIF89a", // GIF
+                    "RIFF", // WebP (starts with RIFF)
+                ];
+                
+                $hasImageSignature = false;
+                foreach ($imageSignatures as $signature) {
+                    if (substr($body, 0, strlen($signature)) === $signature) {
+                        $hasImageSignature = true;
+                        break;
+                    }
+                }
+                
+                if ($isImage || $isVideo || $hasImageSignature || $isBinary) {
+                    // Ensure directory exists
+                    $directory = dirname($localPath);
+                    if (!File::exists($directory)) {
+                        File::makeDirectory($directory, 0755, true);
+                    }
+                    
+                    File::put($localPath, $body);
                 return true;
-            } else {
-                return false;
+                }
             }
+            
+            return false;
         } catch (\Exception $e) {
+            // Don't log every error to avoid spam, just return false
             return false;
         }
     }

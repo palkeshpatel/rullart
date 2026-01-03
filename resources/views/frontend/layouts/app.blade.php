@@ -22,13 +22,13 @@
         <meta property="og:type" content="product" />
         @if(isset($productData) && !empty($productData->shortdescr))
             <meta property="og:title" content="{{ $productData->shortdescr }}" />
-            <meta property="og:image" content="{{ !empty($productData->photo1) ? \App\Helpers\ImageHelper::url($productData->photo1, 'detail-') : '' }}" />
+            <meta property="og:image" content="{{ !empty($productData->photo1) ? asset('storage/upload/product/' . $productData->photo1) : '' }}" />
             <meta property="og:description" content="{{ strip_tags($productData->longdescr ?? '') }}" />
         @endif
     @else
         <meta property="og:type" content="website" />
         <meta property="og:title" content="Rullart.com" />
-        <meta property="og:image" content="{{ \App\Helpers\ImageHelper::url('14644-IMG_3245.JPG', 'detail-') }}" />
+        <meta property="og:image" content="{{ asset('storage/upload/product/14644-IMG_3245.JPG') }}" />
         <meta property="og:description" content="{{ strip_tags($metaDescription ?? '') }}" />
     @endif
 

@@ -186,7 +186,7 @@
                                                 <a
                                                     href="{{ route('product.show', ['locale' => $locale, 'category' => $row->categorycode, 'product' => $row->productcode]) }}">
                                                     <span class="product-image">
-                                                        <img src="{{ url('storage/thumb-' . $photo) }}"
+                                                        <img src="{{ asset('storage/upload/product/' . $photo) }}"
                                                             alt="{{ $productTitle }}">
                                                     </span>
                                                     <span class="product-content">

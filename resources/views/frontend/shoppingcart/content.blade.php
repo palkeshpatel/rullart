@@ -63,7 +63,7 @@
                 <div class="cart-item clearfix {{ $strike }}">
                     <div class="media">
                         <a href="{{ route('product.show', ['locale' => $locale, 'category' => $categorycode, 'product' => $productcode]) }}">
-                            <img src="{{ \App\Helpers\ImageHelper::url($data->image, 'gallary-') }}" width="80" height="93" alt="{{ $data->title }}">
+                            <img src="{{ asset('storage/upload/product/' . $data->image) }}" width="80" height="93" alt="{{ $data->title }}">
                         </a>
                     </div>
                     <div class="data">

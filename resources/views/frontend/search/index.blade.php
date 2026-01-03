@@ -58,7 +58,7 @@
                                     <div class="product-item">
                                         <a href="{{ route('product.show', ['locale' => $locale, 'category' => $product->categorycode, 'product' => $product->productcode]) }}" title="{{ $productTitle }}">
                                             <span class="product-image">
-                                                <img src="{{ \App\Helpers\ImageHelper::url($photo, 'thumb-') }}" alt="{{ $productTitle }}">
+                                                <img src="{{ asset('storage/upload/product/' . $photo) }}" alt="{{ $productTitle }}">
                                             </span>
                                             <span class="product-content">
                                                 <span class="product-title">{{ $productTitle }}</span>

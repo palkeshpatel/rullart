@@ -20,7 +20,7 @@
                 <div class="wish-item clearfix">
                     <div class="media">
                         <a href="{{ route('product.show', ['locale' => $locale, 'category' => $item->categorycode, 'product' => $item->productcode]) }}">
-                            <img src="{{ url('storage/gallary-' . $photo) }}" width="80" height="93" alt="{{ $productTitle }}">
+                            <img src="{{ asset('storage/upload/product/' . $photo) }}" width="80" height="93" alt="{{ $productTitle }}">
                         </a>
                     </div>
                     <div class="data">

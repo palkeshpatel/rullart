@@ -54,9 +54,9 @@
                                 @foreach ($photos as $photo)
                                     @if (!empty($photo) && $photo != 'noimage.jpg')
                                         <div>
-                                            <a class="img-zoom" href="{{ url('storage/' . $photo) }}">
-                                                <img src="{{ url('storage/detail-' . $photo) }}"
-                                                    data-imagezoom="{{ url('storage/' . $photo) }}"
+                                            <a class="img-zoom" href="{{ asset('storage/upload/product/' . $photo) }}">
+                                                <img src="{{ asset('storage/upload/product/' . $photo) }}"
+                                                    data-imagezoom="{{ asset('storage/upload/product/' . $photo) }}"
                                                     data-zoomviewsize="[600,600]">
                                             </a>
                                         </div>
@@ -65,9 +65,10 @@
                                 @if (!empty($productData->video))
                                     <div class="video-slide">
                                         <video id="myVideo1" class="slide-video slide-media" loop muted preload="metadata"
-                                            poster="{{ !empty($productData->videoposter) ? url('storage/' . $productData->videoposter) : url('storage/playvideo.png') }}"
+                                            poster="{{ !empty($productData->videoposter) ? asset('storage/upload/product/' . $productData->videoposter) : asset('storage/playvideo.png') }}"
                                             playsinline controls="true" autoplay>
-                                            <source src="{{ url('storage/' . $productData->video) }}" type="video/mp4" />
+                                            <source src="{{ asset('storage/upload/product/' . $productData->video) }}"
+                                                type="video/mp4" />
                                         </video>
                                     </div>
                                 @endif
@@ -79,8 +80,8 @@
                                         @if (!empty($photo) && $photo != 'noimage.jpg')
                                             <div class="thumb-item">
                                                 <a href="javascript:;">
-                                                    <img src="{{ url('storage/gallary-' . $photo) }}" width="80"
-                                                        height="93">
+                                                    <img src="{{ asset('storage/upload/product/' . $photo) }}"
+                                                        width="80" height="93">
                                                 </a>
                                             </div>
                                         @endif
@@ -88,14 +89,14 @@
                                     @if (!empty($productData->videoposter))
                                         <div class="thumb-item">
                                             <a href="javascript:;">
-                                                <img src="{{ url('storage/gallary-' . $productData->videoposter) }}"
+                                                <img src="{{ asset('storage/upload/product/' . $productData->videoposter) }}"
                                                     width="80" height="93">
                                             </a>
                                         </div>
                                     @elseif(!empty($productData->video))
                                         <div class="thumb-item">
                                             <a href="javascript:;">
-                                                <img src="{{ url('storage/playvideo.png') }}" width="80"
+                                                <img src="{{ asset('storage/playvideo.png') }}" width="80"
                                                     height="93">
                                             </a>
                                         </div>
@@ -369,7 +370,7 @@
                                     <a
                                         href="{{ route('product.show', ['locale' => $locale, 'category' => $related->categorycode, 'product' => $related->productcode]) }}">
                                         <span class="product-image">
-                                            <img src="{{ \App\Helpers\ImageHelper::url($relatedPhoto, 'thumb-') }}"
+                                            <img src="{{ asset('storage/upload/product/' . $relatedPhoto) }}"
                                                 alt="{{ $relatedTitle }}">
                                         </span>
                                         <span class="product-content">
