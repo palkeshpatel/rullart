@@ -16,7 +16,7 @@ class Product extends Model
         'longdescr', 'longdescrAR', 'price', 'discount', 'sellingprice', 
         'ispublished', 'isnew', 'ispopular', 'photo1', 'photo2', 'photo3', 'photo4', 'photo5',
         'metakeyword', 'metadescr', 'metatitle', 'metakeywordAR', 'metadescrAR', 'metatitleAR',
-        'isgift', 'internation_ship', 'productcategoryid', 'productcategoryid2', 'productcategoryid3',
+        'isgift', 'internation_ship', 'productcategoryid', 'productcategoryid2', 'productcategoryid3', 'productcategoryid4',
         'video', 'videoposter', 'productcode_old', 'updatedby', 'updateddate'
     ];
 

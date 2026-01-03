@@ -1,12 +1,12 @@
-@extends('layouts.vertical', ['title' => 'Gift Products List'])
+@extends('layouts.vertical', ['title' => 'Gift Products 4 List'])
 
 @section('content')
-    @include('layouts.partials/page-title', ['title' => 'Gift Products List'])
+    @include('layouts.partials/page-title', ['title' => 'Gift Products 4 List'])
 
     <div class="row">
         <div class="col-12">
             <!-- Filters Section - Top Bar -->
-            <form method="GET" action="{{ route('admin.gift-products') }}" data-table-filters id="giftProductsFilterForm">
+            <form method="GET" action="{{ route('admin.gift-products4') }}" data-table-filters id="giftProducts4FilterForm">
                 <div class="card mb-3">
                     <div class="card-body">
                         <div class="row align-items-end">
@@ -32,12 +32,12 @@
                 </div>
             </form>
 
-            <!-- Gift Products Table Card -->
+            <!-- Gift Products 4 Table Card -->
             <div class="card">
                 <div class="card-header justify-content-between align-items-center border-dashed">
-                    <h4 class="card-title mb-0">Gift Products List</h4>
-                    <a href="javascript:void(0);" class="btn btn-success btn-sm add-gift-product-btn">
-                        <i class="ti ti-plus me-1"></i> Add Gift Product
+                    <h4 class="card-title mb-0">Gift Products 4 List</h4>
+                    <a href="javascript:void(0);" class="btn btn-success btn-sm add-gift-product4-btn">
+                        <i class="ti ti-plus me-1"></i> Add Gift Product 4
                     </a>
                 </div>
                 <div class="card-body">
@@ -69,7 +69,7 @@
 
                     <!-- Table Container -->
                     <div class="table-container">
-                        @include('admin.partials.gift-products-table', ['products' => $products])
+                        @include('admin.partials.gift-products4-table', ['products' => $products])
                     </div>
 
                     <!-- Pagination -->
@@ -82,17 +82,17 @@
     </div>
 
     <!-- Modal Container -->
-    <div id="giftProductModalContainer"></div>
-    <div id="giftProductViewModalContainer"></div>
+    <div id="giftProduct4ModalContainer"></div>
+    <div id="giftProduct4ViewModalContainer"></div>
 @endsection
 
 @section('scripts')
     <script>
         // Wait for jQuery to be available
         (function() {
-            function initGiftProductScript() {
+            function initGiftProduct4Script() {
                 if (typeof jQuery === 'undefined' || typeof AdminAjax === 'undefined' || typeof jQuery.fn.validate === 'undefined') {
-                    setTimeout(initGiftProductScript, 50);
+                    setTimeout(initGiftProduct4Script, 50);
                     return;
                 }
 
@@ -101,61 +101,61 @@
                 $(document).ready(function() {
                     loadTableFromURL();
 
-                    /* ADD GIFT PRODUCT BUTTON */
-                    $(document).on('click', '.add-gift-product-btn', function(e) {
+                    /* ADD GIFT PRODUCT 4 BUTTON */
+                    $(document).on('click', '.add-gift-product4-btn', function(e) {
                         e.preventDefault();
-                        openGiftProductModal(null);
+                        openGiftProduct4Modal(null);
                     });
 
-                    /* VIEW GIFT PRODUCT BUTTON */
-                    $(document).on('click', '.view-gift-product-btn', function(e) {
+                    /* VIEW GIFT PRODUCT 4 BUTTON */
+                    $(document).on('click', '.view-gift-product4-btn', function(e) {
                         e.preventDefault();
                         const productId = $(this).data('product-id');
-                        openGiftProductViewModal(productId);
+                        openGiftProduct4ViewModal(productId);
                     });
 
-                    /* EDIT GIFT PRODUCT BUTTON */
-                    $(document).on('click', '.edit-gift-product-btn', function(e) {
+                    /* EDIT GIFT PRODUCT 4 BUTTON */
+                    $(document).on('click', '.edit-gift-product4-btn', function(e) {
                         e.preventDefault();
                         const productId = $(this).data('product-id');
-                        openGiftProductModal(productId);
+                        openGiftProduct4Modal(productId);
                     });
 
-                    /* DELETE GIFT PRODUCT BUTTON */
-                    $(document).on('click', '.delete-gift-product-btn', function(e) {
+                    /* DELETE GIFT PRODUCT 4 BUTTON */
+                    $(document).on('click', '.delete-gift-product4-btn', function(e) {
                         e.preventDefault();
                         const productId = $(this).data('product-id');
-                        const productName = $(this).data('product-name') || 'this gift product';
-                        if (confirm(`Are you sure you want to remove ${productName} from gift products?`)) {
-                            deleteGiftProduct(productId);
+                        const productName = $(this).data('product-name') || 'this gift product 4';
+                        if (confirm(`Are you sure you want to remove ${productName} from gift products 4?`)) {
+                            deleteGiftProduct4(productId);
                         }
                     });
 
-                    /* OPEN GIFT PRODUCT MODAL */
-                    function openGiftProductModal(productId) {
+                    /* OPEN GIFT PRODUCT 4 MODAL */
+                    function openGiftProduct4Modal(productId) {
                         const url = productId
-                            ? '{{ route('admin.gift-products.edit', ':id') }}'.replace(':id', productId)
-                            : '{{ route('admin.gift-products.create') }}';
+                            ? '{{ route('admin.gift-products4.edit', ':id') }}'.replace(':id', productId)
+                            : '{{ route('admin.gift-products4.create') }}';
 
-                        $('#giftProductModalContainer').html('<div class="text-center p-5"><div class="spinner-border" role="status"></div></div>');
+                        $('#giftProduct4ModalContainer').html('<div class="text-center p-5"><div class="spinner-border" role="status"></div></div>');
 
                         AdminAjax.get(url).then(response => {
-                            $('#giftProductModalContainer').html(response.html);
-                            const modalEl = document.getElementById('giftProductModal');
+                            $('#giftProduct4ModalContainer').html(response.html);
+                            const modalEl = document.getElementById('giftProduct4Modal');
                             if (modalEl) {
                                 const modal = new bootstrap.Modal(modalEl);
                                 modal.show();
                                 // Setup validation after modal is shown
-                                setupGiftProductValidation(productId, modal);
+                                setupGiftProduct4Validation(productId, modal);
                             }
                         }).catch(err => {
-                            console.error('Error loading gift product form:', err);
+                            console.error('Error loading gift product 4 form:', err);
                         });
                     }
 
                     /* VALIDATION SETUP */
-                    function setupGiftProductValidation(productId, modal) {
-                        const $form = $('#giftProductForm');
+                    function setupGiftProduct4Validation(productId, modal) {
+                        const $form = $('#giftProduct4Form');
                         if (!$form.length || $form.data('validator')) {
                             return;
                         }
@@ -163,6 +163,7 @@
                         $form.validate({
                             rules: {
                                 fkcategoryid: { required: true },
+                                productcategoryid4: { required: true },
                                 title: { required: true },
                                 titleAR: { required: true },
                                 productcode: { required: true },
@@ -173,6 +174,7 @@
                             },
                             messages: {
                                 fkcategoryid: 'Category is required.',
+                                productcategoryid4: 'Gift Product Category 4 is required.',
                                 title: 'Product title (EN) is required.',
                                 titleAR: 'Product title (AR) is required.',
                                 productcode: 'Product code is required.',
@@ -193,13 +195,13 @@
                                 error.insertAfter(element);
                             },
                             submitHandler(form) {
-                                submitGiftProductForm(form, productId, modal);
+                                submitGiftProduct4Form(form, productId, modal);
                             }
                         });
                     }
 
                     /* SUBMIT FORM */
-                    function submitGiftProductForm(form, productId, modal) {
+                    function submitGiftProduct4Form(form, productId, modal) {
                         const formData = new FormData(form);
                         const url = form.action;
                         const method = form.querySelector('[name="_method"]')?.value || 'POST';
@@ -209,27 +211,27 @@
                         submitBtn.disabled = true;
                         submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Saving...';
 
-                        console.log('Submitting Gift Product form...', { url, method, productId });
+                        console.log('Submitting Gift Product 4 form...', { url, method, productId });
 
                         AdminAjax.request(url, method, formData)
                             .then(res => {
                                 console.log('Response received:', res);
                                 if (res.success === true) {
                                     console.log('Success! Redirecting to list page...');
-                                    showToast(res.message || 'Gift product saved successfully', 'success');
+                                    showToast(res.message || 'Gift Product 4 saved successfully', 'success');
                                     modal.hide();
                                     // Redirect to list page after successful save
                                     setTimeout(() => {
                                         console.log('Redirecting now...');
-                                        window.location.href = '{{ route('admin.gift-products') }}';
+                                        window.location.href = '{{ route('admin.gift-products4') }}';
                                     }, 500);
                                 } else {
                                     console.log('Response success is false:', res);
-                                    showToast(res.message || 'Failed to save gift product', 'error');
+                                    showToast(res.message || 'Failed to save Gift Product 4', 'error');
                                 }
                             })
                             .catch(err => {
-                                let errorMessage = 'Failed to save gift product.';
+                                let errorMessage = 'Failed to save Gift Product 4.';
                                 if (err.message) {
                                     errorMessage = err.message;
                                 } else if (err.errors) {
@@ -241,7 +243,7 @@
                                     }
                                 }
                                 showToast(errorMessage, 'error');
-                                const $form = $('#giftProductForm');
+                                const $form = $('#giftProduct4Form');
                                 $form.find('.is-invalid').removeClass('is-invalid');
                                 if (err.errors) {
                                     Object.keys(err.errors).forEach(field => {
@@ -260,36 +262,36 @@
                             });
                     }
 
-                    /* OPEN GIFT PRODUCT VIEW MODAL */
-                    function openGiftProductViewModal(productId) {
-                        const url = '/admin/giftproducts/' + productId;
+                    /* OPEN GIFT PRODUCT 4 VIEW MODAL */
+                    function openGiftProduct4ViewModal(productId) {
+                        const url = '/admin/giftproducts4/' + productId;
 
-                        $('#giftProductViewModalContainer').html('<div class="text-center p-5"><div class="spinner-border" role="status"></div></div>');
+                        $('#giftProduct4ViewModalContainer').html('<div class="text-center p-5"><div class="spinner-border" role="status"></div></div>');
 
                         AdminAjax.get(url).then(response => {
-                            $('#giftProductViewModalContainer').html(response.html);
-                            const modalEl = document.getElementById('giftProductViewModal');
+                            $('#giftProduct4ViewModalContainer').html(response.html);
+                            const modalEl = document.getElementById('giftProduct4ViewModal');
                             if (modalEl) {
                                 const modal = new bootstrap.Modal(modalEl);
                                 modal.show();
                             }
                         }).catch(err => {
-                            console.error('Error loading gift product view:', err);
+                            console.error('Error loading gift product 4 view:', err);
                         });
                     }
 
-                    /* DELETE GIFT PRODUCT */
-                    function deleteGiftProduct(productId) {
-                        const url = '{{ route('admin.gift-products.destroy', ':id') }}'.replace(':id', productId);
+                    /* DELETE GIFT PRODUCT 4 */
+                    function deleteGiftProduct4(productId) {
+                        const url = '{{ route('admin.gift-products4.destroy', ':id') }}'.replace(':id', productId);
                         
                         AdminAjax.request(url, 'DELETE')
                             .then(res => {
-                                showToast('Gift product removed successfully', 'success');
+                                showToast('Gift product 4 removed successfully', 'success');
                                 loadTableFromURL();
                             })
                             .catch(err => {
-                                console.error('Error deleting gift product:', err);
-                                showToast(err.message || 'Failed to remove gift product.', 'error');
+                                console.error('Error deleting gift product 4:', err);
+                                showToast(err.message || 'Failed to remove gift product 4.', 'error');
                             });
                     }
 
@@ -298,7 +300,7 @@
                         const url = new URL(window.location.href);
                         const params = Object.fromEntries(url.searchParams);
 
-                        AdminAjax.loadTable('{{ route('admin.gift-products') }}', $('.table-container')[0], {
+                        AdminAjax.loadTable('{{ route('admin.gift-products4') }}', $('.table-container')[0], {
                             params: params,
                             onSuccess: function(response) {
                                 if (response.pagination) {
@@ -333,13 +335,13 @@
 
                     /* PER PAGE CHANGE */
                     $('#perPageSelect').on('change', function() {
-                        const form = $('#giftProductsFilterForm');
+                        const form = $('#giftProducts4FilterForm');
                         const formData = new FormData(form[0]);
                         formData.set('per_page', this.value);
                         formData.delete('page');
 
                         const params = Object.fromEntries(formData);
-                        const url = new URL('{{ route('admin.gift-products') }}');
+                        const url = new URL('{{ route('admin.gift-products4') }}');
                         Object.keys(params).forEach(key => {
                             if (params[key]) {
                                 url.searchParams.set(key, params[key]);
@@ -348,6 +350,7 @@
                         window.history.pushState({}, '', url);
                         loadTableFromURL();
                     });
+
                 });
 
                 /* TOAST FUNCTION */
@@ -396,7 +399,7 @@
                     });
                 }
             }
-            initGiftProductScript();
+            initGiftProduct4Script();
         })();
     </script>
 @endsection
