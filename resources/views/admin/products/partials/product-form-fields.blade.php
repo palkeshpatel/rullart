@@ -7,6 +7,7 @@
         <div class="mb-3">
             <label class="form-label">Product Code <span class="text-danger">*</span></label>
             <input type="text" name="productcode" class="form-control" value="{{ old('productcode', $product ? $product->productcode : '') }}" required>
+            <div class="invalid-feedback"></div>
             @error('productcode')
                 <div class="text-danger">{{ $message }}</div>
             @enderror
@@ -23,6 +24,7 @@
                     </option>
                 @endforeach
             </select>
+            <div class="invalid-feedback"></div>
             @error('fkcategoryid')
                 <div class="text-danger">{{ $message }}</div>
             @enderror
@@ -84,6 +86,7 @@
         <div class="mb-3">
             <label class="form-label">Title [EN] <span class="text-danger">*</span></label>
             <input type="text" name="title" class="form-control" value="{{ old('title', $product ? $product->title : '') }}" required>
+            <div class="invalid-feedback"></div>
             @error('title')
                 <div class="text-danger">{{ $message }}</div>
             @enderror
@@ -93,6 +96,7 @@
         <div class="mb-3">
             <label class="form-label">Title [AR] <span class="text-danger">*</span></label>
             <input type="text" name="titleAR" class="form-control" value="{{ old('titleAR', $product ? $product->titleAR : '') }}" required>
+            <div class="invalid-feedback"></div>
             @error('titleAR')
                 <div class="text-danger">{{ $message }}</div>
             @enderror
@@ -102,6 +106,7 @@
         <div class="mb-3">
             <label class="form-label">Short Description [EN] <span class="text-danger">*</span></label>
             <textarea name="shortdescr" class="form-control" rows="3" required>{{ old('shortdescr', $product ? $product->shortdescr : '') }}</textarea>
+            <div class="invalid-feedback"></div>
             @error('shortdescr')
                 <div class="text-danger">{{ $message }}</div>
             @enderror
@@ -111,6 +116,7 @@
         <div class="mb-3">
             <label class="form-label">Short Description [AR] <span class="text-danger">*</span></label>
             <textarea name="shortdescrAR" class="form-control" rows="3" required>{{ old('shortdescrAR', $product ? $product->shortdescrAR : '') }}</textarea>
+            <div class="invalid-feedback"></div>
             @error('shortdescrAR')
                 <div class="text-danger">{{ $message }}</div>
             @enderror
@@ -147,49 +153,53 @@
                         <th>Size</th>
                         <th>Quantity</th>
                         <th>Barcode</th>
-                        <th>Action</th>
                     </tr>
                 </thead>
                 <tbody>
                     @if($product && $productSizes->count() > 0)
-                        @foreach($productSizes as $ps)
-                            <tr>
-                                <td>
-                                    <select name="sizes[][filtervalueid]" class="form-select form-select-sm">
-                                        <option value="0">No Size</option>
-                                        @foreach($sizes as $size)
-                                            <option value="{{ $size->filtervalueid }}" {{ $ps->fkfiltervalueid == $size->filtervalueid ? 'selected' : '' }}>
-                                                {{ $size->filtervalue }}
-                                            </option>
-                                        @endforeach
-                                    </select>
-                                </td>
-                                <td>
-                                    <input type="number" name="sizes[][qty]" class="form-control form-control-sm" min="0" value="{{ $ps->qty }}">
-                                </td>
-                                <td>
-                                    <input type="text" name="sizes[][barcode]" class="form-control form-control-sm" value="{{ $ps->barcode }}">
-                                </td>
-                                <td>
-                                    <button type="button" class="btn btn-sm btn-danger remove-size-row">
-                                        <i class="ti ti-trash"></i>
-                                    </button>
-                                </td>
-                            </tr>
-                        @endforeach
+                        @php
+                            $firstSize = $productSizes->first();
+                        @endphp
+                        <tr>
+                            <td>
+                                <select name="sizes[][filtervalueid]" class="form-select form-select-sm">
+                                    <option value="0">No Size</option>
+                                    @foreach($sizes as $size)
+                                        <option value="{{ $size->filtervalueid }}" {{ $firstSize->fkfiltervalueid == $size->filtervalueid ? 'selected' : '' }}>
+                                            {{ $size->filtervalue }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                            </td>
+                            <td>
+                                <input type="number" name="sizes[][qty]" class="form-control form-control-sm" min="0" value="{{ $firstSize->qty }}">
+                            </td>
+                            <td>
+                                <input type="text" name="sizes[][barcode]" class="form-control form-control-sm" value="{{ $firstSize->barcode }}">
+                            </td>
+                        </tr>
                     @else
                         <tr>
-                            <td colspan="4" class="text-center text-muted">
-                                <small>Use "No Size" option if product does not have size</small>
+                            <td>
+                                <select name="sizes[][filtervalueid]" class="form-select form-select-sm">
+                                    <option value="0">No Size</option>
+                                    @foreach($sizes as $size)
+                                        <option value="{{ $size->filtervalueid }}">{{ $size->filtervalue }}</option>
+                                    @endforeach
+                                </select>
+                            </td>
+                            <td>
+                                <input type="number" name="sizes[][qty]" class="form-control form-control-sm" min="0" value="0">
+                            </td>
+                            <td>
+                                <input type="text" name="sizes[][barcode]" class="form-control form-control-sm">
                             </td>
                         </tr>
                     @endif
                 </tbody>
             </table>
         </div>
-        <button type="button" class="btn btn-sm btn-success" id="addSizeRow">
-            <i class="ti ti-plus me-1"></i> Add Size
-        </button>
+        <small class="text-muted">Use "No Size" option if product does not have size</small>
     </div>
 </div>
 
@@ -202,6 +212,7 @@
         <div class="mb-3">
             <label class="form-label">Product Price [KWD] <span class="text-danger">*</span></label>
             <input type="number" step="0.001" name="price" class="form-control" value="{{ old('price', $product ? $product->price : '') }}" required>
+            <div class="invalid-feedback"></div>
             @error('price')
                 <div class="text-danger">{{ $message }}</div>
             @enderror
@@ -229,6 +240,7 @@
         <div class="mb-3">
             <label class="form-label">Selling Price [KWD] <span class="text-danger">*</span></label>
             <input type="number" step="0.001" name="sellingprice" class="form-control" value="{{ old('sellingprice', $product ? $product->sellingprice : '') }}" required>
+            <div class="invalid-feedback"></div>
             @error('sellingprice')
                 <div class="text-danger">{{ $message }}</div>
             @enderror
@@ -277,11 +289,22 @@
     <div class="col-md-6">
         <div class="mb-3">
             <label class="form-label">Photo {{ $i }} @if($i == 1) <span class="text-danger">*</span> @endif</label>
-            <input type="file" name="photo{{ $i }}" class="form-control" accept="image/*">
+            <input type="file" name="photo{{ $i }}" id="photo{{ $i }}Input" class="form-control" accept="image/*" onchange="previewProductImage(this, 'photo{{ $i }}Preview')">
+            <div class="invalid-feedback"></div>
+            
             @if($product && $product->{"photo{$i}"})
-                <small class="text-muted">Current: {{ $product->{"photo{$i}"} }}</small>
-                <br>
-                <img src="{{ asset('uploads/products/' . $product->{"photo{$i}"}) }}" alt="Photo {{ $i }}" style="max-width: 200px; margin-top: 10px;">
+                <div class="mt-3 position-relative d-inline-block" id="photo{{ $i }}PreviewContainer">
+                    <div class="position-relative" style="width: 150px; height: 150px;">
+                        <img src="{{ asset('storage/upload/product/' . $product->{"photo{$i}"}) }}" alt="Photo {{ $i }}" id="photo{{ $i }}Preview" style="width: 150px; height: 150px; object-fit: cover; border-radius: 4px;">
+                    </div>
+                    <small class="text-muted d-block mt-2">Current: {{ $product->{"photo{$i}"} }}</small>
+                </div>
+            @else
+                <div class="mt-3" id="photo{{ $i }}PreviewContainer" style="display: none;">
+                    <div class="position-relative d-inline-block" style="width: 150px; height: 150px;">
+                        <img id="photo{{ $i }}Preview" style="width: 150px; height: 150px; object-fit: cover; border-radius: 4px; display: none;">
+                    </div>
+                </div>
             @endif
         </div>
     </div>
@@ -296,9 +319,22 @@
     <div class="col-md-6">
         <div class="mb-3">
             <label class="form-label">Upload Video Poster</label>
-            <input type="file" name="videoposter_file" class="form-control" accept="image/*">
+            <input type="file" name="videoposter_file" id="videoposterInput" class="form-control" accept="image/*" onchange="previewProductImage(this, 'videoposterPreview')">
+            <div class="invalid-feedback"></div>
+            
             @if($product && $product->videoposter)
-                <small class="text-muted">Current: {{ $product->videoposter }}</small>
+                <div class="mt-3 position-relative d-inline-block" id="videoposterPreviewContainer">
+                    <div class="position-relative" style="width: 150px; height: 150px;">
+                        <img src="{{ asset('storage/upload/product/' . $product->videoposter) }}" alt="Video Poster" id="videoposterPreview" style="width: 150px; height: 150px; object-fit: cover; border-radius: 4px;">
+                    </div>
+                    <small class="text-muted d-block mt-2">Current: {{ $product->videoposter }}</small>
+                </div>
+            @else
+                <div class="mt-3" id="videoposterPreviewContainer" style="display: none;">
+                    <div class="position-relative d-inline-block" style="width: 150px; height: 150px;">
+                        <img id="videoposterPreview" style="width: 150px; height: 150px; object-fit: cover; border-radius: 4px; display: none;">
+                    </div>
+                </div>
             @endif
         </div>
     </div>
@@ -306,8 +342,9 @@
         <div class="mb-3">
             <label class="form-label">Upload MP4 Video [MAX 10 MB Size]</label>
             <input type="file" name="video_file" class="form-control" accept="video/mp4">
+            <div class="invalid-feedback"></div>
             @if($product && $product->video)
-                <small class="text-muted">Current: {{ $product->video }}</small>
+                <small class="text-muted d-block mt-2">Current: {{ $product->video }}</small>
             @endif
         </div>
     </div>
