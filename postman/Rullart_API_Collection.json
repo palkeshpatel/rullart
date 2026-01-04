@@ -1,0 +1,623 @@
+{
+	"info": {
+		"_postman_id": "rullart-api-collection",
+		"name": "Rullart API Collection",
+		"description": "Complete API collection for Rullart e-commerce platform matching CodeIgniter API structure",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Home API",
+			"item": [
+				{
+					"name": "Get Home Data",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/{{locale}}/api/home/get?customerid=0&productview=",
+							"host": ["{{base_url}}"],
+							"path": ["{{locale}}", "api", "home", "get"],
+							"query": [
+								{
+									"key": "customerid",
+									"value": "0",
+									"description": "Customer ID (0 for guest)"
+								},
+								{
+									"key": "productview",
+									"value": "",
+									"description": "Product view type"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Get Shop By Categories",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/{{locale}}/api/home/shopby?customerid=0",
+							"host": ["{{base_url}}"],
+							"path": ["{{locale}}", "api", "home", "shopby"],
+							"query": [
+								{
+									"key": "customerid",
+									"value": "0"
+								}
+							]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Category API",
+			"item": [
+				{
+					"name": "Get Category Products",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/{{locale}}/api/category/data?category=wooden-sets&currencycode=KWD&currencyrate=1&sortby=relevance&page=1&customerid=0",
+							"host": ["{{base_url}}"],
+							"path": ["{{locale}}", "api", "category", "data"],
+							"query": [
+								{
+									"key": "category",
+									"value": "wooden-sets",
+									"description": "Category code (use 'all' for all products)"
+								},
+								{
+									"key": "currencycode",
+									"value": "KWD",
+									"description": "Currency code"
+								},
+								{
+									"key": "currencyrate",
+									"value": "1",
+									"description": "Currency rate"
+								},
+								{
+									"key": "sortby",
+									"value": "relevance",
+									"description": "Sort by: relevance, lowtohigh, hightolow, name"
+								},
+								{
+									"key": "color",
+									"value": "",
+									"description": "Color filter (comma-separated)",
+									"disabled": true
+								},
+								{
+									"key": "size",
+									"value": "",
+									"description": "Size filter (comma-separated)",
+									"disabled": true
+								},
+								{
+									"key": "price",
+									"value": "",
+									"description": "Price range (format: min-max)",
+									"disabled": true
+								},
+								{
+									"key": "page",
+									"value": "1",
+									"description": "Page number"
+								},
+								{
+									"key": "customerid",
+									"value": "0",
+									"description": "Customer ID"
+								}
+							]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Product API",
+			"item": [
+				{
+					"name": "Get Product Details",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/{{locale}}/api/product/{{productcode}}?customerid=0",
+							"host": ["{{base_url}}"],
+							"path": ["{{locale}}", "api", "product", "{{productcode}}"],
+							"query": [
+								{
+									"key": "customerid",
+									"value": "0"
+								}
+							]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Shopping Cart API",
+			"item": [
+				{
+					"name": "Get Cart",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"customerid\": 0,\n    \"sessionid\": \"\",\n    \"shippingcountryid\": 1\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/{{locale}}/api/shoppingcart/get",
+							"host": ["{{base_url}}"],
+							"path": ["{{locale}}", "api", "shoppingcart", "get"]
+						}
+					}
+				},
+				{
+					"name": "Add to Cart",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"customerid\": 0,\n    \"sessionid\": \"\",\n    \"productid\": 1,\n    \"size\": 5,\n    \"qty\": 1,\n    \"giftproductid\": 0,\n    \"giftproductid2\": 0,\n    \"giftproductid3\": 0,\n    \"giftproductid4\": 0\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/{{locale}}/api/shoppingcart/add",
+							"host": ["{{base_url}}"],
+							"path": ["{{locale}}", "api", "shoppingcart", "add"]
+						}
+					}
+				},
+				{
+					"name": "Update Cart Item",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"cartitemid\": 123,\n    \"qty\": 2\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/{{locale}}/api/shoppingcart/update",
+							"host": ["{{base_url}}"],
+							"path": ["{{locale}}", "api", "shoppingcart", "update"]
+						}
+					}
+				},
+				{
+					"name": "Delete Cart Item",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"cartitemid\": 123\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/{{locale}}/api/shoppingcart/delete",
+							"host": ["{{base_url}}"],
+							"path": ["{{locale}}", "api", "shoppingcart", "delete"]
+						}
+					}
+				},
+				{
+					"name": "Clear Cart",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"customerid\": 0,\n    \"sessionid\": \"\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/{{locale}}/api/shoppingcart/clear",
+							"host": ["{{base_url}}"],
+							"path": ["{{locale}}", "api", "shoppingcart", "clear"]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Customer API",
+			"item": [
+				{
+					"name": "Get Customer by ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/{{locale}}/api/customer/get_by_id?customerid=1",
+							"host": ["{{base_url}}"],
+							"path": ["{{locale}}", "api", "customer", "get_by_id"],
+							"query": [
+								{
+									"key": "customerid",
+									"value": "1"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Customer Login",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"email\": \"customer@example.com\",\n    \"password\": \"password123\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/{{locale}}/api/customer/login",
+							"host": ["{{base_url}}"],
+							"path": ["{{locale}}", "api", "customer", "login"]
+						}
+					}
+				},
+				{
+					"name": "Customer Register",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"firstname\": \"John\",\n    \"lastname\": \"Doe\",\n    \"email\": \"john@example.com\",\n    \"password\": \"password123\",\n    \"phone\": \"1234567890\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/{{locale}}/api/customer/register",
+							"host": ["{{base_url}}"],
+							"path": ["{{locale}}", "api", "customer", "register"]
+						}
+					}
+				},
+				{
+					"name": "Update Customer",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"customerid\": 1,\n    \"firstname\": \"John\",\n    \"lastname\": \"Doe\",\n    \"email\": \"john@example.com\",\n    \"phone\": \"1234567890\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/{{locale}}/api/customer/update",
+							"host": ["{{base_url}}"],
+							"path": ["{{locale}}", "api", "customer", "update"]
+						}
+					}
+				},
+				{
+					"name": "Forgot Password",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"email\": \"customer@example.com\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/{{locale}}/api/customer/forgot_password",
+							"host": ["{{base_url}}"],
+							"path": ["{{locale}}", "api", "customer", "forgot_password"]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Address Book API",
+			"item": [
+				{
+					"name": "Get Addresses",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/{{locale}}/api/addressbook/get?customerid=1",
+							"host": ["{{base_url}}"],
+							"path": ["{{locale}}", "api", "addressbook", "get"],
+							"query": [
+								{
+									"key": "customerid",
+									"value": "1"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Add Address",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"customerid\": 1,\n    \"firstname\": \"John\",\n    \"lastname\": \"Doe\",\n    \"address\": \"Street Address\",\n    \"area\": \"Area Name\",\n    \"avenue\": \"Avenue Name\",\n    \"block\": \"Block\",\n    \"street\": \"Street\",\n    \"building\": \"Building\",\n    \"floor\": \"Floor\",\n    \"apartment\": \"Apartment\",\n    \"phone\": \"1234567890\",\n    \"countryid\": 1\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/{{locale}}/api/addressbook/add",
+							"host": ["{{base_url}}"],
+							"path": ["{{locale}}", "api", "addressbook", "add"]
+						}
+					}
+				},
+				{
+					"name": "Update Address",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"addressbookid\": 1,\n    \"firstname\": \"John\",\n    \"lastname\": \"Doe\",\n    \"address\": \"Updated Address\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/{{locale}}/api/addressbook/update",
+							"host": ["{{base_url}}"],
+							"path": ["{{locale}}", "api", "addressbook", "update"]
+						}
+					}
+				},
+				{
+					"name": "Delete Address",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"addressbookid\": 1\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/{{locale}}/api/addressbook/delete",
+							"host": ["{{base_url}}"],
+							"path": ["{{locale}}", "api", "addressbook", "delete"]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Search API",
+			"item": [
+				{
+					"name": "Search Products",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/{{locale}}/api/search/data?search=wooden&currencycode=KWD&currencyrate=1&page=1&customerid=0",
+							"host": ["{{base_url}}"],
+							"path": ["{{locale}}", "api", "search", "data"],
+							"query": [
+								{
+									"key": "search",
+									"value": "wooden",
+									"description": "Search keyword"
+								},
+								{
+									"key": "categorycode",
+									"value": "",
+									"disabled": true
+								},
+								{
+									"key": "currencycode",
+									"value": "KWD"
+								},
+								{
+									"key": "currencyrate",
+									"value": "1"
+								},
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "customerid",
+									"value": "0"
+								}
+							]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Wishlist API",
+			"item": [
+				{
+					"name": "Get Wishlist",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/{{locale}}/api/wishlist/get?customerid=1",
+							"host": ["{{base_url}}"],
+							"path": ["{{locale}}", "api", "wishlist", "get"],
+							"query": [
+								{
+									"key": "customerid",
+									"value": "1"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Add to Wishlist",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"customerid\": 1,\n    \"productid\": 1\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/{{locale}}/api/wishlist/add",
+							"host": ["{{base_url}}"],
+							"path": ["{{locale}}", "api", "wishlist", "add"]
+						}
+					}
+				},
+				{
+					"name": "Remove from Wishlist",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"customerid\": 1,\n    \"productid\": 1\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/{{locale}}/api/wishlist/delete",
+							"host": ["{{base_url}}"],
+							"path": ["{{locale}}", "api", "wishlist", "delete"]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "My Orders API",
+			"item": [
+				{
+					"name": "Get Orders",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/{{locale}}/api/myorders/get?customerid=1",
+							"host": ["{{base_url}}"],
+							"path": ["{{locale}}", "api", "myorders", "get"],
+							"query": [
+								{
+									"key": "customerid",
+									"value": "1"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Get Order by ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/{{locale}}/api/myorders/get_by_id?customerid=1&orderid=123",
+							"host": ["{{base_url}}"],
+							"path": ["{{locale}}", "api", "myorders", "get_by_id"],
+							"query": [
+								{
+									"key": "customerid",
+									"value": "1"
+								},
+								{
+									"key": "orderid",
+									"value": "123"
+								}
+							]
+						}
+					}
+				}
+			]
+		}
+	],
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "http://127.0.0.1:8000",
+			"type": "string"
+		},
+		{
+			"key": "locale",
+			"value": "en",
+			"type": "string"
+		},
+		{
+			"key": "productcode",
+			"value": "product-code-123",
+			"type": "string"
+		}
+	]
+}
+

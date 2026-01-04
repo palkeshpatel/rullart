@@ -29,8 +29,8 @@ class RouteServiceProvider extends ServiceProvider
         });
 
         $this->routes(function () {
+            // API routes - no prefix since we handle locale in the route file
             Route::middleware('api')
-                ->prefix('api')
                 ->group(base_path('routes/api.php'));
 
             Route::middleware('web')
