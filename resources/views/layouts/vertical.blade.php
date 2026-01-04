@@ -29,8 +29,6 @@
             @include('layouts.partials/footer')
 
         </div>
-
-        @include('layouts.partials/customizer')
         
     </div>
     

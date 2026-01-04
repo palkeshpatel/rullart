@@ -32,8 +32,6 @@
 
         </div>
 
-        @include('layouts.partials/customizer')
-
         @include('layouts.partials/footer-scripts')
 
     </div>

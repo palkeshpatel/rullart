@@ -480,7 +480,7 @@ class LayoutCustomizer {
         this.initWindowSize();
         this._adjustLayout();
         this.setSwitchFromConfig();
-        this.openCustomizer(); // demo only
+        // this.openCustomizer(); // demo only - disabled
     }
 
     initConfig() {
