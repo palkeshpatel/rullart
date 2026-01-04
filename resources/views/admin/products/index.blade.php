@@ -14,8 +14,10 @@
                                 <label class="form-label mb-1">Category:</label>
                                 <select name="category" class="form-select form-select-sm" data-filter>
                                     <option value="">--All Categories--</option>
-                                    @foreach($categories ?? [] as $cat)
-                                        <option value="{{ $cat->categoryid }}" {{ request('category') == $cat->categoryid ? 'selected' : '' }}>{{ $cat->category }}</option>
+                                    @foreach ($categories ?? [] as $cat)
+                                        <option value="{{ $cat->categoryid }}"
+                                            {{ request('category') == $cat->categoryid ? 'selected' : '' }}>
+                                            {{ $cat->category }}</option>
                                     @endforeach
                                 </select>
                             </div>
@@ -36,7 +38,7 @@
             <div class="card">
                 <div class="card-header justify-content-between align-items-center border-dashed">
                     <h4 class="card-title mb-0">Products List</h4>
-                    @unless(\App\Helpers\ViewHelper::isView('productpriceview'))
+                    @unless (\App\Helpers\ViewHelper::isView('products'))
                         <a href="{{ route('admin.products.create') }}" class="btn btn-success btn-sm">
                             <i class="ti ti-plus me-1"></i> Add Product
                         </a>
@@ -138,9 +140,9 @@
                     /* OPEN PRODUCT MODAL */
                     function openProductModal(productId) {
                         cleanupModals();
-                        const url = productId
-                            ? '{{ route('admin.products.edit', ':id') }}'.replace(':id', productId)
-                            : '{{ route('admin.products.create') }}';
+                        const url = productId ?
+                            '{{ route('admin.products.edit', ':id') }}'.replace(':id', productId) :
+                            '{{ route('admin.products.create') }}';
 
                         $('#productModalContainer').html(loaderHtml());
                         const loadingModal = new bootstrap.Modal($('#productModal')[0], {
@@ -219,14 +221,34 @@
 
                         $form.validate({
                             rules: {
-                                fkcategoryid: { required: true },
-                                title: { required: true },
-                                titleAR: { required: true },
-                                productcode: { required: true },
-                                shortdescr: { required: true },
-                                shortdescrAR: { required: true },
-                                price: { required: true, number: true, min: 0 },
-                                sellingprice: { required: true, number: true, min: 0 }
+                                fkcategoryid: {
+                                    required: true
+                                },
+                                title: {
+                                    required: true
+                                },
+                                titleAR: {
+                                    required: true
+                                },
+                                productcode: {
+                                    required: true
+                                },
+                                shortdescr: {
+                                    required: true
+                                },
+                                shortdescrAR: {
+                                    required: true
+                                },
+                                price: {
+                                    required: true,
+                                    number: true,
+                                    min: 0
+                                },
+                                sellingprice: {
+                                    required: true,
+                                    number: true,
+                                    min: 0
+                                }
                             },
                             messages: {
                                 fkcategoryid: 'Category is required.',
@@ -264,11 +286,13 @@
                         const originalText = submitBtn.innerHTML;
                         submitBtn.setAttribute('data-original-text', originalText);
                         submitBtn.disabled = true;
-                        submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Saving...';
+                        submitBtn.innerHTML =
+                            '<span class="spinner-border spinner-border-sm me-1"></span> Saving...';
 
                         AdminAjax.request(url, method, formData)
                             .then(res => {
-                                showToastInModal(modal, res.message || 'Product saved successfully', 'success');
+                                showToastInModal(modal, res.message || 'Product saved successfully',
+                                    'success');
                                 setTimeout(() => {
                                     modal.hide();
                                 }, 1500);
@@ -293,7 +317,8 @@
                                 $form.find('[id$="-error"]').remove();
                                 $form.find('.invalid-feedback').html('').removeClass('d-block').hide();
                                 submitBtn.disabled = false;
-                                submitBtn.innerHTML = submitBtn.getAttribute('data-original-text') || originalText;
+                                submitBtn.innerHTML = submitBtn.getAttribute('data-original-text') ||
+                                    originalText;
                             });
                     }
 
@@ -304,7 +329,8 @@
                         const currentPerPage = urlParams.get('per_page') || $('#perPageSelect').val() || 25;
                         const currentSearch = urlParams.get('search') || $('[data-search]').val() || '';
                         const currentCategory = urlParams.get('category') || $('[name="category"]').val() || '';
-                        const currentPublished = urlParams.get('published') || $('[name="published"]').val() || '';
+                        const currentPublished = urlParams.get('published') || $('[name="published"]').val() ||
+                            '';
 
                         const params = {
                             page: currentPage,
@@ -383,10 +409,14 @@
                             const urlObj = new URL(url, window.location.origin);
                             const params = {
                                 page: urlObj.searchParams.get('page') || 1,
-                                per_page: urlObj.searchParams.get('per_page') || $('#perPageSelect').val() || 25,
-                                search: urlObj.searchParams.get('search') || $('[data-search]').val() || '',
-                                category: urlObj.searchParams.get('category') || $('[name="category"]').val() || '',
-                                published: urlObj.searchParams.get('published') || $('[name="published"]').val() || ''
+                                per_page: urlObj.searchParams.get('per_page') || $('#perPageSelect')
+                                    .val() || 25,
+                                search: urlObj.searchParams.get('search') || $('[data-search]')
+                                    .val() || '',
+                                category: urlObj.searchParams.get('category') || $(
+                                    '[name="category"]').val() || '',
+                                published: urlObj.searchParams.get('published') || $(
+                                    '[name="published"]').val() || ''
                             };
 
                             const newUrl = new URL(window.location.pathname, window.location.origin);
@@ -397,11 +427,13 @@
                             });
                             window.history.pushState({}, '', newUrl.toString());
 
-                            AdminAjax.loadTable('{{ route('admin.products') }}', $('.table-container')[0], {
+                            AdminAjax.loadTable('{{ route('admin.products') }}', $('.table-container')[
+                                0], {
                                 params: params,
                                 onSuccess: function(response) {
                                     if (response.pagination) {
-                                        $('.pagination-container').html(response.pagination);
+                                        $('.pagination-container').html(response
+                                            .pagination);
                                     }
                                 }
                             });
@@ -432,7 +464,8 @@
                         });
                         window.history.pushState({}, '', newUrl.toString());
 
-                        AdminAjax.loadTable('{{ route('admin.products') }}', $('.table-container')[0], {
+                        AdminAjax.loadTable('{{ route('admin.products') }}', $('.table-container')[
+                            0], {
                             params: params,
                             onSuccess: function(response) {
                                 if (response.pagination) {
@@ -461,7 +494,8 @@
                             if (currentCategory) params.category = currentCategory;
                             if (currentPublished) params.published = currentPublished;
 
-                            const newUrl = new URL(window.location.pathname, window.location.origin);
+                            const newUrl = new URL(window.location.pathname, window.location
+                                .origin);
                             Object.keys(params).forEach(key => {
                                 if (params[key]) {
                                     newUrl.searchParams.set(key, params[key]);
@@ -469,11 +503,13 @@
                             });
                             window.history.pushState({}, '', newUrl.toString());
 
-                            AdminAjax.loadTable('{{ route('admin.products') }}', $('.table-container')[0], {
+                            AdminAjax.loadTable('{{ route('admin.products') }}', $(
+                                '.table-container')[0], {
                                 params: params,
                                 onSuccess: function(response) {
                                     if (response.pagination) {
-                                        $('.pagination-container').html(response.pagination);
+                                        $('.pagination-container').html(response
+                                            .pagination);
                                     }
                                 }
                             });
@@ -503,7 +539,8 @@
                         });
                         window.history.pushState({}, '', newUrl.toString());
 
-                        AdminAjax.loadTable('{{ route('admin.products') }}', $('.table-container')[0], {
+                        AdminAjax.loadTable('{{ route('admin.products') }}', $('.table-container')[
+                            0], {
                             params: params,
                             onSuccess: function(response) {
                                 if (response.pagination) {
@@ -596,4 +633,3 @@
         })();
     </script>
 @endsection
-

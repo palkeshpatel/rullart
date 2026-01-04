@@ -25,7 +25,7 @@
                         <a href="javascript:void(0);" class="btn btn-light btn-icon btn-sm rounded-circle view-product-btn" data-product-id="{{ $product->productid }}" title="View">
                             <i class="ti ti-eye fs-lg"></i>
                         </a>
-                        @unless(\App\Helpers\ViewHelper::isView('productpriceview'))
+                        @unless(\App\Helpers\ViewHelper::isView('products'))
                             <a href="{{ route('admin.products.edit', $product->productid) }}" class="btn btn-light btn-icon btn-sm rounded-circle" title="Edit">
                                 <i class="ti ti-edit fs-lg"></i>
                             </a>
