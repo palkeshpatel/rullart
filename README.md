@@ -1,11 +1,81 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# Rullart - Laravel E-commerce Application
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+## Quick Setup Guide
+
+### Step 1: Add Laravel System Tables to Database
+
+Run the script to create essential Laravel system tables in your database:
+
+```bash
+php create_laravel_system_tables.php
+```
+
+This will create the following tables:
+- `migrations`
+- `cache`
+- `cache_locks`
+- `sessions`
+- `jobs`
+- `job_batches`
+- `failed_jobs`
+
+**Note:** Make sure your `.env` file is configured with the correct database credentials before running this script.
+
+### Step 2: Setup Admin Login
+
+#### Option A: Fix Admin Username and Password
+```bash
+php fix_admin_username.php
+```
+This will set the admin username to `info@rullart.com` with password `rullart@2025`.
+
+#### Option B: Fix Admin Password Only
+```bash
+php fix_admin_password.php [username] [password]
+```
+
+**Examples:**
+```bash
+# Use default username (info@rullart.com) and default password (password)
+php fix_admin_password.php
+
+# Set custom username and password
+php fix_admin_password.php admin@example.com mypassword123
+```
+
+### Step 3: Download Missing Images
+
+Download all missing images from the live site:
+
+```bash
+php artisan images:download --type=all
+```
+
+**Available options:**
+- `--type=all` - Download all images (products, homegallery, category)
+- `--type=products` - Download only product images
+- `--type=homegallery` - Download only home gallery images
+- `--type=category` - Download only category images
+- `--check-only` - Only check which images are missing, don't download
+- `--source=https://www.rullart.com` - Custom source URL
+- `--chunk-size=10` - Number of images to download concurrently
+
+**Examples:**
+```bash
+# Download all images
+php artisan images:download --type=all
+
+# Check which images are missing (without downloading)
+php artisan images:download --type=all --check-only
+
+# Download only product images
+php artisan images:download --type=products
+
+# Download with custom source URL
+php artisan images:download --type=all --source=https://www.rullart.com
+```
+
+---
 
 ## About Laravel
 
