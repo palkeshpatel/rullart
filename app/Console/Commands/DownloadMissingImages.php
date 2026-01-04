@@ -36,6 +36,23 @@ class DownloadMissingImages extends Command
     protected $skipped = 0;
 
     /**
+     * Check if a column exists in a table
+     * 
+     * @param string $table
+     * @param string $column
+     * @return bool
+     */
+    protected function columnExists($table, $column)
+    {
+        try {
+            $columns = DB::select("SHOW COLUMNS FROM `{$table}` LIKE '{$column}'");
+            return !empty($columns);
+        } catch (\Exception $e) {
+            return false;
+        }
+    }
+
+    /**
      * Execute the console command.
      */
     public function handle()
@@ -156,8 +173,24 @@ class DownloadMissingImages extends Command
     {
         $this->info("=== Home Gallery Images ===");
 
+        // Build select columns - use NULL as alias for missing columns
+        $selectColumns = ['homegalleryid', 'title', 'photo', 'photo_mobile'];
+        
+        // Check and add optional columns with NULL fallback
+        if ($this->columnExists('homegallery', 'photo_ar')) {
+            $selectColumns[] = 'photo_ar';
+        } else {
+            $selectColumns[] = DB::raw('NULL as photo_ar');
+        }
+        
+        if ($this->columnExists('homegallery', 'photo_mobile_ar')) {
+            $selectColumns[] = 'photo_mobile_ar';
+        } else {
+            $selectColumns[] = DB::raw('NULL as photo_mobile_ar');
+        }
+
         $gallery = DB::table('homegallery')
-            ->select('homegalleryid', 'title', 'photo', 'photo_mobile', 'photo_ar', 'photo_mobile_ar')
+            ->select($selectColumns)
             ->where('ispublished', 1)
             ->get();
 
@@ -169,10 +202,11 @@ class DownloadMissingImages extends Command
             if (!empty($item->photo_mobile)) {
                 $images[] = ['filename' => $item->photo_mobile, 'type' => 'photo_mobile'];
             }
-            if (!empty($item->photo_ar)) {
+            // Check if property exists and is not null
+            if (isset($item->photo_ar) && !empty($item->photo_ar)) {
                 $images[] = ['filename' => $item->photo_ar, 'type' => 'photo_ar'];
             }
-            if (!empty($item->photo_mobile_ar)) {
+            if (isset($item->photo_mobile_ar) && !empty($item->photo_mobile_ar)) {
                 $images[] = ['filename' => $item->photo_mobile_ar, 'type' => 'photo_mobile_ar'];
             }
         }

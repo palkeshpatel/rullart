@@ -44,8 +44,9 @@
                                 <div class="carousel-video">
                                     <video class="slider-video" width="100%" autoplay loop muted preload="auto"
                                         playsinline style="visibility: visible; width: 100%"
-                                        poster="{{ url('storage/' . $item->photo) }}">
-                                        <source src="{{ url('storage/' . $item->videourl) }}" type="video/mp4">
+                                        poster="{{ asset('storage/upload/homegallery/' . $item->photo) }}">
+                                        <source src="{{ asset('storage/upload/homegallery/' . $item->videourl) }}"
+                                            type="video/mp4">
                                     </video>
                                 </div>
                             </div>
@@ -54,10 +55,10 @@
                                 @if (!empty($item->link) && $item->link != '-')
                                     <a href="{{ $item->link }}" target="_blank">
                                 @endif
-                                    <img src="{{ url('storage/' . $photo) }}" alt="{{ $title }}"
-                                        class="img-responsive fill2">
+                                <img src="{{ asset('storage/upload/homegallery/' . $photo) }}" alt="{{ $title }}"
+                                    class="img-responsive fill2">
                                 @if (!empty($item->link) && $item->link != '-')
-                                </a>
+                                    </a>
                                 @endif
                             </div>
                         @endif
