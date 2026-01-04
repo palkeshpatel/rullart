@@ -100,5 +100,17 @@ class TenantHelper
             'environment' => app()->environment(),
         ];
     }
+
+    /**
+     * Get productpriceview column name based on database
+     * Kuwait uses 'kproductid', Qatar uses 'fkproductid'
+     * 
+     * @return string
+     */
+    public static function getProductPriceViewColumn(): string
+    {
+        // Qatar uses fkproductid, Kuwait uses kproductid
+        return self::isQatar() ? 'fkproductid' : 'kproductid';
+    }
 }
 

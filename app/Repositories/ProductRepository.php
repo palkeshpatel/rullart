@@ -17,9 +17,10 @@ class ProductRepository
             $columns = 'p.shortdescr AS title, p.title as shortdescr, p.longdescr, c.category, c.categorycode';
         }
 
+        $column = \App\Helpers\TenantHelper::getProductPriceViewColumn();
         $query = DB::table('products as p')
             ->select(DB::raw($columns . ', IFNULL(p.video, \'\') as video, IFNULL(p.videoposter, \'\') as videoposter, c.categoryid, p.productid, p.productcode, p.productcategoryid, p.productcategoryid2, p.productcategoryid3, p.productcategoryid4, p.price, p.productid, pp.discount, pp.sellingprice, p.photo1, p.photo2, p.photo3, p.photo4, p.photo5, p.metakeyword, p.metadescr, p.metatitle, c.categorycode, c.parentid, p.internation_ship, IFNULL((SELECT SUM(qty) FROM productsfilter WHERE fkproductid=p.productid AND productsfilter.filtercode=\'size\'), 0) as qty, p.related_category_1, p.related_category_2, p.gift_type, p.related_products'))
-            ->join('productpriceview as pp', 'pp.kproductid', '=', 'p.productid')
+            ->join('productpriceview as pp', "pp.{$column}", '=', 'p.productid')
             ->join('category as c', 'p.fkcategoryid', '=', 'c.categoryid')
             ->where('p.productcode', $productCode)
             ->where('p.ispublished', 1)
@@ -87,10 +88,11 @@ class ProductRepository
             $select .= ', 0 as wishlistid';
         }
 
+        $column = \App\Helpers\TenantHelper::getProductPriceViewColumn();
         $query = DB::table('products as p')
             ->select(DB::raw($select))
             ->distinct()
-            ->join('productpriceview as pp', 'pp.kproductid', '=', 'p.productid')
+            ->join('productpriceview as pp', "pp.{$column}", '=', 'p.productid')
             ->join('category as c', 'p.fkcategoryid', '=', 'c.categoryid');
 
         if ($customerId > 0) {

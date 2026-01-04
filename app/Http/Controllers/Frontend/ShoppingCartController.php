@@ -850,9 +850,10 @@ class ShoppingCartController extends FrontendController
             $columns = 'p.shortdescr as title, p.productid, p.productcode, p.price, pp.discount, pp.sellingprice, p.photo1, p.title as shortdescr, p.internation_ship, ' . $qtyColumn . ', fv.filtervalue, c.categorycode';
         }
 
+        $column = \App\Helpers\TenantHelper::getProductPriceViewColumn();
         $product = DB::table('products as p')
             ->select(DB::raw($columns))
-            ->join('productpriceview as pp', 'pp.kproductid', '=', 'p.productid')
+            ->join('productpriceview as pp', "pp.{$column}", '=', 'p.productid')
             ->join('category as c', 'p.fkcategoryid', '=', 'c.categoryid')
             ->leftJoin('productsfilter as pf', function ($join) use ($sizeid) {
                 $join->on('pf.fkproductid', '=', 'p.productid')
@@ -1369,10 +1370,11 @@ class ShoppingCartController extends FrontendController
             $columns = "p.shortdescr as title, filtersize.filtervalue as sizename, gifttitle";
         }
 
+        $column = \App\Helpers\TenantHelper::getProductPriceViewColumn();
         $item = DB::table('shoppingcartitems as s')
             ->select(DB::raw($columns . ', s.cartitemid, s.photo as image, s.fkproductid as productid, s.productcode, s.price, s.fkcartid, s.sellingprice, p.discount, s.qty, filtersize.filtervalueid as size, pfsize.qty as maxqty, s.giftproductid, s.giftproductid2, s.giftproductid3, s.giftproductid4, s.giftproductprice, s.giftproduct2price, s.giftproduct3price, s.giftproduct4price, s.giftboxprice, s.giftmessageid, s.giftmessage, s.subtotal'))
             ->join('products as p', 'p.productid', '=', 's.fkproductid')
-            ->join('productpriceview as pp', 'pp.kproductid', '=', 'p.productid')
+            ->join('productpriceview as pp', "pp.{$column}", '=', 'p.productid')
             ->join('productsfilter as pfsize', function ($join) {
                 $join->on('p.productid', '=', 'pfsize.fkproductid')
                     ->where('pfsize.filtercode', '=', 'size')

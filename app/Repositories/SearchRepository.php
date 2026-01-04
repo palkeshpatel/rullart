@@ -71,7 +71,8 @@ class SearchRepository
         $hasProductPriceView = DB::getSchemaBuilder()->hasTable('productpriceview');
         
         if ($hasProductPriceView) {
-            $query->leftJoin('productpriceview as pp', 'pp.kproductid', '=', 'p.productid')
+            $column = \App\Helpers\TenantHelper::getProductPriceViewColumn();
+            $query->leftJoin('productpriceview as pp', "pp.{$column}", '=', 'p.productid')
                 ->addSelect(['pp.discount', 'pp.sellingprice', 'p.price']);
         } else {
             $query->addSelect([

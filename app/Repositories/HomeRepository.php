@@ -84,7 +84,8 @@ class HomeRepository
 
         // Join productpriceview if it exists (MySQL view)
         if ($hasProductPriceView) {
-            $query->leftJoin('productpriceview as pp', 'pp.kproductid', '=', 'p.productid');
+            $column = \App\Helpers\TenantHelper::getProductPriceViewColumn();
+            $query->leftJoin('productpriceview as pp', "pp.{$column}", '=', 'p.productid');
         }
 
         return $query->inRandomOrder()

@@ -10,9 +10,14 @@ class CategoryController extends FrontendController
 {
     public function index($locale, $categoryCode)
     {
+        $currentDb = config('database.connections.mysql.database');
+        $currentPort = request()->getPort();
+
         \Log::info("CategoryController index called");
         \Log::info("Request URL: " . request()->fullUrl());
         \Log::info("Request Path: " . request()->path());
+        \Log::info("Current Port: {$currentPort}");
+        \Log::info("Current Database: {$currentDb}");
         \Log::info("Route parameters: " . json_encode(request()->route()->parameters()));
 
         // Get categoryCode from route parameters directly to ensure correct value
@@ -23,18 +28,21 @@ class CategoryController extends FrontendController
 
         // Use locale from route parameter
         $locale = $locale ?? app()->getLocale();
-        
+
+        $currentDb = config('database.connections.mysql.database');
+        \Log::info("CategoryController: Searching for category '{$categoryCode}' in database: {$currentDb}");
+
         $category = Category::where('categorycode', $categoryCode)
             ->where('ispublished', 1)
             ->first();
-        
+
         \Log::info("Category found: " . ($category ? "Yes - ID: {$category->categoryid}, Code: {$category->categorycode}" : "No"));
-        
+
         if (!$category) {
-            \Log::error("Category not found: {$categoryCode}");
+            \Log::error("CategoryController: Category '{$categoryCode}' not found or not published in database: {$currentDb}");
             abort(404, 'Category not found');
         }
-        
+
         // Get filter parameters
         $sortby = request()->get('sortby', 'relevance');
         $color = request()->get('color', '');
@@ -88,11 +96,11 @@ class CategoryController extends FrontendController
 
         return view('frontend.category.index', $data);
     }
-    
+
     public function all()
     {
         $locale = app()->getLocale();
-        
+
         // Get filter parameters
         $sortby = request()->get('sortby', 'relevance');
         $color = request()->get('color', '');
@@ -101,17 +109,17 @@ class CategoryController extends FrontendController
         $page = request()->get('page', 1);
         $main = request()->get('main', 0);
         $subcategory = request()->get('category', '');
-        
+
         try {
             $collections = $this->getAllCategoryProducts($locale, $sortby, $color, $size, $price, $page, $main, $subcategory);
-            
+
             if (!$collections) {
                 abort(404);
             }
-            
+
             $metaTitle = __('All Products');
             $metaDescription = '';
-        
+
             // Prepare view data using helper method
             $data = $this->prepareViewData($collections, $locale, $metaTitle, $metaDescription, [
                 'page' => $page,
@@ -123,30 +131,30 @@ class CategoryController extends FrontendController
                 'categoryCode' => '',
                 'isall' => true,
             ]);
-        
-        return view('frontend.category.index', $data);
+
+            return view('frontend.category.index', $data);
         } catch (\Exception $e) {
             \Log::error('CategoryController all error: ' . $e->getMessage());
             abort(404);
         }
     }
-    
+
     public function occassion($occassionCode)
     {
         $locale = app()->getLocale();
-        
+
         $occassion = DB::table('occassion')
             ->where('occassioncode', $occassionCode)
             ->where('ispublished', 1)
             ->first();
-        
+
         if (!$occassion) {
             abort(404);
         }
-        
+
         // Get products by occasion (you'll need to implement this based on your schema)
         $products = collect([]);
-        
+
         return view('frontend.category.index', [
             'category' => null,
             'products' => $products,
@@ -154,11 +162,11 @@ class CategoryController extends FrontendController
             'metaDescription' => ''
         ]);
     }
-    
+
     public function whatsNew()
     {
         $locale = app()->getLocale();
-        
+
         // Get filter parameters
         $sortby = request()->get('sortby', 'relevance');
         $color = request()->get('color', '');
@@ -166,14 +174,14 @@ class CategoryController extends FrontendController
         $price = request()->get('price', '');
         $page = request()->get('page', 1);
         $category = request()->get('category', '');
-        
+
         try {
             $collections = $this->getNewProductsWithFilters($locale, $sortby, $color, $size, $price, $page, $category);
-            
+
             if (!$collections) {
                 abort(404);
             }
-            
+
             // Create dummy category object for "What's New"
             $categoryObj = (object)[
                 'categoryid' => 0,
@@ -188,12 +196,12 @@ class CategoryController extends FrontendController
                 'metadescrAR' => '',
                 'photo' => null,
             ];
-            
+
             $collections['category'] = $categoryObj;
-            
+
             $metaTitle = __('What\'s New');
             $metaDescription = '';
-        
+
             // Prepare view data using helper method
             $data = $this->prepareViewData($collections, $locale, $metaTitle, $metaDescription, [
                 'page' => $page,
@@ -205,18 +213,18 @@ class CategoryController extends FrontendController
                 'categoryCode' => '',
                 'isall' => false,
             ]);
-        
-        return view('frontend.category.index', $data);
+
+            return view('frontend.category.index', $data);
         } catch (\Exception $e) {
             \Log::error('CategoryController whatsNew error: ' . $e->getMessage());
             abort(404);
         }
     }
-    
+
     public function sale()
     {
         $locale = app()->getLocale();
-        
+
         // Get filter parameters
         $sortby = request()->get('sortby', 'relevance');
         $color = request()->get('color', '');
@@ -224,14 +232,14 @@ class CategoryController extends FrontendController
         $price = request()->get('price', '');
         $page = request()->get('page', 1);
         $category = request()->get('category', '');
-        
+
         try {
             $collections = $this->getSaleProductsWithFilters($locale, $sortby, $color, $size, $price, $page, $category);
-            
+
             if (!$collections) {
                 abort(404);
             }
-            
+
             // Create dummy category object for "Sale"
             $categoryObj = (object)[
                 'categoryid' => 0,
@@ -246,12 +254,12 @@ class CategoryController extends FrontendController
                 'metadescrAR' => '',
                 'photo' => null,
             ];
-            
+
             $collections['category'] = $categoryObj;
-            
+
             $metaTitle = __('Sale');
             $metaDescription = '';
-        
+
             // Prepare view data using helper method
             $data = $this->prepareViewData($collections, $locale, $metaTitle, $metaDescription, [
                 'page' => $page,
@@ -263,14 +271,14 @@ class CategoryController extends FrontendController
                 'categoryCode' => '',
                 'isall' => false,
             ]);
-        
-        return view('frontend.category.index', $data);
+
+            return view('frontend.category.index', $data);
         } catch (\Exception $e) {
             \Log::error('CategoryController sale error: ' . $e->getMessage());
             abort(404);
         }
     }
-    
+
     protected function getCategoryProducts($categoryCode, $locale, $sortby = 'relevance', $color = '', $size = '', $price = '', $page = 1, $main = 0, $subcategory = '')
     {
         try {
@@ -285,26 +293,48 @@ class CategoryController extends FrontendController
                 ->first();
 
             if (!$category) {
+                \Log::error("CategoryController: Category '{$categoryCode}' not found or not published in database: " . config('database.connections.mysql.database'));
                 return false;
             }
 
             // Check if productpriceview exists (it's a VIEW, not a TABLE)
-            try {
-                $hasProductPriceView = DB::selectOne("
-                    SELECT 1
-                    FROM information_schema.views
-                    WHERE table_schema = DATABASE()
-                      AND table_name = 'productpriceview'
-                ");
-                $hasProductPriceView = !empty($hasProductPriceView);
-            } catch (\Exception $e) {
-                $hasProductPriceView = false;
-            }
-            \Log::info("productpriceview exists: " . ($hasProductPriceView ? "Yes" : "No"));
+            // Note: Both Kuwait and Qatar have this view, but we check anyway
+            $currentDb = config('database.connections.mysql.database');
+            $hasProductPriceView = false;
 
+            // Method 1: Try to query the view directly (most reliable)
+            try {
+                DB::selectOne("SELECT 1 FROM productpriceview LIMIT 1");
+                $hasProductPriceView = true;
+                \Log::info("CategoryController: productpriceview exists (verified by direct query) in database: {$currentDb}");
+            } catch (\Exception $e) {
+                \Log::warning("CategoryController: Direct query to productpriceview failed: " . $e->getMessage());
+
+                // Method 2: Check information_schema as fallback
+                try {
+                    $result = DB::selectOne("
+                        SELECT 1 as exists_check
+                        FROM information_schema.views
+                        WHERE table_schema = ?
+                          AND table_name = 'productpriceview'
+                    ", [$currentDb]);
+                    $hasProductPriceView = !empty($result);
+                    if ($hasProductPriceView) {
+                        \Log::info("CategoryController: productpriceview exists (verified by information_schema) in database: {$currentDb}");
+                    }
+                } catch (\Exception $e2) {
+                    \Log::warning("CategoryController: information_schema check also failed: " . $e2->getMessage());
+                }
+            }
+
+            \Log::info("productpriceview check result for database {$currentDb}: " . ($hasProductPriceView ? "EXISTS" : "NOT FOUND"));
+
+            // Don't fail if view doesn't exist - just log warning and continue
+            // The code will fall back to using products table directly
             if (!$hasProductPriceView) {
-                \Log::error('productpriceview view does not exist');
-                return false;
+                \Log::warning('CategoryController: productpriceview view not found in database: ' . $currentDb);
+                \Log::warning('CategoryController: Will attempt to use products table directly');
+                // Continue anyway - the code handles this case
             }
 
             // Build where category clause (handles parent/child relationships)
@@ -313,18 +343,18 @@ class CategoryController extends FrontendController
 
             // Get subcategories
             $subcategoriesQuery = DB::table('category as c')
-            ->select([
+                ->select([
                     $locale == 'ar' ? 'c.categoryAR as category' : 'c.category',
                     'c.categoryid',
-                'c.categorycode',
+                    'c.categorycode',
                     'c.parentid',
                     DB::raw("(SELECT COUNT(*) FROM products WHERE ispublished=1 AND fkcategoryid=c.categoryid) as productcnt")
-            ])
+                ])
                 ->distinct()
                 ->join('products as p', 'p.fkcategoryid', '=', 'c.categoryid')
-            ->where('p.ispublished', 1)
-            ->where('c.ispublished', 1);
-        
+                ->where('p.ispublished', 1)
+                ->where('c.ispublished', 1);
+
             if ($main == 0) {
                 if ($parentId > 0) {
                     $subcategoriesQuery->where(function ($query) use ($parentId, $categoryId) {
@@ -352,21 +382,22 @@ class CategoryController extends FrontendController
             $productsQuery = DB::table('products as p')
                 ->select([
                     DB::raw($locale == 'ar' ? 'p.shortdescrAR as title' : 'p.shortdescr as title'),
-                'p.productid',
-                'p.productcode',
+                    'p.productid',
+                    'p.productcode',
                     'p.price',
-                'p.photo1',
-                'c.categorycode',
+                    'p.photo1',
+                    'c.categorycode',
                     DB::raw("IFNULL((SELECT SUM(qty) FROM productsfilter WHERE fkproductid=p.productid AND productsfilter.filtercode='size'), 0) as qty")
                 ])
                 ->distinct();
 
             if ($hasProductPriceView) {
+                $column = \App\Helpers\TenantHelper::getProductPriceViewColumn();
                 $productsQuery->addSelect(['pp.discount', 'pp.sellingprice'])
-                    ->join('productpriceview as pp', 'pp.kproductid', '=', 'p.productid');
-        } else {
+                    ->join('productpriceview as pp', "pp.{$column}", '=', 'p.productid');
+            } else {
                 $productsQuery->addSelect([
-                DB::raw('COALESCE(p.discount, 0) as discount'),
+                    DB::raw('COALESCE(p.discount, 0) as discount'),
                     DB::raw('COALESCE(p.sellingprice, p.price) as sellingprice')
                 ]);
             }
@@ -414,7 +445,7 @@ class CategoryController extends FrontendController
                 // Get color IDs from filtervaluecode (handle comma-separated values)
                 $colorCodes = is_array($color) ? $color : explode(',', $color);
                 $colorCodes = array_filter(array_map('trim', $colorCodes)); // Remove empty values
-                
+
                 if (!empty($colorCodes)) {
                     $colorIds = DB::table('filtervalues')
                         ->whereIn('filtervaluecode', $colorCodes)
@@ -439,7 +470,7 @@ class CategoryController extends FrontendController
                 // Get size IDs from filtervaluecode (handle comma-separated values)
                 $sizeCodes = is_array($size) ? $size : explode(',', $size);
                 $sizeCodes = array_filter(array_map('trim', $sizeCodes)); // Remove empty values
-                
+
                 if (!empty($sizeCodes)) {
                     $sizeIds = DB::table('filtervalues')
                         ->whereIn('filtervaluecode', $sizeCodes)
@@ -578,7 +609,8 @@ class CategoryController extends FrontendController
             if ($price) {
                 $prices = explode('-', $price);
                 if ($hasProductPriceView) {
-                    $colorsQuery->join('productpriceview as pp', 'pp.kproductid', '=', 'p.productid');
+                    $column = \App\Helpers\TenantHelper::getProductPriceViewColumn();
+                    $colorsQuery->join('productpriceview as pp', "pp.{$column}", '=', 'p.productid');
                     $sellingPriceColumn = 'pp.sellingprice';
                 } else {
                     $sellingPriceColumn = DB::raw('COALESCE(p.sellingprice, p.price)');
@@ -657,7 +689,8 @@ class CategoryController extends FrontendController
             if ($price) {
                 $prices = explode('-', $price);
                 if ($hasProductPriceView) {
-                    $sizesQuery->join('productpriceview as pp', 'pp.kproductid', '=', 'p.productid');
+                    $column = \App\Helpers\TenantHelper::getProductPriceViewColumn();
+                    $sizesQuery->join('productpriceview as pp', "pp.{$column}", '=', 'p.productid');
                     $sellingPriceColumn = 'pp.sellingprice';
                 } else {
                     $sellingPriceColumn = DB::raw('COALESCE(p.sellingprice, p.price)');
@@ -698,8 +731,10 @@ class CategoryController extends FrontendController
             ];
         } catch (\Exception $e) {
             \Log::error('CategoryController getCategoryProducts error: ' . $e->getMessage());
+            \Log::error('Database: ' . config('database.connections.mysql.database'));
+            \Log::error('Category Code: ' . $categoryCode);
             \Log::error('File: ' . $e->getFile() . ' Line: ' . $e->getLine());
-            \Log::error($e->getTraceAsString());
+            \Log::error('Stack trace: ' . $e->getTraceAsString());
             return false;
         }
     }
@@ -806,7 +841,7 @@ class CategoryController extends FrontendController
             return (object) $item;
         }, $ranges);
     }
-    
+
     protected function getAllProducts($locale)
     {
         $query = DB::table('products as p')
@@ -822,9 +857,10 @@ class CategoryController extends FrontendController
             ->leftJoin('category as c', 'p.fkcategoryid', '=', 'c.categoryid')
             ->where('p.ispublished', 1)
             ->where('c.ispublished', 1);
-        
+
         if (DB::getSchemaBuilder()->hasTable('productpriceview')) {
-            $query->leftJoin('productpriceview as pp', 'pp.kproductid', '=', 'p.productid')
+            $column = \App\Helpers\TenantHelper::getProductPriceViewColumn();
+            $query->leftJoin('productpriceview as pp', "pp.{$column}", '=', 'p.productid')
                 ->addSelect(['pp.discount', 'pp.sellingprice', 'p.price']);
         } else {
             $query->addSelect([
@@ -833,12 +869,12 @@ class CategoryController extends FrontendController
                 'p.price'
             ]);
         }
-        
+
         return $query->havingRaw('qty > 0 OR qty IS NULL')
             ->orderBy('p.productid', 'desc')
             ->paginate(20);
     }
-    
+
     protected function getNewProducts($locale)
     {
         $query = DB::table('products as p')
@@ -855,9 +891,10 @@ class CategoryController extends FrontendController
             ->where('p.ispublished', 1)
             ->where('p.isnew', 1)
             ->where('c.ispublished', 1);
-        
+
         if (DB::getSchemaBuilder()->hasTable('productpriceview')) {
-            $query->leftJoin('productpriceview as pp', 'pp.kproductid', '=', 'p.productid')
+            $column = \App\Helpers\TenantHelper::getProductPriceViewColumn();
+            $query->leftJoin('productpriceview as pp', "pp.{$column}", '=', 'p.productid')
                 ->addSelect(['pp.discount', 'pp.sellingprice', 'p.price']);
         } else {
             $query->addSelect([
@@ -866,12 +903,12 @@ class CategoryController extends FrontendController
                 'p.price'
             ]);
         }
-        
+
         return $query->havingRaw('qty > 0 OR qty IS NULL')
             ->orderBy('p.productid', 'desc')
             ->paginate(20);
     }
-    
+
     protected function getSaleProducts($locale)
     {
         $query = DB::table('products as p')
@@ -887,9 +924,10 @@ class CategoryController extends FrontendController
             ->leftJoin('category as c', 'p.fkcategoryid', '=', 'c.categoryid')
             ->where('p.ispublished', 1)
             ->where('c.ispublished', 1);
-        
+
         if (DB::getSchemaBuilder()->hasTable('productpriceview')) {
-            $query->leftJoin('productpriceview as pp', 'pp.kproductid', '=', 'p.productid')
+            $column = \App\Helpers\TenantHelper::getProductPriceViewColumn();
+            $query->leftJoin('productpriceview as pp', "pp.{$column}", '=', 'p.productid')
                 ->where('pp.discount', '>', 0)
                 ->addSelect(['pp.discount', 'pp.sellingprice', 'p.price']);
         } else {
@@ -900,7 +938,7 @@ class CategoryController extends FrontendController
                     'p.price'
                 ]);
         }
-        
+
         return $query->havingRaw('qty > 0 OR qty IS NULL')
             ->orderBy('p.productid', 'desc')
             ->paginate(20);
@@ -913,7 +951,7 @@ class CategoryController extends FrontendController
     public function prodlisting($locale, $categoryCode)
     {
         $locale = $locale ?? app()->getLocale();
-        
+
         // Handle 'all' category
         if ($categoryCode == 'all') {
             $categoryCode = '';
@@ -945,7 +983,7 @@ class CategoryController extends FrontendController
                 // Get category products
                 $collections = $this->getCategoryProducts($categoryCode, $locale, $sortby, $color, $size, $price, $page, $main, $subcategory);
             }
-            
+
             \Log::info("prodlisting collections: " . ($collections ? "Found " . count($collections['products']) . " products" : "False"));
 
             if (!$collections || count($collections['products']) == 0) {
@@ -979,7 +1017,7 @@ class CategoryController extends FrontendController
 
             // Prepare filter data for sidefilter view
             $filterData = $this->prepareFilterData($collections, $locale, $subcategory ?: $categoryCode, $color, $size, $price);
-            
+
             // Get side filter HTML
             $sideFilterHtml = view('frontend.category.sidefilter', $filterData)->render();
 
@@ -994,7 +1032,6 @@ class CategoryController extends FrontendController
                 'totalpage' => $collections['totalpage'],
                 'sidefilter' => $sideFilterHtml,
             ]);
-
         } catch (\Exception $e) {
             \Log::error('CategoryController prodlisting error: ' . $e->getMessage());
             \Log::error($e->getTraceAsString());
@@ -1008,7 +1045,7 @@ class CategoryController extends FrontendController
     public function prodlistingOccassion($locale, $occassion)
     {
         $locale = $locale ?? app()->getLocale();
-        
+
         $sortby = request()->get('sortby', 'relevance');
         $color = request()->get('color', '');
         $size = request()->get('size', '');
@@ -1027,7 +1064,7 @@ class CategoryController extends FrontendController
 
             // Prepare filter data for sidefilter view
             $filterData = $this->prepareFilterData($collections, $locale, $category, $color, $size, $price);
-            
+
             $sideFilterHtml = view('frontend.category.sidefilter', $filterData)->render();
             $sideFilterHtml = str_replace(["\r", "\n", "\t"], '', $sideFilterHtml);
 
@@ -1038,7 +1075,6 @@ class CategoryController extends FrontendController
                 'totalpage' => $collections['totalpage'],
                 'sidefilter' => $sideFilterHtml,
             ]);
-
         } catch (\Exception $e) {
             \Log::error('CategoryController prodlistingOccassion error: ' . $e->getMessage());
             return response()->json('FALSE');
@@ -1051,7 +1087,7 @@ class CategoryController extends FrontendController
     public function prodlistingWhatsnew($locale)
     {
         $locale = $locale ?? app()->getLocale();
-        
+
         $sortby = request()->get('sortby', 'relevance');
         $color = request()->get('color', '');
         $size = request()->get('size', '');
@@ -1069,7 +1105,7 @@ class CategoryController extends FrontendController
 
             // Prepare filter data for sidefilter view
             $filterData = $this->prepareFilterData($collections, $locale, $category, $color, $size, $price);
-            
+
             $sideFilterHtml = view('frontend.category.sidefilter', $filterData)->render();
             $sideFilterHtml = str_replace(["\r", "\n", "\t"], '', $sideFilterHtml);
 
@@ -1080,7 +1116,6 @@ class CategoryController extends FrontendController
                 'totalpage' => $collections['totalpage'],
                 'sidefilter' => $sideFilterHtml,
             ]);
-
         } catch (\Exception $e) {
             \Log::error('CategoryController prodlistingWhatsnew error: ' . $e->getMessage());
             return response()->json('FALSE');
@@ -1093,7 +1128,7 @@ class CategoryController extends FrontendController
     public function prodlistingSale($locale)
     {
         $locale = $locale ?? app()->getLocale();
-        
+
         $sortby = request()->get('sortby', 'relevance');
         $color = request()->get('color', '');
         $size = request()->get('size', '');
@@ -1111,7 +1146,7 @@ class CategoryController extends FrontendController
 
             // Prepare filter data for sidefilter view
             $filterData = $this->prepareFilterData($collections, $locale, $category, $color, $size, $price);
-            
+
             $sideFilterHtml = view('frontend.category.sidefilter', $filterData)->render();
             $sideFilterHtml = str_replace(["\r", "\n", "\t"], '', $sideFilterHtml);
 
@@ -1122,7 +1157,6 @@ class CategoryController extends FrontendController
                 'totalpage' => $collections['totalpage'],
                 'sidefilter' => $sideFilterHtml,
             ]);
-
         } catch (\Exception $e) {
             \Log::error('CategoryController prodlistingSale error: ' . $e->getMessage());
             return response()->json('FALSE');
@@ -1162,8 +1196,9 @@ class CategoryController extends FrontendController
         $hasProductPriceView = !empty($hasProductPriceView);
 
         if ($hasProductPriceView) {
+            $column = \App\Helpers\TenantHelper::getProductPriceViewColumn();
             $productsQuery->addSelect(['pp.discount', 'pp.sellingprice'])
-                ->join('productpriceview as pp', 'pp.kproductid', '=', 'p.productid');
+                ->join('productpriceview as pp', "pp.{$column}", '=', 'p.productid');
         } else {
             $productsQuery->addSelect([
                 DB::raw('COALESCE(p.discount, 0) as discount'),
@@ -1296,8 +1331,9 @@ class CategoryController extends FrontendController
                 ->where('p.isnew', 1); // Filter for new products
 
             if ($hasProductPriceView) {
+                $column = \App\Helpers\TenantHelper::getProductPriceViewColumn();
                 $productsQuery->addSelect(['pp.discount', 'pp.sellingprice'])
-                    ->join('productpriceview as pp', 'pp.kproductid', '=', 'p.productid');
+                    ->join('productpriceview as pp', "pp.{$column}", '=', 'p.productid');
             } else {
                 $productsQuery->addSelect([
                     DB::raw('COALESCE(p.discount, 0) as discount'),
@@ -1481,15 +1517,16 @@ class CategoryController extends FrontendController
                 ->where('p.ispublished', 1);
 
             if ($hasProductPriceView) {
+                $column = \App\Helpers\TenantHelper::getProductPriceViewColumn();
                 $productsQuery->addSelect(['pp.discount', 'pp.sellingprice'])
-                    ->join('productpriceview as pp', 'pp.kproductid', '=', 'p.productid')
+                    ->join('productpriceview as pp', "pp.{$column}", '=', 'p.productid')
                     ->where('pp.discount', '>', 0);
             } else {
                 $productsQuery->addSelect([
                     DB::raw('COALESCE(p.discount, 0) as discount'),
                     DB::raw('COALESCE(p.sellingprice, p.price) as sellingprice')
                 ])
-                ->where('p.discount', '>', 0);
+                    ->where('p.discount', '>', 0);
             }
 
             if ($customerId) {
@@ -1605,14 +1642,15 @@ class CategoryController extends FrontendController
                 ->join('products as p', 'p.fkcategoryid', '=', 'c.categoryid')
                 ->where('p.ispublished', 1)
                 ->where('c.ispublished', 1);
-            
+
             if ($hasProductPriceView) {
-                $subcategories->join('productpriceview as pp', 'pp.kproductid', '=', 'p.productid')
+                $column = \App\Helpers\TenantHelper::getProductPriceViewColumn();
+                $subcategories->join('productpriceview as pp', "pp.{$column}", '=', 'p.productid')
                     ->where('pp.discount', '>', 0);
             } else {
                 $subcategories->where('p.discount', '>', 0);
             }
-            
+
             $subcategories = $subcategories->orderBy('c.parentid')
                 ->orderBy('c.displayorder')
                 ->get();
