@@ -36,9 +36,11 @@
             <div class="card">
                 <div class="card-header justify-content-between align-items-center border-dashed">
                     <h4 class="card-title mb-0">Products List</h4>
-                    <a href="{{ route('admin.products.create') }}" class="btn btn-success btn-sm">
-                        <i class="ti ti-plus me-1"></i> Add Product
-                    </a>
+                    @unless(\App\Helpers\ViewHelper::isView('productpriceview'))
+                        <a href="{{ route('admin.products.create') }}" class="btn btn-success btn-sm">
+                            <i class="ti ti-plus me-1"></i> Add Product
+                        </a>
+                    @endunless
                 </div>
                 <div class="card-body">
                     <!-- Search and Per Page Controls -->

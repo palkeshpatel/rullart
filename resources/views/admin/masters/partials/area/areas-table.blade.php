@@ -32,12 +32,14 @@
                         <a href="javascript:void(0);" class="btn btn-light btn-icon btn-sm rounded-circle view-area-btn" data-area-id="{{ $area->areaid }}" title="View">
                             <i class="ti ti-eye fs-lg"></i>
                         </a>
-                        <a href="javascript:void(0);" class="btn btn-light btn-icon btn-sm rounded-circle edit-area-btn" data-area-id="{{ $area->areaid }}" title="Edit">
-                            <i class="ti ti-edit fs-lg"></i>
-                        </a>
-                        <a href="javascript:void(0);" class="btn btn-light btn-icon btn-sm rounded-circle delete-area-btn" data-area-id="{{ $area->areaid }}" data-area-name="{{ $area->areaname }}" title="Delete">
-                            <i class="ti ti-trash fs-lg"></i>
-                        </a>
+                        @unless(\App\Helpers\ViewHelper::isView('areamaster'))
+                            <a href="javascript:void(0);" class="btn btn-light btn-icon btn-sm rounded-circle edit-area-btn" data-area-id="{{ $area->areaid }}" title="Edit">
+                                <i class="ti ti-edit fs-lg"></i>
+                            </a>
+                            <a href="javascript:void(0);" class="btn btn-light btn-icon btn-sm rounded-circle delete-area-btn" data-area-id="{{ $area->areaid }}" data-area-name="{{ $area->areaname }}" title="Delete">
+                                <i class="ti ti-trash fs-lg"></i>
+                            </a>
+                        @endunless
                     </div>
                 </td>
             </tr>

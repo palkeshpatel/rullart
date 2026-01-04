@@ -13,9 +13,11 @@
                             class="btn btn-success btn-sm" title="Export to Excel">
                             <i class="ti ti-file-excel me-1"></i> Export
                         </a>
-                        <a href="javascript:void(0);" class="btn btn-primary btn-sm add-customer-btn">
-                            <i class="ti ti-plus me-1"></i> Add Customer
-                        </a>
+                        @unless(\App\Helpers\ViewHelper::isView('customers'))
+                            <a href="javascript:void(0);" class="btn btn-primary btn-sm add-customer-btn">
+                                <i class="ti ti-plus me-1"></i> Add Customer
+                            </a>
+                        @endunless
                     </div>
                 </div>
                 <div class="card-body">

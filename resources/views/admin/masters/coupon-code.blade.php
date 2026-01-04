@@ -9,9 +9,11 @@
             <div class="card">
                 <div class="card-header justify-content-between align-items-center border-dashed">
                     <h4 class="card-title mb-0">Coupon Codes List</h4>
-                    <a href="javascript:void(0);" class="btn btn-success btn-sm add-coupon-btn">
-                        <i class="ti ti-plus me-1"></i> Add Coupon Code
-                    </a>
+                    @unless(\App\Helpers\ViewHelper::isView('customercoupon'))
+                        <a href="javascript:void(0);" class="btn btn-success btn-sm add-coupon-btn">
+                            <i class="ti ti-plus me-1"></i> Add Coupon Code
+                        </a>
+                    @endunless
                 </div>
                 <div class="card-body">
                     <!-- Search and Per Page Controls -->
