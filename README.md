@@ -57,23 +57,42 @@ php artisan images:download --type=all
 - `--type=homegallery` - Download only home gallery images
 - `--type=category` - Download only category images
 - `--check-only` - Only check which images are missing, don't download
-- `--source=https://www.rullart.com` - Custom source URL
-- `--chunk-size=10` - Number of images to download concurrently
+- `--source=https://www.rullart.com` - Custom source URL (default: https://www.rullart.com)
+- `--chunk-size=10` - Number of images to download concurrently (default: 10, recommended: 20-50 for faster downloads)
 
-**Examples:**
+**Important Commands:**
+
 ```bash
-# Download all images
-php artisan images:download --type=all
+# Download all images with faster concurrent downloads (recommended)
+php artisan images:download --type=all --chunk-size=50
+
+# Download all product images with faster downloads
+php artisan images:download --type=products --chunk-size=50
+
+# Download all home gallery images
+php artisan images:download --type=homegallery --chunk-size=30
+
+# Download all category images
+php artisan images:download --type=category --chunk-size=30
 
 # Check which images are missing (without downloading)
 php artisan images:download --type=all --check-only
 
-# Download only product images
-php artisan images:download --type=products
+# Download with custom source URL and chunk size
+php artisan images:download --type=all --source=https://www.rullart.com --chunk-size=50
 
-# Download with custom source URL
-php artisan images:download --type=all --source=https://www.rullart.com
+# Download only product images with custom chunk size
+php artisan images:download --type=products --chunk-size=50
+
+# Download with default settings (slower, but safer)
+php artisan images:download --type=all
 ```
+
+**Performance Tips:**
+- Use `--chunk-size=50` for faster downloads (downloads 50 images at once)
+- Use `--chunk-size=20-30` for moderate speed (balanced)
+- Use default `--chunk-size=10` if you have slow internet or server limitations
+- Always use `--check-only` first to see what needs to be downloaded
 
 ---
 
