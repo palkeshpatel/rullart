@@ -66,7 +66,20 @@ class ApiController extends Controller
      */
     protected function getLocale(): string
     {
-        return request()->route('locale') ?? app()->getLocale();
+        // Try to get locale from route parameter first
+        $locale = request()->route('locale');
+        
+        // If not in route, try from URL segment
+        if (!$locale) {
+            $locale = request()->segment(1);
+        }
+        
+        // Validate and default to 'en' if invalid
+        if (!in_array($locale, ['en', 'ar'])) {
+            $locale = app()->getLocale() ?: 'en';
+        }
+        
+        return $locale;
     }
 
     /**

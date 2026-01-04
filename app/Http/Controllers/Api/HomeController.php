@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Repositories\HomeRepository;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 
 class HomeController extends ApiController
 {
@@ -23,46 +24,52 @@ class HomeController extends ApiController
      */
     public function get(Request $request)
     {
-        $locale = $this->getLocale();
-        $customerId = $this->getCustomerId();
-        $productView = $request->get('productview', '');
+        try {
+            $locale = $this->getLocale();
+            $customerId = $this->getCustomerId();
+            $productView = $request->get('productview', '');
 
-        // Get home gallery
-        $homeGallery = $this->homeRepository->getHomeGallery($locale);
+            // Get home gallery
+            $homeGallery = $this->homeRepository->getHomeGallery($locale);
 
-        // Process home gallery links - remove full URLs, keep only path
-        foreach ($homeGallery as $item) {
-            if (!empty($item->link)) {
-                $link = $item->link;
-                $link = str_replace('https://www.rullart.com/en/category/', '', $link);
-                $link = str_replace('https://www.rullart.com/ar/category/', '', $link);
-                $link = str_replace('https://www.rullart.com/en/', '', $link);
-                $link = str_replace('https://www.rullart.com/ar/', '', $link);
-                $item->link = $link;
+            // Process home gallery links - remove full URLs, keep only path
+            foreach ($homeGallery as $item) {
+                if (!empty($item->link)) {
+                    $link = $item->link;
+                    $link = str_replace('https://www.rullart.com/en/category/', '', $link);
+                    $link = str_replace('https://www.rullart.com/ar/category/', '', $link);
+                    $link = str_replace('https://www.rullart.com/en/', '', $link);
+                    $link = str_replace('https://www.rullart.com/ar/', '', $link);
+                    $item->link = $link;
+                }
+                // Clear title and description for API (as per CI implementation)
+                $item->title = '';
+                $item->titleAR = '';
+                $item->descr = '';
+                $item->descrAR = '';
             }
-            // Clear title and description for API (as per CI implementation)
-            $item->title = '';
-            $item->titleAR = '';
-            $item->descr = '';
-            $item->descrAR = '';
-        }
 
-        // Get popular products
-        $popularProducts = $this->homeRepository->getPopularProducts($locale);
+            // Get popular products
+            $popularProducts = $this->homeRepository->getPopularProducts($locale);
 
-        // Add 'thumb-' prefix to photo1 (as per CI implementation)
-        foreach ($popularProducts as $product) {
-            if (!empty($product->photo1)) {
-                $product->photo1 = 'thumb-' . $product->photo1;
+            // Add 'thumb-' prefix to photo1 (as per CI implementation)
+            foreach ($popularProducts as $product) {
+                if (!empty($product->photo1)) {
+                    $product->photo1 = 'thumb-' . $product->photo1;
+                }
             }
+
+            $data = [
+                'homegallery' => $homeGallery,
+                'popularproducts' => $popularProducts,
+            ];
+
+            return $this->success($data);
+        } catch (\Exception $e) {
+            Log::error('API Home get() error: ' . $e->getMessage());
+            Log::error('Stack trace: ' . $e->getTraceAsString());
+            return $this->error('Internal server error: ' . $e->getMessage());
         }
-
-        $data = [
-            'homegallery' => $homeGallery,
-            'popularproducts' => $popularProducts,
-        ];
-
-        return $this->success($data);
     }
 
     /**

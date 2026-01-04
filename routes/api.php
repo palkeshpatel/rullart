@@ -16,7 +16,7 @@ use Illuminate\Support\Facades\Route;
 */
 
 // API routes with locale prefix (en/ar)
-Route::prefix('{locale}/api')->where(['locale' => 'en|ar'])->group(function () {
+Route::prefix('{locale}/api')->where(['locale' => 'en|ar'])->middleware(['locale', 'currency'])->group(function () {
 
     // Home API
     Route::get('home/get', [App\Http\Controllers\Api\HomeController::class, 'get']);

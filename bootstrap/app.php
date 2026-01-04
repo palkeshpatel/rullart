@@ -11,6 +11,11 @@ return Application::configure(basePath: dirname(__DIR__))
         commands: __DIR__.'/../routes/console.php',
         health: '/up',
         then: function () {
+            // Load API routes FIRST (before frontend routes) to avoid route conflicts
+            if (file_exists(base_path('routes/api.php'))) {
+                Route::middleware('web')
+                    ->group(base_path('routes/api.php'));
+            }
             if (file_exists(base_path('routes/admin.php'))) {
                 Route::middleware('web')
                     ->group(base_path('routes/admin.php'));
