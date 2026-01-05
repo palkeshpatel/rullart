@@ -11,12 +11,26 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use App\Traits\ImageUploadTrait;
 use Illuminate\Http\UploadedFile;
+use Exception;
 
 class ProductController extends Controller
 {
     use ImageUploadTrait;
     public function index(Request $request)
     {
+        // ============================================
+        // NEW DATATABLES IMPLEMENTATION
+        // ============================================
+
+        // Check if this is a DataTables request
+        if ($request->has('draw')) {
+            return $this->getDataTablesData($request);
+        }
+
+        // ============================================
+        // OLD IMPLEMENTATION (COMMENTED FOR REFERENCE)
+        // ============================================
+        /*
         $query = Product::with('category');
 
         // Filter by category
@@ -58,6 +72,168 @@ class ProductController extends Controller
         }
 
         return view('admin.products.index', compact('products', 'categories'));
+        */
+
+        // Get categories for dropdown with subcategory count
+        $categories = Category::select('category.*')
+            ->selectRaw('(SELECT COUNT(*) FROM category as sub WHERE sub.parentid = category.categoryid AND sub.ispublished = 1) as subcategory_count')
+            ->orderBy('category')
+            ->get();
+
+        return view('admin.products.index', compact('categories'));
+    }
+
+    /**
+     * Get DataTables data
+     */
+    private function getDataTablesData(Request $request)
+    {
+        try {
+            // Base query for counting (without selectRaw to avoid issues)
+            $countQuery = Product::query();
+
+            // Get total records count (before filtering)
+            $totalRecords = $countQuery->count();
+
+            // Build base query for data (with quantity calculation)
+            $query = Product::with('category')
+                ->select('products.*')
+                ->selectRaw('IFNULL((SELECT SUM(qty) FROM productsfilter WHERE fkproductid=products.productid AND filtercode=\'size\'), 0) as quantity');
+
+            // Build count query for filtered results (without selectRaw)
+            $filteredCountQuery = Product::query();
+
+            // Filter by category
+            $category = $request->input('category');
+            if (!empty($category)) {
+                $query->where('products.fkcategoryid', $category);
+                $filteredCountQuery->where('fkcategoryid', $category);
+            }
+
+            // Filter by published status - only if explicitly set to 0 or 1
+            // Don't filter if published is null, empty, or the string "null"
+            $published = $request->input('published');
+            if ($published !== null && $published !== '' && $published !== 'null' && ($published === '0' || $published === '1' || $published === 0 || $published === 1)) {
+                $publishedValue = (int)$published;
+                $query->where('products.ispublished', $publishedValue);
+                $filteredCountQuery->where('ispublished', $publishedValue);
+            }
+
+            // Get filtered count (after filters but before search)
+            $filteredCount = $filteredCountQuery->count();
+
+            // DataTables search (global search)
+            $searchValue = $request->input('search.value', '');
+            if (!empty($searchValue)) {
+                $query->where(function ($q) use ($searchValue) {
+                    $q->where('products.title', 'like', "%{$searchValue}%")
+                        ->orWhere('products.titleAR', 'like', "%{$searchValue}%")
+                        ->orWhere('products.productcode', 'like', "%{$searchValue}%")
+                        ->orWhere('products.price', 'like', "%{$searchValue}%")
+                        ->orWhere('products.sellingprice', 'like', "%{$searchValue}%");
+                });
+
+                // Apply same search to count query
+                $filteredCountQuery->where(function ($q) use ($searchValue) {
+                    $q->where('title', 'like', "%{$searchValue}%")
+                        ->orWhere('titleAR', 'like', "%{$searchValue}%")
+                        ->orWhere('productcode', 'like', "%{$searchValue}%")
+                        ->orWhere('price', 'like', "%{$searchValue}%")
+                        ->orWhere('sellingprice', 'like', "%{$searchValue}%");
+                });
+            }
+
+            // Get filtered count after search
+            $filteredAfterSearch = $filteredCountQuery->count();
+
+            // Ordering
+            $orderColumnIndex = $request->input('order.0.column', 0);
+            $orderDir = $request->input('order.0.dir', 'desc');
+
+            $columns = [
+                'productid',
+                'productcode',
+                'title',
+                'fkcategoryid',
+                'price',
+                'discount',
+                'sellingprice',
+                'photo1',
+                'quantity',
+                'ispublished',
+                'updateddate'
+            ];
+
+            $orderColumn = $columns[$orderColumnIndex] ?? 'productid';
+
+            if ($orderColumn === 'fkcategoryid') {
+                $query->join('category as c_sort', 'c_sort.categoryid', '=', 'products.fkcategoryid');
+                $query->orderBy('c_sort.category', $orderDir);
+            } else {
+                $query->orderBy('products.' . $orderColumn, $orderDir);
+            }
+
+            // Pagination
+            $start = $request->input('start', 0);
+            $length = $request->input('length', 25);
+
+            // Debug logging
+            Log::info('DataTables Query Debug', [
+                'totalRecords' => $totalRecords,
+                'filteredCount' => $filteredCount,
+                'filteredAfterSearch' => $filteredAfterSearch,
+                'published_input' => $request->input('published'),
+                'published_type' => gettype($request->input('published')),
+                'category_input' => $request->input('category'),
+                'query_sql' => $query->toSql(),
+                'query_bindings' => $query->getBindings(),
+                'count_query_sql' => $filteredCountQuery->toSql(),
+                'count_query_bindings' => $filteredCountQuery->getBindings()
+            ]);
+
+            $products = $query->skip($start)->take($length)->get();
+
+            Log::info('DataTables Products Retrieved', [
+                'products_count' => $products->count()
+            ]);
+
+            // Format data for DataTables
+            $data = [];
+            foreach ($products as $product) {
+                $data[] = [
+                    'productid' => $product->productid,
+                    'productcode' => $product->productcode ?? '',
+                    'title' => $product->title ?? '',
+                    'category' => $product->category->category ?? 'N/A',
+                    'price' => number_format($product->price ?? 0, 3),
+                    'discount' => number_format($product->discount ?? 0, 2),
+                    'sellingprice' => number_format($product->sellingprice ?? 0, 3),
+                    'photo' => $product->photo1 ? asset('storage/upload/product/thumb-' . $product->photo1) : null,
+                    'quantity' => $product->quantity ?? 0,
+                    'ispublished' => $product->ispublished ? 'Yes' : 'No',
+                    'updateddate' => $product->updateddate ? \Carbon\Carbon::parse($product->updateddate)->format('d/M/Y') : 'N/A',
+                    'action' => $product->productid // For action buttons
+                ];
+            }
+
+            return response()->json([
+                'draw' => intval($request->input('draw')),
+                'recordsTotal' => $totalRecords,
+                'recordsFiltered' => $filteredAfterSearch,
+                'data' => $data
+            ]);
+        } catch (Exception $e) {
+            Log::error('DataTables Error: ' . $e->getMessage());
+            Log::error('Stack trace: ' . $e->getTraceAsString());
+
+            return response()->json([
+                'draw' => intval($request->input('draw', 1)),
+                'recordsTotal' => 0,
+                'recordsFiltered' => 0,
+                'data' => [],
+                'error' => 'Error loading data: ' . $e->getMessage()
+            ], 500);
+        }
     }
 
     public function create(Request $request)

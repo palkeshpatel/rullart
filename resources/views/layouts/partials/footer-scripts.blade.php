@@ -4,6 +4,9 @@
 <!-- Admin AJAX Helper -->
 <script src="{{ asset('js/admin-ajax.js') }}"></script>
 
+<!-- DataTables JS - Will be loaded dynamically after jQuery is ready -->
+<!-- Removed from here to prevent loading before jQuery -->
+
 <!-- Validation CSS -->
 <style>
     .invalid-feedback {
