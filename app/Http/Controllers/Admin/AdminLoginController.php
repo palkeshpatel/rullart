@@ -104,7 +104,8 @@ class AdminLoginController extends Controller
         }
 
         // Log in the admin using the 'admin' guard
-        Auth::guard('admin')->login($admin, $request->boolean('remember'));
+        // Note: remember_token column doesn't exist in admin table, so always pass false
+        Auth::guard('admin')->login($admin, false);
         
         Log::info('Admin Login Successful', [
             'username' => $request->user,

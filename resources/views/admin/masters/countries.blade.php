@@ -148,14 +148,14 @@
                 loadDataTables(function() {
                     if (typeof jQuery === 'undefined' || typeof jQuery.fn.DataTable === 'undefined') {
                         setTimeout(initCountriesDataTable, 50);
-                        return;
-                    }
+                    return;
+                }
 
-                    const $ = jQuery;
+                const $ = jQuery;
                     const countryBaseUrl = '{{ url("/admin/countries") }}';
                     let deleteCountryId = null;
 
-                    $(document).ready(function() {
+                $(document).ready(function() {
                         let loadingModal = null;
                         
                         function showLoader() {
@@ -324,26 +324,26 @@
 
                         // View/Edit/Add/Delete handlers
                         $(document).on('click', '.view-country-btn', function(e) {
-                            e.preventDefault();
+                        e.preventDefault();
                             const countryId = $(this).data('country-id');
                             openCountryViewModal(countryId);
-                        });
+                    });
 
-                        $(document).on('click', '.edit-country-btn', function(e) {
-                            e.preventDefault();
-                            const countryId = $(this).data('country-id');
-                            openCountryFormModal(countryId);
-                        });
+                    $(document).on('click', '.edit-country-btn', function(e) {
+                        e.preventDefault();
+                        const countryId = $(this).data('country-id');
+                        openCountryFormModal(countryId);
+                    });
 
                         $(document).on('click', '.add-country-btn', function(e) {
-                            e.preventDefault();
+                        e.preventDefault();
                             openCountryFormModal();
-                        });
+                    });
 
-                        $(document).on('click', '.delete-country-btn', function(e) {
-                            e.preventDefault();
+                    $(document).on('click', '.delete-country-btn', function(e) {
+                        e.preventDefault();
                             deleteCountryId = $(this).data('country-id');
-                            const countryName = $(this).data('country-name') || 'this country';
+                        const countryName = $(this).data('country-name') || 'this country';
                             $('#deleteCountryName').text(countryName);
                             const deleteModal = new bootstrap.Modal(document.getElementById('deleteCountryModal'));
                             deleteModal.show();
@@ -380,23 +380,23 @@
                         function openCountryViewModal(countryId) {
                             cleanupModals();
                             const url = countryBaseUrl + '/' + countryId;
-                            $('#countryViewModalContainer').html(loaderHtml());
-                            const loadingModal = new bootstrap.Modal($('#countryModal')[0], {
-                                backdrop: 'static',
-                                keyboard: false
-                            });
-                            loadingModal.show();
+                        $('#countryViewModalContainer').html(loaderHtml());
+                        const loadingModal = new bootstrap.Modal($('#countryModal')[0], {
+                            backdrop: 'static',
+                            keyboard: false
+                        });
+                        loadingModal.show();
 
-                            AdminAjax.get(url).then(response => {
-                                loadingModal.hide();
-                                cleanupModals();
-                                $('#countryViewModalContainer').html(response.html);
-                                const modalEl = document.getElementById('countryViewModal');
-                                const modal = new bootstrap.Modal(modalEl);
-                                modal.show();
+                        AdminAjax.get(url).then(response => {
+                            loadingModal.hide();
+                            cleanupModals();
+                            $('#countryViewModalContainer').html(response.html);
+                            const modalEl = document.getElementById('countryViewModal');
+                            const modal = new bootstrap.Modal(modalEl);
+                            modal.show();
 
                                 modalEl.addEventListener('hidden.bs.modal', function() {
-                                    cleanupModals();
+                                cleanupModals();
                                 }, { once: true });
                             }).catch(err => {
                                 loadingModal.hide();
@@ -408,151 +408,151 @@
                         function openCountryFormModal(countryId = null) {
                             cleanupModals();
                             const url = countryId ? countryBaseUrl + '/' + countryId + '/edit' : countryBaseUrl + '/create';
-                            $('#countryModalContainer').html(loaderHtml());
-                            const loadingModal = new bootstrap.Modal($('#countryModal')[0], {
-                                backdrop: 'static',
-                                keyboard: false
-                            });
-                            loadingModal.show();
+                        $('#countryModalContainer').html(loaderHtml());
+                        const loadingModal = new bootstrap.Modal($('#countryModal')[0], {
+                            backdrop: 'static',
+                            keyboard: false
+                        });
+                        loadingModal.show();
 
-                            AdminAjax.get(url).then(response => {
-                                loadingModal.hide();
-                                cleanupModals();
-                                $('#countryModalContainer').html(response.html);
-                                const modalEl = document.getElementById('countryModal');
-                                const modal = new bootstrap.Modal(modalEl);
-                                modal.show();
-                                setupCountryValidation(countryId, modal);
-                            }).catch(err => {
-                                loadingModal.hide();
-                                cleanupModals();
-                            });
+                        AdminAjax.get(url).then(response => {
+                            loadingModal.hide();
+                            cleanupModals();
+                            $('#countryModalContainer').html(response.html);
+                            const modalEl = document.getElementById('countryModal');
+                            const modal = new bootstrap.Modal(modalEl);
+                            modal.show();
+                            setupCountryValidation(countryId, modal);
+                        }).catch(err => {
+                            loadingModal.hide();
+                            cleanupModals();
+                        });
+                    }
+
+                    function setupCountryValidation(countryId, modal) {
+                        const $form = $('#countryForm');
+                            if (!$form.length || $form.data('validator')) {
+                            return;
                         }
 
-                        function setupCountryValidation(countryId, modal) {
-                            const $form = $('#countryForm');
-                            if (!$form.length || $form.data('validator')) {
-                                return;
-                            }
-
-                            $form.validate({
-                                rules: {
+                        $form.validate({
+                            rules: {
                                     countryname: { required: true },
                                     countrynameAR: { required: true }
-                                },
-                                messages: {
+                            },
+                            messages: {
                                     countryname: 'Country Name(EN) is required.',
                                     countrynameAR: 'Country Name(AR) is required.'
-                                },
-                                errorElement: 'div',
-                                errorClass: 'invalid-feedback',
-                                highlight(el) {
-                                    $(el).addClass('is-invalid');
-                                },
-                                unhighlight(el) {
-                                    $(el).removeClass('is-invalid').addClass('is-valid');
-                                },
-                                errorPlacement(error, element) {
-                                    error.insertAfter(element);
-                                },
-                                submitHandler(form) {
-                                    submitCountryForm(form, countryId, modal);
-                                }
-                            });
-                        }
+                            },
+                            errorElement: 'div',
+                            errorClass: 'invalid-feedback',
+                            highlight(el) {
+                                $(el).addClass('is-invalid');
+                            },
+                            unhighlight(el) {
+                                $(el).removeClass('is-invalid').addClass('is-valid');
+                            },
+                            errorPlacement(error, element) {
+                                error.insertAfter(element);
+                            },
+                            submitHandler(form) {
+                                submitCountryForm(form, countryId, modal);
+                            }
+                        });
+                    }
 
-                        function submitCountryForm(form, countryId, modal) {
-                            const formData = new FormData(form);
-                            const url = form.action;
-                            const method = form.querySelector('[name="_method"]')?.value || 'POST';
-                            const submitBtn = form.querySelector('button[type="submit"]');
-                            const originalText = submitBtn.innerHTML;
-                            submitBtn.disabled = true;
+                    function submitCountryForm(form, countryId, modal) {
+                        const formData = new FormData(form);
+                        const url = form.action;
+                        const method = form.querySelector('[name="_method"]')?.value || 'POST';
+                        const submitBtn = form.querySelector('button[type="submit"]');
+                        const originalText = submitBtn.innerHTML;
+                        submitBtn.disabled = true;
                             submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Saving...';
 
-                            AdminAjax.request(url, method, formData)
-                                .then(res => {
+                        AdminAjax.request(url, method, formData)
+                            .then(res => {
                                     showToast(res.message || 'Country saved successfully', 'success');
-                                    setTimeout(() => {
-                                        modal.hide();
-                                    }, 1500);
+                                setTimeout(() => {
+                                    modal.hide();
+                                }, 1500);
                                     showLoader();
                                     table.ajax.reload();
-                                })
-                                .catch(err => {
-                                    let errorMessage = 'Failed to save country.';
-                                    if (err.message) {
-                                        errorMessage = err.message;
-                                    } else if (err.errors) {
-                                        const firstError = Object.values(err.errors)[0];
+                            })
+                            .catch(err => {
+                                let errorMessage = 'Failed to save country.';
+                                if (err.message) {
+                                    errorMessage = err.message;
+                                } else if (err.errors) {
+                                    const firstError = Object.values(err.errors)[0];
                                         errorMessage = Array.isArray(firstError) ? firstError[0] : firstError;
                                     }
                                     showToast(errorMessage, 'error');
-                                    submitBtn.disabled = false;
+                                submitBtn.disabled = false;
                                     submitBtn.innerHTML = originalText;
-                                });
-                        }
+                            });
+                    }
 
                         function showToast(message, type = 'error') {
-                            let toastContainer = $('#global-toast-container');
-                            if (!toastContainer.length) {
+                        let toastContainer = $('#global-toast-container');
+                        if (!toastContainer.length) {
                                 toastContainer = $('<div id="global-toast-container" class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 9999;"></div>');
-                                $('body').append(toastContainer);
-                            }
+                            $('body').append(toastContainer);
+                        }
 
-                            toastContainer.find('.toast').each(function() {
-                                const bsToast = bootstrap.Toast.getInstance(this);
+                        toastContainer.find('.toast').each(function() {
+                            const bsToast = bootstrap.Toast.getInstance(this);
                                 if (bsToast) bsToast.hide();
-                            });
+                        });
 
-                            const toastBg = type === 'error' ? 'bg-danger' : 'bg-success';
-                            const toastId = 'toast-' + Date.now();
-                            const toast = $(`
+                        const toastBg = type === 'error' ? 'bg-danger' : 'bg-success';
+                        const toastId = 'toast-' + Date.now();
+                        const toast = $(`
                                 <div id="${toastId}" class="toast ${toastBg} text-white border-0" role="alert">
-                                    <div class="d-flex">
-                                        <div class="toast-body">
-                                            <i class="ti ti-${type === 'error' ? 'alert-circle' : 'check-circle'} me-2"></i>
-                                            ${message}
-                                        </div>
+                                <div class="d-flex">
+                                    <div class="toast-body">
+                                        <i class="ti ti-${type === 'error' ? 'alert-circle' : 'check-circle'} me-2"></i>
+                                        ${message}
+                                    </div>
                                         <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
-                                    </div>
                                 </div>
-                            `);
+                            </div>
+                        `);
 
-                            toastContainer.append(toast);
+                        toastContainer.append(toast);
                             const bsToast = new bootstrap.Toast(toast[0], { autohide: true, delay: 5000 });
-                            bsToast.show();
+                        bsToast.show();
 
-                            toast.on('hidden.bs.toast', function() {
-                                $(this).remove();
-                                if (toastContainer.find('.toast').length === 0) {
-                                    toastContainer.remove();
-                                }
-                            });
-                        }
+                        toast.on('hidden.bs.toast', function() {
+                            $(this).remove();
+                            if (toastContainer.find('.toast').length === 0) {
+                                toastContainer.remove();
+                            }
+                        });
+                    }
 
-                        function cleanupModals() {
-                            $('.modal-backdrop').remove();
-                            $('body').removeClass('modal-open').css({
-                                overflow: '',
-                                paddingRight: ''
-                            });
-                            $('#countryModal').remove();
+                    function cleanupModals() {
+                        $('.modal-backdrop').remove();
+                        $('body').removeClass('modal-open').css({
+                            overflow: '',
+                            paddingRight: ''
+                        });
+                        $('#countryModal').remove();
                             $('#countryViewModal').remove();
-                        }
+                    }
 
-                        function loaderHtml() {
-                            return `
-                                <div class="modal fade" id="countryModal">
-                                    <div class="modal-dialog">
-                                        <div class="modal-content">
-                                            <div class="modal-body text-center p-4">
-                                                <div class="spinner-border"></div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>`;
-                        }
+                    function loaderHtml() {
+                        return `
+        <div class="modal fade" id="countryModal">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-body text-center p-4">
+                        <div class="spinner-border"></div>
+                    </div>
+                </div>
+            </div>
+        </div>`;
+                    }
                     });
                 });
             }

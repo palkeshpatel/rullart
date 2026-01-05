@@ -40,24 +40,24 @@ class OrderController extends Controller
             $totalRecords = $countQuery->count();
 
             // Build base query for data
-            $query = Order::with('customer');
+        $query = Order::with('customer');
 
             // Build count query for filtered results
             $filteredCountQuery = Order::query();
 
-            // Filter by status
+        // Filter by status
             $status = $request->input('status');
             if (!empty($status)) {
                 $query->where('fkorderstatus', $status);
                 $filteredCountQuery->where('fkorderstatus', $status);
-            }
+        }
 
-            // Filter by country
+        // Filter by country
             $country = $request->input('country');
             if (!empty($country) && $country !== '--All Country--') {
                 $query->where('country', $country);
                 $filteredCountQuery->where('country', $country);
-            }
+        }
 
             // Get filtered count (after filters but before search)
             $filteredCount = $filteredCountQuery->count();
@@ -83,9 +83,9 @@ class OrderController extends Controller
                         ->orWhere('mobile', 'like', "%{$searchValue}%")
                         ->orWhereHas('customer', function($customerQuery) use ($searchValue) {
                             $customerQuery->where('email', 'like', "%{$searchValue}%");
-                        });
-                });
-            }
+                  });
+            });
+        }
 
             // Get filtered count after search
             $filteredAfterSearch = $filteredCountQuery->count();

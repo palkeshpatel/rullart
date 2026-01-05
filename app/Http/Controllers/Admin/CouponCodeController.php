@@ -34,11 +34,11 @@ class CouponCodeController extends Controller
             $query = CouponCode::query();
             $filteredCountQuery = CouponCode::query();
 
-            // Filter by active status
-            if ($request->has('active') && $request->active !== '') {
-                $query->where('isactive', $request->active);
+        // Filter by active status
+        if ($request->has('active') && $request->active !== '') {
+            $query->where('isactive', $request->active);
                 $filteredCountQuery->where('isactive', $request->active);
-            }
+        }
 
             // DataTables search
             $searchValue = $request->input('search.value', '');

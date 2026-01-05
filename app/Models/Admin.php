@@ -57,5 +57,30 @@ class Admin extends Authenticatable
     {
         return $this->id;
     }
+
+    /**
+     * Disable remember token functionality
+     * The admin table doesn't have remember_token column
+     */
+    public function getRememberToken()
+    {
+        return null;
+    }
+
+    /**
+     * Disable remember token functionality
+     */
+    public function setRememberToken($value)
+    {
+        // Do nothing - remember_token column doesn't exist
+    }
+
+    /**
+     * Disable remember token functionality
+     */
+    public function getRememberTokenName()
+    {
+        return null;
+    }
 }
 

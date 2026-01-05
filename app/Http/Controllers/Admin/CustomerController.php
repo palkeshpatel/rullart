@@ -37,7 +37,7 @@ class CustomerController extends Controller
             $totalRecords = $countQuery->count();
 
             // Build base query for data
-            $query = Customer::query();
+        $query = Customer::query();
 
             // Build count query for filtered results
             $filteredCountQuery = Customer::query();
@@ -59,8 +59,8 @@ class CustomerController extends Controller
                     $q->where('firstname', 'like', "%{$searchValue}%")
                         ->orWhere('lastname', 'like', "%{$searchValue}%")
                         ->orWhere('email', 'like', "%{$searchValue}%");
-                });
-            }
+            });
+        }
 
             // Get filtered count after search
             $filteredAfterSearch = $filteredCountQuery->count();

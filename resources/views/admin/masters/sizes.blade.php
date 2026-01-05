@@ -127,14 +127,14 @@
                 loadDataTables(function() {
                     if (typeof jQuery === 'undefined' || typeof jQuery.fn.DataTable === 'undefined') {
                         setTimeout(initSizesDataTable, 50);
-                        return;
-                    }
+                    return;
+                }
 
-                    const $ = jQuery;
+                const $ = jQuery;
                     const sizeBaseUrl = '{{ url("/admin/sizes") }}';
                     let deleteSizeId = null;
 
-                    $(document).ready(function() {
+                $(document).ready(function() {
                         let loadingModal = null;
                         
                         function showLoader() {
@@ -272,26 +272,26 @@
 
                         // View/Edit/Add/Delete handlers
                         $(document).on('click', '.view-size-btn', function(e) {
-                            e.preventDefault();
+                        e.preventDefault();
                             const sizeId = $(this).data('size-id');
                             openSizeViewModal(sizeId);
-                        });
+                    });
 
-                        $(document).on('click', '.edit-size-btn', function(e) {
-                            e.preventDefault();
-                            const sizeId = $(this).data('size-id');
-                            openSizeFormModal(sizeId);
-                        });
+                    $(document).on('click', '.edit-size-btn', function(e) {
+                        e.preventDefault();
+                        const sizeId = $(this).data('size-id');
+                        openSizeFormModal(sizeId);
+                    });
 
                         $(document).on('click', '.add-size-btn', function(e) {
-                            e.preventDefault();
+                        e.preventDefault();
                             openSizeFormModal();
-                        });
+                    });
 
-                        $(document).on('click', '.delete-size-btn', function(e) {
-                            e.preventDefault();
+                    $(document).on('click', '.delete-size-btn', function(e) {
+                        e.preventDefault();
                             deleteSizeId = $(this).data('size-id');
-                            const sizeName = $(this).data('size-name') || 'this size';
+                        const sizeName = $(this).data('size-name') || 'this size';
                             $('#deleteSizeName').text(sizeName);
                             const deleteModal = new bootstrap.Modal(document.getElementById('deleteSizeModal'));
                             deleteModal.show();
@@ -328,23 +328,23 @@
                         function openSizeViewModal(sizeId) {
                             cleanupModals();
                             const url = sizeBaseUrl + '/' + sizeId;
-                            $('#sizeViewModalContainer').html(loaderHtml());
-                            const loadingModal = new bootstrap.Modal($('#sizeModal')[0], {
-                                backdrop: 'static',
-                                keyboard: false
-                            });
-                            loadingModal.show();
+                        $('#sizeViewModalContainer').html(loaderHtml());
+                        const loadingModal = new bootstrap.Modal($('#sizeModal')[0], {
+                            backdrop: 'static',
+                            keyboard: false
+                        });
+                        loadingModal.show();
 
-                            AdminAjax.get(url).then(response => {
-                                loadingModal.hide();
-                                cleanupModals();
-                                $('#sizeViewModalContainer').html(response.html);
-                                const modalEl = document.getElementById('sizeViewModal');
-                                const modal = new bootstrap.Modal(modalEl);
-                                modal.show();
+                        AdminAjax.get(url).then(response => {
+                            loadingModal.hide();
+                            cleanupModals();
+                            $('#sizeViewModalContainer').html(response.html);
+                            const modalEl = document.getElementById('sizeViewModal');
+                            const modal = new bootstrap.Modal(modalEl);
+                            modal.show();
 
                                 modalEl.addEventListener('hidden.bs.modal', function() {
-                                    cleanupModals();
+                                cleanupModals();
                                 }, { once: true });
                             }).catch(err => {
                                 loadingModal.hide();
@@ -356,106 +356,106 @@
                         function openSizeFormModal(sizeId = null) {
                             cleanupModals();
                             const url = sizeId ? sizeBaseUrl + '/' + sizeId + '/edit' : sizeBaseUrl + '/create';
-                            $('#sizeModalContainer').html(loaderHtml());
-                            const loadingModal = new bootstrap.Modal($('#sizeModal')[0], {
-                                backdrop: 'static',
-                                keyboard: false
-                            });
-                            loadingModal.show();
+                        $('#sizeModalContainer').html(loaderHtml());
+                        const loadingModal = new bootstrap.Modal($('#sizeModal')[0], {
+                            backdrop: 'static',
+                            keyboard: false
+                        });
+                        loadingModal.show();
 
-                            AdminAjax.get(url).then(response => {
-                                loadingModal.hide();
-                                cleanupModals();
-                                $('#sizeModalContainer').html(response.html);
-                                const modalEl = document.getElementById('sizeModal');
-                                const modal = new bootstrap.Modal(modalEl);
-                                modal.show();
+                        AdminAjax.get(url).then(response => {
+                            loadingModal.hide();
+                            cleanupModals();
+                            $('#sizeModalContainer').html(response.html);
+                            const modalEl = document.getElementById('sizeModal');
+                            const modal = new bootstrap.Modal(modalEl);
+                            modal.show();
 
-                                setupSizeValidation(sizeId, modal);
-                            }).catch(err => {
-                                loadingModal.hide();
-                                cleanupModals();
+                            setupSizeValidation(sizeId, modal);
+                        }).catch(err => {
+                            loadingModal.hide();
+                            cleanupModals();
                                 AdminAjax.showError('Failed to load form.');
-                            });
-                        }
+                        });
+                    }
 
-                        function setupSizeValidation(sizeId, modal) {
-                            const $form = $('#sizeForm');
+                    function setupSizeValidation(sizeId, modal) {
+                        const $form = $('#sizeForm');
                             if (!$form.length || $form.data('validator')) return;
 
-                            $form.validate({
-                                rules: {
+                        $form.validate({
+                            rules: {
                                     filtervalue: { required: true },
                                     filtervalueAR: { required: true }
-                                },
-                                messages: {
-                                    filtervalue: 'Size Name(EN) is required',
-                                    filtervalueAR: 'Size Name(AR) is required'
-                                },
-                                errorElement: 'div',
-                                errorClass: 'invalid-feedback',
+                            },
+                            messages: {
+                                filtervalue: 'Size Name(EN) is required',
+                                filtervalueAR: 'Size Name(AR) is required'
+                            },
+                            errorElement: 'div',
+                            errorClass: 'invalid-feedback',
                                 highlight: function(el) {
-                                    $(el).addClass('is-invalid');
-                                },
+                                $(el).addClass('is-invalid');
+                            },
                                 unhighlight: function(el) {
-                                    $(el).removeClass('is-invalid').addClass('is-valid');
-                                },
+                                $(el).removeClass('is-invalid').addClass('is-valid');
+                            },
                                 errorPlacement: function(error, element) {
-                                    error.insertAfter(element);
-                                },
+                                error.insertAfter(element);
+                            },
                                 submitHandler: function(form) {
-                                    submitSizeForm(form, sizeId, modal);
-                                }
-                            });
-                        }
+                                submitSizeForm(form, sizeId, modal);
+                            }
+                        });
+                    }
 
-                        function submitSizeForm(form, sizeId, modal) {
-                            const formData = new FormData(form);
-                            const url = form.action;
-                            const method = form.querySelector('[name="_method"]')?.value || 'POST';
-                            const submitBtn = form.querySelector('button[type="submit"]');
-                            const originalText = submitBtn.innerHTML;
-                            submitBtn.disabled = true;
+                    function submitSizeForm(form, sizeId, modal) {
+                        const formData = new FormData(form);
+                        const url = form.action;
+                        const method = form.querySelector('[name="_method"]')?.value || 'POST';
+                        const submitBtn = form.querySelector('button[type="submit"]');
+                        const originalText = submitBtn.innerHTML;
+                        submitBtn.disabled = true;
                             submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Saving...';
 
-                            AdminAjax.request(url, method, formData)
-                                .then(res => {
+                        AdminAjax.request(url, method, formData)
+                            .then(res => {
                                     showToast(res.message || 'Size saved successfully', 'success');
-                                    setTimeout(() => {
-                                        modal.hide();
+                                setTimeout(() => {
+                                    modal.hide();
                                         cleanupModals();
-                                    }, 1500);
+                                }, 1500);
                                     showLoader();
                                     table.ajax.reload(function() {
                                         hideLoader();
                                     }, false);
-                                })
-                                .catch(err => {
+                            })
+                            .catch(err => {
                                     showToast(err.message || 'Failed to save size.', 'error');
-                                    submitBtn.disabled = false;
+                                submitBtn.disabled = false;
                                     submitBtn.innerHTML = originalText;
-                                });
-                        }
-
-                        function cleanupModals() {
-                            $('.modal-backdrop').remove();
-                            $('body').removeClass('modal-open').css({
-                                overflow: '',
-                                paddingRight: ''
                             });
-                            $('#sizeModal').remove();
-                        }
+                    }
 
-                        function loaderHtml() {
-                            return `
-                                <div class="modal fade" id="sizeModal">
-                                    <div class="modal-dialog">
-                                        <div class="modal-content">
-                                            <div class="modal-body text-center p-4">
-                                                <div class="spinner-border"></div>
-                                            </div>
-                                        </div>
-                                    </div>
+                    function cleanupModals() {
+                        $('.modal-backdrop').remove();
+                        $('body').removeClass('modal-open').css({
+                            overflow: '',
+                            paddingRight: ''
+                        });
+                        $('#sizeModal').remove();
+                    }
+
+                    function loaderHtml() {
+                        return `
+        <div class="modal fade" id="sizeModal">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-body text-center p-4">
+                        <div class="spinner-border"></div>
+                    </div>
+                </div>
+            </div>
                                 </div>
                                 <div class="modal fade" id="sizeDataTableLoader" tabindex="-1" aria-hidden="true">
                                     <div class="modal-dialog modal-dialog-centered">
@@ -470,7 +470,7 @@
                                     </div>
                                 </div>
                             `;
-                        }
+                    }
 
                         function showToast(message, type = 'success') {
                             let toastContainer = $('#global-toast-container');
