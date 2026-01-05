@@ -395,6 +395,28 @@
                                 emptyTable: "No products found",
                                 zeroRecords: "No matching products found"
                             },
+                            responsive: true,
+                            columnDefs: [{
+                                    responsivePriority: 1,
+                                    targets: [0, 1,
+                                        10
+                                    ] // Product Code, Title, Action - always visible
+                                },
+                                {
+                                    responsivePriority: 2,
+                                    targets: [2,
+                                        6
+                                    ] // Category, Photo - show on medium screens
+                                },
+                                {
+                                    responsivePriority: 3,
+                                    targets: [3, 4, 5] // Price, Discount, Selling Price
+                                },
+                                {
+                                    responsivePriority: 4,
+                                    targets: [7, 8, 9] // Quantity, Active, Updated Date
+                                }
+                            ]
                         });
 
                         // 🔍 External Search
@@ -499,7 +521,7 @@
                                         // Reload table (this will trigger the draw event)
                                         table.ajax.reload(null,
                                             false
-                                            ); // false = don't reset pagination
+                                        ); // false = don't reset pagination
                                     })
                                     .catch(err => {
                                         hideLoader();
@@ -546,23 +568,23 @@
                         // OLD IMPLEMENTATION (COMMENTED FOR REFERENCE)
                         // ============================================
                         /*
-                    function initProductScript() {
-                        if (typeof jQuery === 'undefined' || typeof jQuery.fn.validate === 'undefined') {
-                            setTimeout(initProductScript, 50);
-                            return;
-                        }
+                        function initProductScript() {
+                            if (typeof jQuery === 'undefined' || typeof jQuery.fn.validate === 'undefined') {
+                                setTimeout(initProductScript, 50);
+                                return;
+                            }
 
-                        const $ = jQuery;
+                            const $ = jQuery;
 
-                        $(document).ready(function() {
-                            loadTableFromURL();
+                            $(document).ready(function() {
+                                loadTableFromURL();
 
-                                        // ... all old code ...
-                                    });
-                                }
+                                            // ... all old code ...
+                                        });
+                                    }
 
-                                initProductScript();
-                                */
+                                    initProductScript();
+                                    */
                     });
 
                     // Helper functions (keep for modals and toasts)
