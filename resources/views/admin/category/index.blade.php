@@ -267,7 +267,8 @@
                             columnDefs: [{
                                     responsivePriority: 1,
                                     targets: [0, 1,
-                                        5] // Category (EN), Category (AR), Action - always visible
+                                        5
+                                    ] // Category (EN), Category (AR), Action - always visible
                                 },
                                 {
                                     responsivePriority: 2,
@@ -471,7 +472,7 @@
                             if (!toastContainer.length) {
                                 toastContainer = $(
                                     '<div id="global-toast-container" class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 9999;"></div>'
-                                    );
+                                );
                                 $('body').append(toastContainer);
                             }
 

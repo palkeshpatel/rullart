@@ -6,38 +6,96 @@ use App\Http\Controllers\Controller;
 use App\Models\ReturnRequest;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Response;
+use Illuminate\Support\Facades\Log;
+use Exception;
 
 class ReturnRequestController extends Controller
 {
     public function index(Request $request)
     {
-        $query = ReturnRequest::query();
-
-        // Search functionality
-        if ($request->has('search') && $request->search) {
-            $search = $request->search;
-            $query->where(function($q) use ($search) {
-                $q->where('firstname', 'like', "%{$search}%")
-                  ->orWhere('lastname', 'like', "%{$search}%")
-                  ->orWhere('email', 'like', "%{$search}%")
-                  ->orWhere('orderno', 'like', "%{$search}%")
-                  ->orWhere('mobile', 'like', "%{$search}%");
-            });
+        // Check if this is a DataTables request
+        if ($request->has('draw')) {
+            return $this->getDataTablesData($request);
         }
 
-        $perPage = $request->get('per_page', 25);
-        $returnRequests = $query->orderBy('submiton', 'desc')->paginate($perPage);
+        // Load initial view (for non-DataTables requests)
+        return view('admin.return-request.index');
+    }
 
-        // Return JSON for AJAX requests
-        if ($request->expectsJson() || $request->ajax()) {
+    private function getDataTablesData(Request $request)
+    {
+        try {
+            $query = ReturnRequest::query();
+            $filteredCountQuery = ReturnRequest::query();
+
+            // Get total records count
+            $totalRecords = ReturnRequest::count();
+
+            // DataTables search (global search)
+            $searchValue = $request->input('search.value', '');
+            if (!empty($searchValue)) {
+                $query->where(function($q) use ($searchValue) {
+                    $q->where('firstname', 'like', "%{$searchValue}%")
+                      ->orWhere('lastname', 'like', "%{$searchValue}%")
+                      ->orWhere('email', 'like', "%{$searchValue}%")
+                      ->orWhere('orderno', 'like', "%{$searchValue}%")
+                      ->orWhere('mobile', 'like', "%{$searchValue}%");
+                });
+
+                $filteredCountQuery->where(function($q) use ($searchValue) {
+                    $q->where('firstname', 'like', "%{$searchValue}%")
+                      ->orWhere('lastname', 'like', "%{$searchValue}%")
+                      ->orWhere('email', 'like', "%{$searchValue}%")
+                      ->orWhere('orderno', 'like', "%{$searchValue}%")
+                      ->orWhere('mobile', 'like', "%{$searchValue}%");
+                });
+            }
+
+            // Get filtered count after search
+            $filteredAfterSearch = $filteredCountQuery->count();
+
+            // Ordering
+            $orderColumnIndex = $request->input('order.0.column', 0);
+            $orderDir = $request->input('order.0.dir', 'desc');
+
+            // Default order by submiton
+            $query->orderBy('submiton', $orderDir);
+
+            // Pagination
+            $start = $request->input('start', 0);
+            $length = $request->input('length', 25);
+            $returnRequests = $query->skip($start)->take($length)->get();
+
+            // Format data for DataTables
+            $data = [];
+            $returnRequestBaseUrl = url('/admin/returnrequest');
+            foreach ($returnRequests as $returnRequest) {
+                $data[] = [
+                    'orderno' => $returnRequest->orderno ?? 'N/A',
+                    'name' => trim(($returnRequest->firstname ?? '') . ' ' . ($returnRequest->lastname ?? '')),
+                    'email' => $returnRequest->email ?? 'N/A',
+                    'mobile' => $returnRequest->mobile ?? 'N/A',
+                    'submiton' => $returnRequest->submiton ? \Carbon\Carbon::parse($returnRequest->submiton)->format('d/M/Y H:i') : 'N/A',
+                    'action' => $returnRequest->requestid ?? $returnRequest->id // For action buttons
+                ];
+            }
+
             return response()->json([
-                'success' => true,
-                'html' => view('admin.return-request.partials.table', compact('returnRequests'))->render(),
-                'pagination' => view('admin.partials.pagination', ['items' => $returnRequests])->render(),
+                'draw' => intval($request->input('draw')),
+                'recordsTotal' => $totalRecords,
+                'recordsFiltered' => $filteredAfterSearch,
+                'data' => $data
             ]);
+        } catch (Exception $e) {
+            Log::error('ReturnRequest DataTables Error: ' . $e->getMessage());
+            return response()->json([
+                'draw' => intval($request->input('draw', 1)),
+                'recordsTotal' => 0,
+                'recordsFiltered' => 0,
+                'data' => [],
+                'error' => 'An error occurred while loading data.'
+            ], 500);
         }
-
-        return view('admin.return-request.index', compact('returnRequests'));
     }
 
     public function export(Request $request)

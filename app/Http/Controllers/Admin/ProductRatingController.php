@@ -6,47 +6,117 @@ use App\Http\Controllers\Controller;
 use App\Models\ProductRating;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Response;
+use Illuminate\Support\Facades\Log;
+use Exception;
 
 class ProductRatingController extends Controller
 {
     public function index(Request $request)
     {
-        $query = ProductRating::with(['product', 'customer']);
-
-        // Search functionality
-        if ($request->has('search') && $request->search) {
-            $search = $request->search;
-            $query->whereHas('customer', function($q) use ($search) {
-                $q->where('firstname', 'like', "%{$search}%")
-                  ->orWhere('lastname', 'like', "%{$search}%");
-            })->orWhereHas('product', function($q) use ($search) {
-                $q->where('title', 'like', "%{$search}%");
-            });
+        // Check if this is a DataTables request
+        if ($request->has('draw')) {
+            return $this->getDataTablesData($request);
         }
 
-        // Filter by rating
-        if ($request->has('rating') && $request->rating) {
-            $query->where('rate', $request->rating);
-        }
+        // Load initial view (for non-DataTables requests)
+        return view('admin.product-rate.index');
+    }
 
-        // Filter by published status
-        if ($request->has('published') && $request->published !== '') {
-            $query->where('ispublished', $request->published);
-        }
+    private function getDataTablesData(Request $request)
+    {
+        try {
+            $query = ProductRating::with(['product', 'customer']);
+            $filteredCountQuery = ProductRating::with(['product', 'customer']);
 
-        $perPage = $request->get('per_page', 25);
-        $ratings = $query->orderBy('submiton', 'desc')->paginate($perPage);
+            // Get total records count
+            $totalRecords = ProductRating::count();
 
-        // Return JSON for AJAX requests
-        if ($request->expectsJson() || $request->ajax()) {
+            // Filter by rating
+            $rating = $request->input('rating');
+            if (!empty($rating)) {
+                $query->where('rate', $rating);
+                $filteredCountQuery->where('rate', $rating);
+            }
+
+            // Filter by published status
+            $published = $request->input('published');
+            if ($published !== '' && $published !== null) {
+                $query->where('ispublished', $published);
+                $filteredCountQuery->where('ispublished', $published);
+            }
+
+            // DataTables search (global search)
+            $searchValue = $request->input('search.value', '');
+            if (!empty($searchValue)) {
+                $query->where(function($q) use ($searchValue) {
+                    $q->whereHas('customer', function($customerQuery) use ($searchValue) {
+                        $customerQuery->where('firstname', 'like', "%{$searchValue}%")
+                          ->orWhere('lastname', 'like', "%{$searchValue}%");
+                    })->orWhereHas('product', function($productQuery) use ($searchValue) {
+                        $productQuery->where('title', 'like', "%{$searchValue}%");
+                    });
+                });
+
+                $filteredCountQuery->where(function($q) use ($searchValue) {
+                    $q->whereHas('customer', function($customerQuery) use ($searchValue) {
+                        $customerQuery->where('firstname', 'like', "%{$searchValue}%")
+                          ->orWhere('lastname', 'like', "%{$searchValue}%");
+                    })->orWhereHas('product', function($productQuery) use ($searchValue) {
+                        $productQuery->where('title', 'like', "%{$searchValue}%");
+                    });
+                });
+            }
+
+            // Get filtered count after search
+            $filteredAfterSearch = $filteredCountQuery->count();
+
+            // Ordering
+            $orderColumnIndex = $request->input('order.0.column', 0);
+            $orderDir = $request->input('order.0.dir', 'desc');
+
+            // Default order by submiton
+            $query->orderBy('submiton', $orderDir);
+
+            // Pagination
+            $start = $request->input('start', 0);
+            $length = $request->input('length', 25);
+            $ratings = $query->skip($start)->take($length)->get();
+
+            // Format data for DataTables
+            $data = [];
+            $ratingBaseUrl = url('/admin/productrate');
+            foreach ($ratings as $rating) {
+                $customerName = $rating->customer ? trim(($rating->customer->firstname ?? '') . ' ' . ($rating->customer->lastname ?? '')) : 'N/A';
+                $data[] = [
+                    'product' => [
+                        'title' => $rating->product ? $rating->product->title : 'N/A',
+                        'photo' => $rating->product ? $rating->product->photo : null
+                    ],
+                    'customer' => $customerName ?: 'N/A',
+                    'rate' => $rating->rate ?? 0,
+                    'review' => $rating->review ?? 'No review',
+                    'submiton' => $rating->submiton ? \Carbon\Carbon::parse($rating->submiton)->format('d/M/Y H:i') : 'N/A',
+                    'ispublished' => $rating->ispublished ? 'Published' : 'Unpublished',
+                    'action' => $rating->rateid // For action buttons
+                ];
+            }
+
             return response()->json([
-                'success' => true,
-                'html' => view('admin.product-rate.partials.table', compact('ratings'))->render(),
-                'pagination' => view('admin.partials.pagination', ['items' => $ratings])->render(),
+                'draw' => intval($request->input('draw')),
+                'recordsTotal' => $totalRecords,
+                'recordsFiltered' => $filteredAfterSearch,
+                'data' => $data
             ]);
+        } catch (Exception $e) {
+            Log::error('ProductRating DataTables Error: ' . $e->getMessage());
+            return response()->json([
+                'draw' => intval($request->input('draw', 1)),
+                'recordsTotal' => 0,
+                'recordsFiltered' => 0,
+                'data' => [],
+                'error' => 'An error occurred while loading data.'
+            ], 500);
         }
-
-        return view('admin.product-rate.index', compact('ratings'));
     }
 
     public function export(Request $request)
