@@ -53,13 +53,13 @@
                         @endif
                     </td>
                     <td>
-                        <div class="d-flex gap-2">
-                            <button type="button" class="btn btn-sm btn-primary" title="View">
-                                <i class="ti ti-eye"></i>
-                            </button>
-                            <button type="button" class="btn btn-sm btn-danger" title="Delete">
-                                <i class="ti ti-trash"></i>
-                            </button>
+                        <div class="d-flex gap-1">
+                            <a href="javascript:void(0);" class="btn btn-light btn-icon btn-sm rounded-circle view-rating-btn" data-rating-id="{{ $rating->ratingid }}" title="View">
+                                <i class="ti ti-eye fs-lg"></i>
+                            </a>
+                            <a href="javascript:void(0);" class="btn btn-light btn-icon btn-sm rounded-circle delete-rating-btn" data-rating-id="{{ $rating->ratingid }}" title="Delete">
+                                <i class="ti ti-trash fs-lg"></i>
+                            </a>
                         </div>
                     </td>
                 </tr>

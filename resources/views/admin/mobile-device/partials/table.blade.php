@@ -54,9 +54,11 @@
                         <input type="checkbox" class="form-check-input" value="{{ $device->id }}">
                     </td>
                     <td>
-                        <button type="button" class="btn btn-sm btn-primary" title="Send Notification">
-                            <i class="ti ti-send"></i> Send Notification
-                        </button>
+                        <div class="d-flex gap-1">
+                            <a href="javascript:void(0);" class="btn btn-light btn-icon btn-sm rounded-circle send-notification-btn" data-device-id="{{ $device->id }}" title="Send Notification">
+                                <i class="ti ti-send fs-lg"></i>
+                            </a>
+                        </div>
                     </td>
                 </tr>
             @empty

@@ -254,9 +254,11 @@
                                     orderable: false,
                                     searchable: false,
                                     render: function(data, type, row) {
-                                        let html = '<div class="d-flex gap-2">';
-                                        html += '<button type="button" class="btn btn-sm btn-primary view-rating-btn" data-rating-id="' + row.action + '" title="View"><i class="ti ti-eye"></i></button>';
-                                        html += '<button type="button" class="btn btn-sm btn-danger delete-rating-btn" data-rating-id="' + row.action + '" title="Delete"><i class="ti ti-trash"></i></button>';
+                                        let html = '<div class="d-flex gap-1">';
+                                        html += '<a href="javascript:void(0);" class="btn btn-light btn-icon btn-sm rounded-circle view-rating-btn" data-rating-id="' + row.action + '" title="View">';
+                                        html += '<i class="ti ti-eye fs-lg"></i></a>';
+                                        html += '<a href="javascript:void(0);" class="btn btn-light btn-icon btn-sm rounded-circle delete-rating-btn" data-rating-id="' + row.action + '" title="Delete">';
+                                        html += '<i class="ti ti-trash fs-lg"></i></a>';
                                         html += '</div>';
                                         return html;
                                     }

@@ -200,7 +200,11 @@
                                     orderable: false,
                                     searchable: false,
                                     render: function(data, type, row) {
-                                        return '<button type="button" class="btn btn-sm btn-danger delete-wishlist-btn" data-wishlist-id="' + row.action + '" title="Delete"><i class="ti ti-trash"></i></button>';
+                                        let html = '<div class="d-flex gap-1">';
+                                        html += '<a href="javascript:void(0);" class="btn btn-light btn-icon btn-sm rounded-circle delete-wishlist-btn" data-wishlist-id="' + row.action + '" title="Delete">';
+                                        html += '<i class="ti ti-trash fs-lg"></i></a>';
+                                        html += '</div>';
+                                        return html;
                                     }
                                 }
                             ],

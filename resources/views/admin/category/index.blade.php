@@ -243,8 +243,13 @@
                                         html +=
                                             '<a href="javascript:void(0);" class="btn btn-light btn-icon btn-sm rounded-circle edit-category-btn" data-category-id="' +
                                             row.action + '" title="Edit">';
+                                        html += '<i class="ti ti-edit fs-lg"></i></a>';
                                         html +=
-                                            '<i class="ti ti-edit fs-lg"></i></a>';
+                                            '<a href="javascript:void(0);" class="btn btn-light btn-icon btn-sm rounded-circle delete-category-btn" data-category-id="' +
+                                            row.action + '" data-category-name="' + (row
+                                                .category || 'this category') +
+                                            '" title="Delete">';
+                                        html += '<i class="ti ti-trash fs-lg"></i></a>';
                                         html += '</div>';
                                         return html;
                                     }

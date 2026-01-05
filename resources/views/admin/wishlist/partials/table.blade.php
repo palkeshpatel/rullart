@@ -35,9 +35,11 @@
                         @endif
                     </td>
                     <td>
-                        <button type="button" class="btn btn-sm btn-danger" title="Delete">
-                            <i class="ti ti-trash"></i>
-                        </button>
+                        <div class="d-flex gap-1">
+                            <a href="javascript:void(0);" class="btn btn-light btn-icon btn-sm rounded-circle delete-wishlist-btn" data-wishlist-id="{{ $wishlist->wishlistid }}" title="Delete">
+                                <i class="ti ti-trash fs-lg"></i>
+                            </a>
+                        </div>
                     </td>
                 </tr>
             @empty

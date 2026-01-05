@@ -225,7 +225,11 @@
                                     orderable: false,
                                     searchable: false,
                                     render: function(data, type, row) {
-                                        return '<button type="button" class="btn btn-sm btn-primary" title="Send Notification"><i class="ti ti-send"></i> Send Notification</button>';
+                                        let html = '<div class="d-flex gap-1">';
+                                        html += '<a href="javascript:void(0);" class="btn btn-light btn-icon btn-sm rounded-circle send-notification-btn" data-device-id="' + row.action + '" title="Send Notification">';
+                                        html += '<i class="ti ti-send fs-lg"></i></a>';
+                                        html += '</div>';
+                                        return html;
                                     }
                                 }
                             ],
