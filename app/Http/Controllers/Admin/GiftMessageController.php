@@ -7,45 +7,96 @@ use App\Models\GiftMessage;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rule;
+use Exception;
 
 class GiftMessageController extends Controller
 {
     public function index(Request $request)
     {
-        $query = GiftMessage::query();
-
-        // Search functionality
-        if ($request->has('search') && $request->search) {
-            $search = $request->search;
-            $query->where(function($q) use ($search) {
-                $q->where('message', 'like', "%{$search}%")
-                  ->orWhere('messageAR', 'like', "%{$search}%");
-            });
+        // Check if this is a DataTables request
+        if ($request->has('draw')) {
+            return $this->getDataTablesData($request);
         }
 
-        // Filter by active status
-        if ($request->has('active') && $request->active !== '') {
-            $query->where('isactive', $request->active);
-        }
+        // Return view for initial page load
+        return view('admin.masters.messages');
+    }
 
-        // Sorting
-        $sortColumn = $request->get('sort', 'displayorder');
-        $sortDirection = $request->get('direction', 'asc');
-        $query->orderBy($sortColumn, $sortDirection);
+    /**
+     * Get DataTables data for server-side processing
+     */
+    private function getDataTablesData(Request $request)
+    {
+        try {
+            $countQuery = GiftMessage::query();
+            $totalRecords = $countQuery->count();
 
-        $perPage = $request->get('per_page', 25);
-        $messages = $query->paginate($perPage);
+            $query = GiftMessage::query();
+            $filteredCountQuery = GiftMessage::query();
 
-        // Return JSON for AJAX requests
-        if ($request->expectsJson() || $request->ajax()) {
+            // Filter by active status
+            if ($request->has('active') && $request->active !== '') {
+                $query->where('isactive', $request->active);
+                $filteredCountQuery->where('isactive', $request->active);
+            }
+
+            // DataTables search
+            $searchValue = $request->input('search.value', '');
+            if (!empty($searchValue)) {
+                $query->where(function ($q) use ($searchValue) {
+                    $q->where('message', 'like', "%{$searchValue}%")
+                        ->orWhere('messageAR', 'like', "%{$searchValue}%");
+                });
+
+                $filteredCountQuery->where(function ($q) use ($searchValue) {
+                    $q->where('message', 'like', "%{$searchValue}%")
+                        ->orWhere('messageAR', 'like', "%{$searchValue}%");
+                });
+            }
+
+            $filteredAfterSearch = $filteredCountQuery->count();
+
+            // Ordering
+            $orderColumnIndex = $request->input('order.0.column', 0);
+            $orderDir = $request->input('order.0.dir', 'asc');
+            $columns = ['messageid', 'message', 'messageAR', 'displayorder', 'isactive', 'messageid'];
+            $orderColumn = $columns[$orderColumnIndex] ?? 'messageid';
+            $query->orderBy($orderColumn, $orderDir);
+
+            // Pagination
+            $start = $request->input('start', 0);
+            $length = $request->input('length', 25);
+            $messages = $query->skip($start)->take($length)->get();
+
+            // Format data
+            $data = [];
+            foreach ($messages as $message) {
+                $data[] = [
+                    'messageid' => $message->messageid ?? '',
+                    'message' => \Str::limit($message->message ?? '', 50),
+                    'messageAR' => \Str::limit($message->messageAR ?? '', 50),
+                    'displayorder' => $message->displayorder ?? '',
+                    'isactive' => $message->isactive ? 'Yes' : 'No',
+                    'action' => $message->messageid
+                ];
+            }
+
             return response()->json([
-                'success' => true,
-                'html' => view('admin.masters.partials.messages.messages-table', compact('messages'))->render(),
-                'pagination' => view('admin.partials.pagination', ['items' => $messages])->render(),
+                'draw' => intval($request->input('draw')),
+                'recordsTotal' => $totalRecords,
+                'recordsFiltered' => $filteredAfterSearch,
+                'data' => $data
             ]);
+        } catch (Exception $e) {
+            Log::error('GiftMessage DataTables Error: ' . $e->getMessage());
+            return response()->json([
+                'draw' => intval($request->input('draw', 1)),
+                'recordsTotal' => 0,
+                'recordsFiltered' => 0,
+                'data' => [],
+                'error' => 'An error occurred while loading data.'
+            ], 500);
         }
-
-        return view('admin.masters.messages', compact('messages'));
     }
 
     public function create(Request $request)

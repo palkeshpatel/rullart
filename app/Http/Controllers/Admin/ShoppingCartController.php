@@ -7,42 +7,19 @@ use App\Models\ShoppingCartMaster;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Response;
+use Illuminate\Support\Facades\Log;
+use Exception;
 
 class ShoppingCartController extends Controller
 {
     public function index(Request $request)
     {
-        // Based on CI project - Get incomplete shopping carts using NOT EXISTS
-        // Carts that haven't been converted to orders
-        $query = ShoppingCartMaster::with(['customer', 'addressbook'])
-            ->whereDoesntHave('order');
-
-        // Search functionality
-        if ($request->has('search') && $request->search) {
-            $search = $request->search;
-            $query->where(function ($q) use ($search) {
-                $q->where('cartid', 'like', "%{$search}%")
-                    ->orWhereHas('customer', function ($customerQuery) use ($search) {
-                        $customerQuery->where('firstname', 'like', "%{$search}%")
-                            ->orWhere('lastname', 'like', "%{$search}%")
-                            ->orWhere('email', 'like', "%{$search}%");
-                    });
-            });
+        // Check if this is a DataTables request
+        if ($request->has('draw')) {
+            return $this->getDataTablesData($request);
         }
-
-        // Filter by country
-        if ($request->filled('country') && $request->country !== '' && $request->country !== '--All Country--') {
-            $query->whereHas('addressbook', function ($addressQuery) use ($request) {
-                $addressQuery->where('country', $request->country);
-            });
-        }
-
-        // Pagination with limit
-        $perPage = $request->get('per_page', 25);
-        $carts = $query->orderBy('orderdate', 'desc')->paginate($perPage);
 
         // Get unique countries for filter dropdown
-        // Only get countries that have incomplete shopping carts (same logic as main query)
         $countries = ShoppingCartMaster::whereDoesntHave('order')
             ->whereHas('addressbook', function ($query) {
                 $query->whereNotNull('country');
@@ -55,16 +32,119 @@ class ShoppingCartController extends Controller
             ->sort()
             ->values();
 
-        // Return JSON for AJAX requests
-        if ($request->expectsJson() || $request->ajax()) {
-            return response()->json([
-                'success' => true,
-                'html' => view('admin.orders-not-process.partials.table', compact('carts'))->render(),
-                'pagination' => view('admin.partials.pagination', ['items' => $carts])->render(),
-            ]);
-        }
+        // Return view for initial page load
+        return view('admin.orders-not-process.index', compact('countries'));
+    }
 
-        return view('admin.orders-not-process.index', compact('carts', 'countries'));
+    /**
+     * Get DataTables data for server-side processing
+     */
+    private function getDataTablesData(Request $request)
+    {
+        try {
+            $countQuery = ShoppingCartMaster::whereDoesntHave('order');
+            $totalRecords = $countQuery->count();
+
+            $query = ShoppingCartMaster::with(['customer', 'addressbook'])->whereDoesntHave('order');
+            $filteredCountQuery = ShoppingCartMaster::whereDoesntHave('order');
+
+            // Filter by country
+            $country = $request->input('country');
+            if (!empty($country) && $country !== '--All Country--') {
+                $query->whereHas('addressbook', function ($addressQuery) use ($country) {
+                    $addressQuery->where('country', $country);
+                });
+                $filteredCountQuery->whereHas('addressbook', function ($addressQuery) use ($country) {
+                    $addressQuery->where('country', $country);
+                });
+            }
+
+            $filteredCount = $filteredCountQuery->count();
+
+            // DataTables search
+            $searchValue = $request->input('search.value', '');
+            if (!empty($searchValue)) {
+                $query->where(function ($q) use ($searchValue) {
+                    $q->where('cartid', 'like', "%{$searchValue}%")
+                        ->orWhereHas('customer', function ($customerQuery) use ($searchValue) {
+                            $customerQuery->where('firstname', 'like', "%{$searchValue}%")
+                                ->orWhere('lastname', 'like', "%{$searchValue}%")
+                                ->orWhere('email', 'like', "%{$searchValue}%");
+                        });
+                });
+
+                $filteredCountQuery->where(function ($q) use ($searchValue) {
+                    $q->where('cartid', 'like', "%{$searchValue}%")
+                        ->orWhereHas('customer', function ($customerQuery) use ($searchValue) {
+                            $customerQuery->where('firstname', 'like', "%{$searchValue}%")
+                                ->orWhere('lastname', 'like', "%{$searchValue}%")
+                                ->orWhere('email', 'like', "%{$searchValue}%");
+                        });
+                });
+            }
+
+            $filteredAfterSearch = $filteredCountQuery->count();
+
+            // Ordering
+            $orderColumnIndex = $request->input('order.0.column', 0);
+            $orderDir = $request->input('order.0.dir', 'desc');
+            $columns = ['cartid', 'firstname', 'email', 'total', 'orderdate', 'paymentmethod', 'mobiledevice', 'emailcount', 'emailsenddate', 'cartid'];
+            $orderColumn = $columns[$orderColumnIndex] ?? 'orderdate';
+            $query->orderBy($orderColumn, $orderDir);
+
+            // Pagination
+            $start = $request->input('start', 0);
+            $length = $request->input('length', 25);
+            $carts = $query->skip($start)->take($length)->get();
+
+            // Format data
+            $data = [];
+            foreach ($carts as $cart) {
+                $name = trim(($cart->customer->firstname ?? '') . ' ' . ($cart->customer->lastname ?? ''));
+                $orderFrom = '';
+                if (isset($cart->mobiledevice) && $cart->mobiledevice) {
+                    $orderFrom = ucfirst($cart->mobiledevice);
+                    if (isset($cart->platform) && $cart->platform) {
+                        $orderFrom .= ' ' . $cart->platform;
+                    }
+                } elseif (isset($cart->platform) && $cart->platform) {
+                    $orderFrom = 'Web ' . $cart->platform;
+                } elseif (isset($cart->browser) && $cart->browser) {
+                    $orderFrom = 'Web ' . $cart->browser;
+                } else {
+                    $orderFrom = 'Web';
+                }
+
+                $data[] = [
+                    'ref' => $cart->cartid ?? '',
+                    'name' => $name ?: 'N/A',
+                    'email' => $cart->customer->email ?? 'N/A',
+                    'total' => number_format($cart->total ?? 0, 3),
+                    'orderdate' => $cart->orderdate ? \Carbon\Carbon::parse($cart->orderdate)->format('d/M/Y H:i') : 'N/A',
+                    'paymentmethod' => isset($cart->paymentmethod) && $cart->paymentmethod ? ucfirst($cart->paymentmethod) : 'N/A',
+                    'orderfrom' => $orderFrom,
+                    'emailcount' => '0',
+                    'emailsenddate' => '-',
+                    'action' => $cart->cartid
+                ];
+            }
+
+            return response()->json([
+                'draw' => intval($request->input('draw')),
+                'recordsTotal' => $totalRecords,
+                'recordsFiltered' => $filteredAfterSearch,
+                'data' => $data
+            ]);
+        } catch (Exception $e) {
+            Log::error('Orders Not Process DataTables Error: ' . $e->getMessage());
+            return response()->json([
+                'draw' => intval($request->input('draw', 1)),
+                'recordsTotal' => 0,
+                'recordsFiltered' => 0,
+                'data' => [],
+                'error' => 'An error occurred while loading data.'
+            ], 500);
+        }
     }
 
     public function show(Request $request, $id)

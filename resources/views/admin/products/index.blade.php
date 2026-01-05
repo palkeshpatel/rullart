@@ -263,6 +263,7 @@
                         let table = $('#productsTable').DataTable({
                             processing: true,
                             serverSide: true,
+                            dom: 'rtip', // Hide default search (f) and length menu (l), show only table, info, pagination
                             ajax: {
                                 url: '{{ route('admin.products') }}',
                                 type: 'GET',

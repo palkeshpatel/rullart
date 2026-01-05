@@ -7,45 +7,96 @@ use App\Models\CourierCompany;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rule;
+use Exception;
 
 class CourierCompanyController extends Controller
 {
     public function index(Request $request)
     {
-        $query = CourierCompany::query();
-
-        // Search functionality
-        if ($request->has('search') && $request->search) {
-            $search = $request->search;
-            $query->where(function($q) use ($search) {
-                $q->where('name', 'like', "%{$search}%")
-                  ->orWhere('tracking_url', 'like', "%{$search}%");
-            });
+        // Check if this is a DataTables request
+        if ($request->has('draw')) {
+            return $this->getDataTablesData($request);
         }
 
-        // Filter by active status
-        if ($request->has('active') && $request->active !== '') {
-            $query->where('isactive', $request->active);
-        }
+        // Return view for initial page load
+        return view('admin.masters.courier-company');
+    }
 
-        // Sorting
-        $sortColumn = $request->get('sort', 'id');
-        $sortDirection = $request->get('direction', 'desc');
-        $query->orderBy($sortColumn, $sortDirection);
+    /**
+     * Get DataTables data for server-side processing
+     */
+    private function getDataTablesData(Request $request)
+    {
+        try {
+            $countQuery = CourierCompany::query();
+            $totalRecords = $countQuery->count();
 
-        $perPage = $request->get('per_page', 25);
-        $courierCompanies = $query->paginate($perPage);
+            $query = CourierCompany::query();
+            $filteredCountQuery = CourierCompany::query();
 
-        // Return JSON for AJAX requests
-        if ($request->expectsJson() || $request->ajax()) {
+            // Filter by active status
+            if ($request->has('active') && $request->active !== '') {
+                $query->where('isactive', $request->active);
+                $filteredCountQuery->where('isactive', $request->active);
+            }
+
+            // DataTables search
+            $searchValue = $request->input('search.value', '');
+            if (!empty($searchValue)) {
+                $query->where(function ($q) use ($searchValue) {
+                    $q->where('name', 'like', "%{$searchValue}%")
+                        ->orWhere('tracking_url', 'like', "%{$searchValue}%");
+                });
+
+                $filteredCountQuery->where(function ($q) use ($searchValue) {
+                    $q->where('name', 'like', "%{$searchValue}%")
+                        ->orWhere('tracking_url', 'like', "%{$searchValue}%");
+                });
+            }
+
+            $filteredAfterSearch = $filteredCountQuery->count();
+
+            // Ordering
+            $orderColumnIndex = $request->input('order.0.column', 0);
+            $orderDir = $request->input('order.0.dir', 'desc');
+            $columns = ['id', 'name', 'tracking_url', 'isactive', 'created_at', 'id'];
+            $orderColumn = $columns[$orderColumnIndex] ?? 'id';
+            $query->orderBy($orderColumn, $orderDir);
+
+            // Pagination
+            $start = $request->input('start', 0);
+            $length = $request->input('length', 25);
+            $courierCompanies = $query->skip($start)->take($length)->get();
+
+            // Format data
+            $data = [];
+            foreach ($courierCompanies as $courier) {
+                $data[] = [
+                    'id' => $courier->id ?? '',
+                    'name' => $courier->name ?? '',
+                    'tracking_url' => $courier->tracking_url ? '<a href="' . $courier->tracking_url . '" target="_blank" class="text-primary">' . \Str::limit($courier->tracking_url, 50) . '</a>' : 'N/A',
+                    'isactive' => $courier->isactive ? 'Yes' : 'No',
+                    'created_at' => $courier->created_at ? \Carbon\Carbon::parse($courier->created_at)->format('d-M-Y H:i') : 'N/A',
+                    'action' => $courier->id
+                ];
+            }
+
             return response()->json([
-                'success' => true,
-                'html' => view('admin.masters.partials.courier.courier-company-table', compact('courierCompanies'))->render(),
-                'pagination' => view('admin.partials.pagination', ['items' => $courierCompanies])->render(),
+                'draw' => intval($request->input('draw')),
+                'recordsTotal' => $totalRecords,
+                'recordsFiltered' => $filteredAfterSearch,
+                'data' => $data
             ]);
+        } catch (Exception $e) {
+            Log::error('CourierCompany DataTables Error: ' . $e->getMessage());
+            return response()->json([
+                'draw' => intval($request->input('draw', 1)),
+                'recordsTotal' => 0,
+                'recordsFiltered' => 0,
+                'data' => [],
+                'error' => 'An error occurred while loading data.'
+            ], 500);
         }
-
-        return view('admin.masters.courier-company', compact('courierCompanies'));
     }
 
     public function create(Request $request)

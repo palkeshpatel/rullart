@@ -8,54 +8,147 @@ use App\Models\OrderItem;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Response;
+use Illuminate\Support\Facades\Log;
+use Exception;
 
 class OrderController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Order::with('customer');
-
-        // Filter by status
-        if ($request->has('status') && $request->status) {
-            $query->where('fkorderstatus', $request->status);
+        // Check if this is a DataTables request
+        if ($request->has('draw')) {
+            return $this->getDataTablesData($request);
         }
-
-        // Filter by country
-        if ($request->has('country') && $request->country && $request->country !== '--All Country--') {
-            $query->where('country', $request->country);
-        }
-
-        // Search functionality
-        if ($request->has('search') && $request->search) {
-            $search = $request->search;
-            $query->where(function($q) use ($search) {
-                $q->where('orderid', 'like', "%{$search}%")
-                  ->orWhere('firstname', 'like', "%{$search}%")
-                  ->orWhere('lastname', 'like', "%{$search}%")
-                  ->orWhere('mobile', 'like', "%{$search}%")
-                  ->orWhereHas('customer', function($customerQuery) use ($search) {
-                      $customerQuery->where('email', 'like', "%{$search}%");
-                  });
-            });
-        }
-
-        $perPage = $request->get('per_page', 25);
-        $orders = $query->orderBy('orderdate', 'desc')->paginate($perPage);
 
         // Get unique countries for filter
         $countries = Order::select('country')->distinct()->whereNotNull('country')->orderBy('country')->pluck('country');
 
-        // Return JSON for AJAX requests
-        if ($request->expectsJson() || $request->ajax()) {
-            return response()->json([
-                'success' => true,
-                'html' => view('admin.orders.partials.table', compact('orders'))->render(),
-                'pagination' => view('admin.partials.pagination', ['items' => $orders])->render(),
-                'hasFilters' => $request->has('status') || $request->has('country') || $request->has('search'),
-            ]);
-        }
+        // Return view for initial page load
+        return view('admin.orders.index', compact('countries'));
+    }
 
-        return view('admin.orders.index', compact('orders', 'countries'));
+    /**
+     * Get DataTables data for server-side processing
+     */
+    private function getDataTablesData(Request $request)
+    {
+        try {
+            // Base query for counting
+            $countQuery = Order::query();
+
+            // Get total records count (before filtering)
+            $totalRecords = $countQuery->count();
+
+            // Build base query for data
+            $query = Order::with('customer');
+
+            // Build count query for filtered results
+            $filteredCountQuery = Order::query();
+
+            // Filter by status
+            $status = $request->input('status');
+            if (!empty($status)) {
+                $query->where('fkorderstatus', $status);
+                $filteredCountQuery->where('fkorderstatus', $status);
+            }
+
+            // Filter by country
+            $country = $request->input('country');
+            if (!empty($country) && $country !== '--All Country--') {
+                $query->where('country', $country);
+                $filteredCountQuery->where('country', $country);
+            }
+
+            // Get filtered count (after filters but before search)
+            $filteredCount = $filteredCountQuery->count();
+
+            // DataTables search (global search)
+            $searchValue = $request->input('search.value', '');
+            if (!empty($searchValue)) {
+                $query->where(function ($q) use ($searchValue) {
+                    $q->where('orderid', 'like', "%{$searchValue}%")
+                        ->orWhere('firstname', 'like', "%{$searchValue}%")
+                        ->orWhere('lastname', 'like', "%{$searchValue}%")
+                        ->orWhere('mobile', 'like', "%{$searchValue}%")
+                        ->orWhereHas('customer', function($customerQuery) use ($searchValue) {
+                            $customerQuery->where('email', 'like', "%{$searchValue}%");
+                        });
+                });
+
+                // Apply same search to count query
+                $filteredCountQuery->where(function ($q) use ($searchValue) {
+                    $q->where('orderid', 'like', "%{$searchValue}%")
+                        ->orWhere('firstname', 'like', "%{$searchValue}%")
+                        ->orWhere('lastname', 'like', "%{$searchValue}%")
+                        ->orWhere('mobile', 'like', "%{$searchValue}%")
+                        ->orWhereHas('customer', function($customerQuery) use ($searchValue) {
+                            $customerQuery->where('email', 'like', "%{$searchValue}%");
+                        });
+                });
+            }
+
+            // Get filtered count after search
+            $filteredAfterSearch = $filteredCountQuery->count();
+
+            // Ordering
+            $orderColumnIndex = $request->input('order.0.column', 0);
+            $orderDir = $request->input('order.0.dir', 'desc');
+
+            $columns = [
+                'orderid',
+                'firstname',
+                'email',
+                'total',
+                'fkorderstatus',
+                'country',
+                'orderdate',
+                'shipping_charge',
+                'paymentmethod',
+                'tranid'
+            ];
+
+            $orderColumn = $columns[$orderColumnIndex] ?? 'orderdate';
+            $query->orderBy($orderColumn, $orderDir);
+
+            // Pagination
+            $start = $request->input('start', 0);
+            $length = $request->input('length', 25);
+            $orders = $query->skip($start)->take($length)->get();
+
+            // Format data for DataTables
+            $data = [];
+            foreach ($orders as $order) {
+                $data[] = [
+                    'orderid' => $order->orderid ?? '',
+                    'name' => trim(($order->firstname ?? '') . ' ' . ($order->lastname ?? '')),
+                    'email' => $order->customer->email ?? 'N/A',
+                    'total' => number_format($order->total ?? 0, 3),
+                    'status' => $order->fkorderstatus ?? 1,
+                    'country' => $order->country ?? 'N/A',
+                    'orderdate' => $order->orderdate ? \Carbon\Carbon::parse($order->orderdate)->format('d/M/Y H:i') : 'N/A',
+                    'shippingmethod' => $order->shipping_charge ? 'standard' : 'N/A',
+                    'paymentmethod' => $order->paymentmethod ?? 'N/A',
+                    'ref' => $order->tranid ?? 'N/A',
+                    'action' => $order->orderid // For action buttons
+                ];
+            }
+
+            return response()->json([
+                'draw' => intval($request->input('draw')),
+                'recordsTotal' => $totalRecords,
+                'recordsFiltered' => $filteredAfterSearch,
+                'data' => $data
+            ]);
+        } catch (Exception $e) {
+            Log::error('Order DataTables Error: ' . $e->getMessage());
+            return response()->json([
+                'draw' => intval($request->input('draw', 1)),
+                'recordsTotal' => 0,
+                'recordsFiltered' => 0,
+                'data' => [],
+                'error' => 'An error occurred while loading data.'
+            ], 500);
+        }
     }
 
     public function show(Request $request, $id)

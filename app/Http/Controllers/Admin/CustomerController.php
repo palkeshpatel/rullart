@@ -8,36 +8,119 @@ use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Response;
+use Illuminate\Support\Facades\Log;
+use Exception;
 
 class CustomerController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Customer::query();
-
-        // Search functionality
-        if ($request->has('search') && $request->search) {
-            $search = $request->search;
-            $query->where(function($q) use ($search) {
-                $q->where('firstname', 'like', "%{$search}%")
-                  ->orWhere('lastname', 'like', "%{$search}%")
-                  ->orWhere('email', 'like', "%{$search}%");
-            });
+        // Check if this is a DataTables request
+        if ($request->has('draw')) {
+            return $this->getDataTablesData($request);
         }
 
-        $perPage = $request->get('per_page', 25);
-        $customers = $query->orderBy('createdon', 'desc')->paginate($perPage);
+        // Return view for initial page load
+        return view('admin.customers');
+    }
 
-        // Return JSON for AJAX requests
-        if ($request->expectsJson() || $request->ajax()) {
+    /**
+     * Get DataTables data for server-side processing
+     */
+    private function getDataTablesData(Request $request)
+    {
+        try {
+            // Base query for counting
+            $countQuery = Customer::query();
+
+            // Get total records count (before filtering)
+            $totalRecords = $countQuery->count();
+
+            // Build base query for data
+            $query = Customer::query();
+
+            // Build count query for filtered results
+            $filteredCountQuery = Customer::query();
+
+            // Get filtered count (before search)
+            $filteredCount = $filteredCountQuery->count();
+
+            // DataTables search (global search)
+            $searchValue = $request->input('search.value', '');
+            if (!empty($searchValue)) {
+                $query->where(function ($q) use ($searchValue) {
+                    $q->where('firstname', 'like', "%{$searchValue}%")
+                        ->orWhere('lastname', 'like', "%{$searchValue}%")
+                        ->orWhere('email', 'like', "%{$searchValue}%");
+                });
+
+                // Apply same search to count query
+                $filteredCountQuery->where(function ($q) use ($searchValue) {
+                    $q->where('firstname', 'like', "%{$searchValue}%")
+                        ->orWhere('lastname', 'like', "%{$searchValue}%")
+                        ->orWhere('email', 'like', "%{$searchValue}%");
+                });
+            }
+
+            // Get filtered count after search
+            $filteredAfterSearch = $filteredCountQuery->count();
+
+            // Ordering
+            $orderColumnIndex = $request->input('order.0.column', 0);
+            $orderDir = $request->input('order.0.dir', 'desc');
+
+            $columns = [
+                'firstname',
+                'lastname',
+                'email',
+                'fkstoreid',
+                'login_type',
+                'isactive',
+                'last_login',
+                'createdon',
+                'customerid' // For action column
+            ];
+
+            $orderColumn = $columns[$orderColumnIndex] ?? 'createdon';
+            $query->orderBy($orderColumn, $orderDir);
+
+            // Pagination
+            $start = $request->input('start', 0);
+            $length = $request->input('length', 25);
+            $customers = $query->skip($start)->take($length)->get();
+
+            // Format data for DataTables
+            $data = [];
+            foreach ($customers as $customer) {
+                $data[] = [
+                    'firstname' => $customer->firstname ?? '',
+                    'lastname' => $customer->lastname ?? '',
+                    'email' => $customer->email ?? '',
+                    'site' => $customer->fkstoreid ?? 'N/A',
+                    'login_type' => $customer->login_type ?? 'N/A',
+                    'isactive' => $customer->isactive ? 'Yes' : 'No',
+                    'last_login' => $customer->last_login ? \Carbon\Carbon::parse($customer->last_login)->format('d-M-Y H:i') : 'N/A',
+                    'regdate' => $customer->createdon ? \Carbon\Carbon::parse($customer->createdon)->format('d-M-Y') : 'N/A',
+                    'action' => $customer->customerid // For action buttons
+                ];
+            }
+
             return response()->json([
-                'success' => true,
-                'html' => view('admin.partials.customers-table', compact('customers'))->render(),
-                'pagination' => view('admin.partials.pagination', ['items' => $customers])->render(),
+                'draw' => intval($request->input('draw')),
+                'recordsTotal' => $totalRecords,
+                'recordsFiltered' => $filteredAfterSearch,
+                'data' => $data
             ]);
+        } catch (Exception $e) {
+            Log::error('Customer DataTables Error: ' . $e->getMessage());
+            return response()->json([
+                'draw' => intval($request->input('draw', 1)),
+                'recordsTotal' => 0,
+                'recordsFiltered' => 0,
+                'data' => [],
+                'error' => 'An error occurred while loading data.'
+            ], 500);
         }
-
-        return view('admin.customers', compact('customers'));
     }
 
     public function create(Request $request)

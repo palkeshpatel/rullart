@@ -8,40 +8,88 @@ use App\Models\Country;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rule;
+use Exception;
 
 class AreaController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Area::query();
-
-        // Search functionality
-        if ($request->has('search') && $request->search) {
-            $search = $request->search;
-            $query->where(function($q) use ($search) {
-                $q->where('areaname', 'like', "%{$search}%")
-                  ->orWhere('areanameAR', 'like', "%{$search}%");
-            });
+        // Check if this is a DataTables request
+        if ($request->has('draw')) {
+            return $this->getDataTablesData($request);
         }
 
-        // Sorting
-        $sortColumn = $request->get('sort', 'areaid');
-        $sortDirection = $request->get('direction', 'asc');
-        $query->orderBy($sortColumn, $sortDirection);
+        // Return view for initial page load
+        return view('admin.masters.areas');
+    }
 
-        $perPage = $request->get('per_page', 25);
-        $areas = $query->paginate($perPage);
+    /**
+     * Get DataTables data for server-side processing
+     */
+    private function getDataTablesData(Request $request)
+    {
+        try {
+            $countQuery = Area::query();
+            $totalRecords = $countQuery->count();
 
-        // Return JSON for AJAX requests
-        if ($request->expectsJson() || $request->ajax()) {
+            $query = Area::query();
+            $filteredCountQuery = Area::query();
+
+            // DataTables search
+            $searchValue = $request->input('search.value', '');
+            if (!empty($searchValue)) {
+                $query->where(function ($q) use ($searchValue) {
+                    $q->where('areaname', 'like', "%{$searchValue}%")
+                        ->orWhere('areanameAR', 'like', "%{$searchValue}%");
+                });
+
+                $filteredCountQuery->where(function ($q) use ($searchValue) {
+                    $q->where('areaname', 'like', "%{$searchValue}%")
+                        ->orWhere('areanameAR', 'like', "%{$searchValue}%");
+                });
+            }
+
+            $filteredAfterSearch = $filteredCountQuery->count();
+
+            // Ordering
+            $orderColumnIndex = $request->input('order.0.column', 0);
+            $orderDir = $request->input('order.0.dir', 'asc');
+            $columns = ['areaname', 'areanameAR', 'isactive', 'areaid'];
+            $orderColumn = $columns[$orderColumnIndex] ?? 'areaname';
+            $query->orderBy($orderColumn, $orderDir);
+
+            // Pagination
+            $start = $request->input('start', 0);
+            $length = $request->input('length', 25);
+            $areas = $query->skip($start)->take($length)->get();
+
+            // Format data
+            $data = [];
+            foreach ($areas as $area) {
+                $data[] = [
+                    'areaname' => $area->areaname ?? '',
+                    'areanameAR' => $area->areanameAR ?? 'N/A',
+                    'isactive' => $area->isactive ? 'Yes' : 'No',
+                    'action' => $area->areaid
+                ];
+            }
+
             return response()->json([
-                'success' => true,
-                'html' => view('admin.masters.partials.area.areas-table', compact('areas'))->render(),
-                'pagination' => view('admin.partials.pagination', ['items' => $areas])->render(),
+                'draw' => intval($request->input('draw')),
+                'recordsTotal' => $totalRecords,
+                'recordsFiltered' => $filteredAfterSearch,
+                'data' => $data
             ]);
+        } catch (Exception $e) {
+            Log::error('Area DataTables Error: ' . $e->getMessage());
+            return response()->json([
+                'draw' => intval($request->input('draw', 1)),
+                'recordsTotal' => 0,
+                'recordsFiltered' => 0,
+                'data' => [],
+                'error' => 'An error occurred while loading data.'
+            ], 500);
         }
-
-        return view('admin.masters.areas', compact('areas'));
     }
 
     public function create(Request $request)

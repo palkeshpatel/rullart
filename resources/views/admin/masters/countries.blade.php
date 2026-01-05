@@ -14,25 +14,38 @@
                     </a>
                 </div>
                 <div class="card-body">
+                    <!-- Filters -->
+                    <div class="card mb-3">
+                        <div class="card-body">
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label class="form-label">Active:</label>
+                                    <select class="form-select form-select-sm" id="activeFilter">
+                                        <option value="">--All--</option>
+                                        <option value="1">Yes</option>
+                                        <option value="0">No</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- Search and Per Page Controls -->
                     <div class="row mb-3">
                         <div class="col-md-12">
                             <div class="d-flex gap-2 justify-content-between align-items-center">
                                 <div class="app-search app-search-sm" style="max-width: 300px;">
-                                    <input type="text" name="search" class="form-control form-control-sm" data-search
-                                        placeholder="Search countries..." value="{{ request('search') }}">
+                                    <input type="text" id="searchBox" class="form-control form-control-sm"
+                                        placeholder="Search countries...">
                                     <i data-lucide="search" class="app-search-icon text-muted"></i>
                                 </div>
                                 <div class="d-flex align-items-center">
                                     <label class="mb-0 me-2">Show
                                         <select class="form-select form-select-sm d-inline-block" style="width: auto;"
                                             id="perPageSelect">
-                                            @php
-                                                $currentPerPage = request('per_page', 25);
-                                            @endphp
-                                            <option value="25" {{ $currentPerPage == 25 ? 'selected' : '' }}>25</option>
-                                            <option value="50" {{ $currentPerPage == 50 ? 'selected' : '' }}>50</option>
-                                            <option value="100" {{ $currentPerPage == 100 ? 'selected' : '' }}>100</option>
+                                            <option value="25">25</option>
+                                            <option value="50">50</option>
+                                            <option value="100">100</option>
                                         </select>
                                     </label>
                                 </div>
@@ -40,14 +53,26 @@
                         </div>
                     </div>
 
-                    <!-- Table Container -->
-                    <div class="table-container">
-                        @include('admin.masters.partials.countries.countries-table', ['countries' => $countries])
-                    </div>
-
-                    <!-- Pagination -->
-                    <div class="pagination-container">
-                        @include('admin.partials.pagination', ['items' => $countries])
+                    <!-- DataTable -->
+                    <div class="table-responsive">
+                        <table id="countriesTable" class="table table-bordered table-striped table-hover" style="width:100%">
+                            <thead>
+                                <tr>
+                                    <th>Country Name(EN)</th>
+                                    <th>Country Name(AR)</th>
+                                    <th>Currency Code</th>
+                                    <th>Currency Rate</th>
+                                    <th>Shipping Charge [QAR]</th>
+                                    <th>Free Over</th>
+                                    <th>ISO</th>
+                                    <th>Is Active?</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- DataTables will populate this -->
+                            </tbody>
+                        </table>
                     </div>
                 </div>
             </div>
@@ -57,696 +82,483 @@
     <!-- Modal Container -->
     <div id="countryModalContainer"></div>
     <div id="countryViewModalContainer"></div>
-@endsection
 
+    <!-- Delete Confirmation Modal -->
+    <div class="modal fade" id="deleteCountryModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="ti ti-alert-triangle text-warning me-2"></i>Confirm Delete
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Are you sure you want to delete <strong id="deleteCountryName"></strong>?</p>
+                    <p class="text-danger mb-0"><small>This action cannot be undone.</small></p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-danger" id="confirmDeleteCountryBtn">Delete</button>
+                </div>
+            </div>
+        </div>
+    </div>
+@endsection
 
 @section('scripts')
     <script>
-        // Wait for jQuery to be available (Vite loads scripts asynchronously)
         (function() {
-            function initCountriesScript() {
-                if (typeof jQuery === 'undefined' || typeof jQuery.fn.validate === 'undefined') {
-                    setTimeout(initCountriesScript, 50);
+            let dataTablesLoaded = false;
+
+            function loadDataTables(callback) {
+                if (dataTablesLoaded && typeof jQuery !== 'undefined' && typeof jQuery.fn.DataTable !== 'undefined') {
+                    callback();
                     return;
                 }
 
-                const $ = jQuery;
+                if (typeof jQuery === 'undefined') {
+                    setTimeout(function() {
+                        loadDataTables(callback);
+                    }, 50);
+                    return;
+                }
 
-                $(document).ready(function() {
+                if (!dataTablesLoaded) {
+                    const dtScript = document.createElement('script');
+                    dtScript.src = 'https://cdn.datatables.net/1.13.8/js/jquery.dataTables.min.js';
+                    dtScript.onload = function() {
+                        const dtRespScript = document.createElement('script');
+                        dtRespScript.src = 'https://cdn.datatables.net/responsive/2.5.0/js/dataTables.responsive.min.js';
+                        dtRespScript.onload = function() {
+                            dataTablesLoaded = true;
+                            callback();
+                        };
+                        document.head.appendChild(dtRespScript);
+                    };
+                    document.head.appendChild(dtScript);
+                } else {
+                    setTimeout(function() {
+                        loadDataTables(callback);
+                    }, 50);
+                }
+            }
 
-                    console.log('✅ Document ready for Countries');
-
-                    // Load table from URL parameters on page load
-                    loadTableFromURL();
-
-                    /* -----------------------------------
-                     HARD BLOCK native submit (AJAX forms)
-                    ----------------------------------- */
-                    $(document).off('submit', '#countryForm');
-                    $(document).on('submit', '#countryForm', function(e) {
-                        console.log('🚫 Native submit blocked');
-                        e.preventDefault();
-                        return false;
-                    });
-
-                    /* -----------------------------------
-                     ADD COUNTRY BUTTON (OPEN MODAL ONLY)
-                    ----------------------------------- */
-                    $(document).on('click', '.add-country-btn', function(e) {
-                        e.preventDefault();
-                        console.log('➕ Add Country clicked (open modal)');
-                        openCountryFormModal();
-                    });
-
-                    /* -----------------------------------
-                     EDIT COUNTRY BUTTON
-                    ----------------------------------- */
-                    $(document).on('click', '.edit-country-btn', function(e) {
-                        e.preventDefault();
-                        const countryId = $(this).data('country-id');
-                        console.log('✏️ Edit Country clicked, ID:', countryId);
-                        openCountryFormModal(countryId);
-                    });
-
-                    /* -----------------------------------
-                     VIEW COUNTRY BUTTON
-                    ----------------------------------- */
-                    $(document).on('click', '.view-country-btn', function(e) {
-                        e.preventDefault();
-                        const countryId = $(this).data('country-id');
-                        console.log('👁️ View Country clicked, ID:', countryId);
-                        openCountryViewModal(countryId);
-                    });
-
-                    /* -----------------------------------
-                     DELETE COUNTRY BUTTON
-                    ----------------------------------- */
-                    $(document).on('click', '.delete-country-btn', function(e) {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        const countryId = $(this).data('country-id');
-                        const countryName = $(this).data('country-name') || 'this country';
-                        console.log('🗑️ Delete Country clicked, ID:', countryId);
-                        confirmDeleteCountry(countryId, countryName);
-                    });
-
-                    /* -----------------------------------
-                     OPEN VIEW MODAL
-                    ----------------------------------- */
-                    function openCountryViewModal(countryId) {
-                        console.log('📦 Opening country view modal, ID:', countryId);
-
-                        cleanupModals();
-
-                        const url = '{{ route('admin.countries.show', ':id') }}'.replace(':id', countryId);
-
-                        $('#countryViewModalContainer').html(loaderHtml());
-
-                        const loadingModal = new bootstrap.Modal($('#countryModal')[0], {
-                            backdrop: 'static',
-                            keyboard: false
-                        });
-
-                        loadingModal.show();
-
-                        AdminAjax.get(url).then(response => {
-                            console.log('📥 View HTML loaded');
-
-                            loadingModal.hide();
-                            cleanupModals();
-
-                            $('#countryViewModalContainer').html(response.html);
-
-                            const modalEl = document.getElementById('countryViewModal');
-                            const modal = new bootstrap.Modal(modalEl);
-                            modal.show();
-
-                            // Handle edit button click from view modal
-                            $(modalEl).find('.edit-country-btn').on('click', function(e) {
-                                e.preventDefault();
-                                const editCountryId = $(this).data('country-id');
-                                modal.hide();
-                                cleanupModals();
-                                // Open edit modal
-                                setTimeout(() => {
-                                    openCountryFormModal(editCountryId);
-                                }, 300);
-                            });
-
-                            // Cleanup on close
-                            modalEl.addEventListener('hidden.bs.modal', function() {
-                                cleanupModals();
-                            }, {
-                                once: true
-                            });
-
-                        }).catch(err => {
-                            console.error('❌ Failed to load view', err);
-                            loadingModal.hide();
-                            cleanupModals();
-                            showToastInModal(null, 'Failed to load country details.', 'error');
-                        });
+            function initCountriesDataTable() {
+                loadDataTables(function() {
+                    if (typeof jQuery === 'undefined' || typeof jQuery.fn.DataTable === 'undefined') {
+                        setTimeout(initCountriesDataTable, 50);
+                        return;
                     }
 
-                    /* -----------------------------------
-                     OPEN FORM MODAL
-                    ----------------------------------- */
-                    function openCountryFormModal(countryId = null) {
+                    const $ = jQuery;
+                    const countryBaseUrl = '{{ url("/admin/countries") }}';
+                    let deleteCountryId = null;
 
-                        console.log('📦 Opening country form modal, ID:', countryId);
-
-                        cleanupModals();
-
-                        const url = countryId ?
-                            '{{ route('admin.countries.edit', ':id') }}'.replace(':id', countryId) :
-                            '{{ route('admin.countries.create') }}';
-
-                        $('#countryModalContainer').html(loaderHtml());
-
-                        const loadingModal = new bootstrap.Modal($('#countryModal')[0], {
-                            backdrop: 'static',
-                            keyboard: false
-                        });
-
-                        loadingModal.show();
-
-                        AdminAjax.get(url).then(response => {
-
-                            console.log('📥 Form HTML loaded');
-
-                            loadingModal.hide();
-                            cleanupModals();
-
-                            $('#countryModalContainer').html(response.html);
-
-                            const modalEl = document.getElementById('countryModal');
-                            const modal = new bootstrap.Modal(modalEl);
-                            modal.show();
-
-                            // IMPORTANT
-                            setupCountryValidation(countryId, modal);
-
-                        }).catch(err => {
-                            console.error('❌ Failed to load form', err);
-                            loadingModal.hide();
-                            cleanupModals();
-                        });
-                    }
-
-                    /* -----------------------------------
-                     VALIDATION SETUP
-                    ----------------------------------- */
-                    function setupCountryValidation(countryId, modal) {
-
-                        const $form = $('#countryForm');
-
-                        console.log('🧪 setupCountryValidation called');
-                        console.log('Form exists:', $form.length);
-
-                        if (!$form.length) {
-                            console.warn('❌ #countryForm not found');
-                            return;
+                    $(document).ready(function() {
+                        let loadingModal = null;
+                        
+                        function showLoader() {
+                            if (!loadingModal) {
+                                $('body').append(loaderHtml());
+                                const modalEl = document.getElementById('countryDataTableLoader');
+                                loadingModal = new bootstrap.Modal(modalEl, {
+                                    backdrop: 'static',
+                                    keyboard: false
+                                });
+                            }
+                            loadingModal.show();
+                        }
+                        
+                        function hideLoader() {
+                            if (loadingModal) {
+                                loadingModal.hide();
+                                cleanupLoader();
+                            }
+                        }
+                        
+                        function cleanupLoader() {
+                            $('#countryDataTableLoader').remove();
+                            $('.modal-backdrop').remove();
+                            $('body').removeClass('modal-open').css({
+                                overflow: '',
+                                paddingRight: ''
+                            });
+                            loadingModal = null;
                         }
 
-                        if ($form.data('validator')) {
-                            console.warn('⚠️ Validator already exists');
-                            return;
-                        }
-
-                        console.log('✅ Initializing jQuery Validation');
-
-                        $form.validate({
-                            rules: {
-                                countryname: {
-                                    required: true
+                        let isFirstDraw = true;
+                        showLoader();
+                        
+                        let table = $('#countriesTable').DataTable({
+                            processing: true,
+                            serverSide: true,
+                            dom: 'rtip', // Hide default search (f) and length menu (l), show only table, info, pagination
+                            ajax: {
+                                url: countryBaseUrl,
+                                type: 'GET',
+                                data: function(d) {
+                                    if (!isFirstDraw) {
+                                        showLoader();
+                                    }
+                                    d.active = $('#activeFilter').val();
+                                    console.log('📤 DataTables request:', d);
                                 },
-                                countrynameAR: {
-                                    required: true
+                                dataSrc: function(json) {
+                                    hideLoader();
+                                    isFirstDraw = false;
+                                    console.log('📥 DataTables response:', json);
+                                    if (json.error) {
+                                        console.error('❌ Server error:', json.error);
+                                        alert('Error: ' + json.error);
+                                    }
+                                    return json.data;
+                                },
+                                error: function(xhr, error, thrown) {
+                                    hideLoader();
+                                    console.error('❌ DataTables AJAX Error:', error);
+                                    alert('Error loading data. Status: ' + xhr.status);
                                 }
                             },
-                            messages: {
-                                countryname: 'Country Name(EN) is required',
-                                countrynameAR: 'Country Name(AR) is required'
-                            },
-                            errorElement: 'div',
-                            errorClass: 'invalid-feedback',
-                            highlight(el) {
-                                console.log('❌ Invalid:', el.name);
-                                $(el).addClass('is-invalid');
-                            },
-                            unhighlight(el) {
-                                console.log('✅ Valid:', el.name);
-                                $(el).removeClass('is-invalid').addClass('is-valid');
-                            },
-                            errorPlacement(error, element) {
-                                error.insertAfter(element);
-                            },
-                            invalidHandler(event, validator) {
-                                console.warn('🚫 Validation failed');
-                                console.log('Errors:', validator.errorList);
-                            },
-                            submitHandler(form) {
-                                console.log('🚀 Validation passed → submitCountryForm()');
-                                submitCountryForm(form, countryId, modal);
-                            }
-                        });
-                    }
-
-                    /* -----------------------------------
-                     SUBMIT FORM (AJAX)
-                    ----------------------------------- */
-                    function submitCountryForm(form, countryId, modal) {
-
-                        console.log('📤 submitCountryForm called');
-
-                        const formData = new FormData(form);
-                        const url = form.action;
-                        const method = form.querySelector('[name="_method"]')?.value || 'POST';
-
-                        const submitBtn = form.querySelector('button[type="submit"]');
-                        const originalText = submitBtn.innerHTML;
-                        submitBtn.setAttribute('data-original-text', originalText);
-                        submitBtn.disabled = true;
-                        submitBtn.innerHTML =
-                            '<span class="spinner-border spinner-border-sm me-1"></span> Saving...';
-
-                        AdminAjax.request(url, method, formData)
-                            .then(res => {
-                                console.log('✅ AJAX success:', res);
-                                // Show success toast before closing modal
-                                showToastInModal(modal, res.message || 'Country saved successfully',
-                                    'success');
-
-                                // Close modal after a short delay to show success message
-                                setTimeout(() => {
-                                    modal.hide();
-                                }, 1500);
-
-                                // Reload table with current page preserved
-                                reloadCountriesTable();
-                            })
-                            .catch(err => {
-                                console.error('❌ AJAX error:', err);
-
-                                // Get error message from server response
-                                let errorMessage = 'Failed to save country.';
-
-                                if (err.message) {
-                                    errorMessage = err.message;
-                                } else if (err.errors) {
-                                    // Handle validation errors
-                                    const firstError = Object.values(err.errors)[0];
-                                    if (Array.isArray(firstError)) {
-                                        errorMessage = firstError[0];
-                                    } else {
-                                        errorMessage = firstError;
+                            columns: [{
+                                    data: 'countryname',
+                                    name: 'countryname'
+                                },
+                                {
+                                    data: 'countrynameAR',
+                                    name: 'countrynameAR'
+                                },
+                                {
+                                    data: 'currencycode',
+                                    name: 'currencycode'
+                                },
+                                {
+                                    data: 'currencyrate',
+                                    name: 'currencyrate'
+                                },
+                                {
+                                    data: 'shipping_charge',
+                                    name: 'shipping_charge'
+                                },
+                                {
+                                    data: 'free_shipping_over',
+                                    name: 'free_shipping_over'
+                                },
+                                {
+                                    data: 'isocode',
+                                    name: 'isocode'
+                                },
+                                {
+                                    data: 'isactive',
+                                    name: 'isactive'
+                                },
+                                {
+                                    data: 'action',
+                                    name: 'action',
+                                    orderable: false,
+                                    searchable: false,
+                                    render: function(data, type, row) {
+                                        let html = '<div class="d-flex gap-1">';
+                                        html +=
+                                            '<a href="javascript:void(0);" class="btn btn-light btn-icon btn-sm rounded-circle view-country-btn" data-country-id="' +
+                                            row.action + '" title="View">';
+                                        html += '<i class="ti ti-eye fs-lg"></i></a>';
+                                        html +=
+                                            '<a href="javascript:void(0);" class="btn btn-light btn-icon btn-sm rounded-circle edit-country-btn" data-country-id="' +
+                                            row.action + '" title="Edit">';
+                                        html += '<i class="ti ti-edit fs-lg"></i></a>';
+                                        html +=
+                                            '<a href="javascript:void(0);" class="btn btn-light btn-icon btn-sm rounded-circle delete-country-btn" data-country-id="' +
+                                            row.action + '" data-country-name="' + (row.countryname || 'this country') +
+                                            '" title="Delete">';
+                                        html += '<i class="ti ti-trash fs-lg"></i></a>';
+                                        html += '</div>';
+                                        return html;
                                     }
                                 }
-
-                                // Show red error toast outside modal (top-right corner)
-                                showToastInModal(modal, errorMessage, 'error');
-
-                                // Clear any previous validation states (keep form clean - no field errors shown)
-                                const $form = $('#countryForm');
-                                $form.find('.is-invalid').removeClass('is-invalid');
-                                $form.find('.is-valid').removeClass('is-valid');
-                                $form.find('[id$="-error"]').remove();
-                                $form.find('.invalid-feedback').html('').removeClass('d-block').hide();
-
-                                submitBtn.disabled = false;
-                                submitBtn.innerHTML = submitBtn.getAttribute('data-original-text') ||
-                                    originalText;
-                            });
-                    }
-
-                    /* -----------------------------------
-                     CONFIRM DELETE COUNTRY
-                    ----------------------------------- */
-                    function confirmDeleteCountry(countryId, countryName) {
-                        // Remove existing delete modal if any
-                        $('#deleteCountryModal').remove();
-                        $('.modal-backdrop').remove();
-
-                        const modalHtml = `
-                            <div class="modal fade" id="deleteCountryModal" tabindex="-1">
-                                <div class="modal-dialog">
-                                    <div class="modal-content">
-                                        <div class="modal-header">
-                                            <h5 class="modal-title">Confirm Delete</h5>
-                                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                                        </div>
-                                        <div class="modal-body">
-                                            <p>Are you sure you want to delete "<strong>${countryName}</strong>"?</p>
-                                            <p class="text-danger mb-0">This action cannot be undone.</p>
-                                        </div>
-                                        <div class="modal-footer">
-                                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                                            <button type="button" class="btn btn-danger" id="confirmDeleteCountryBtn">Delete</button>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        `;
-
-                        $('body').append(modalHtml);
-
-                        const modalEl = document.getElementById('deleteCountryModal');
-                        const modal = new bootstrap.Modal(modalEl);
-
-                        modalEl.addEventListener('hidden.bs.modal', function() {
-                            modalEl.remove();
-                            cleanupModals();
-                        }, {
-                            once: true
+                            ],
+                            pageLength: 25,
+                            lengthMenu: [
+                                [25, 50, 100],
+                                [25, 50, 100]
+                            ],
+                            order: [
+                                [0, 'asc']
+                            ],
+                            language: {
+                                processing: '<div class="spinner-border spinner-border-sm" role="status"><span class="visually-hidden">Loading...</span></div>',
+                                emptyTable: "No countries found",
+                                zeroRecords: "No matching countries found"
+                            },
+                            responsive: true,
+                            columnDefs: [{
+                                    responsivePriority: 1,
+                                    targets: [0, 1, 8]
+                                },
+                                {
+                                    responsivePriority: 2,
+                                    targets: [2, 3, 4]
+                                },
+                                {
+                                    responsivePriority: 3,
+                                    targets: [5, 6, 7]
+                                }
+                            ]
                         });
 
-                        const deleteBtn = document.getElementById('confirmDeleteCountryBtn');
-                        deleteBtn.onclick = function() {
-                            deleteCountry(countryId, modal, deleteBtn);
-                        };
-
-                        modal.show();
-                    }
-
-                    /* -----------------------------------
-                     DELETE COUNTRY
-                    ----------------------------------- */
-                    function deleteCountry(countryId, modal, deleteBtn) {
-                        const originalText = deleteBtn.innerHTML;
-                        deleteBtn.disabled = true;
-                        deleteBtn.innerHTML =
-                            '<span class="spinner-border spinner-border-sm me-1"></span> Deleting...';
-
-                        const url = '{{ route('admin.countries.destroy', ':id') }}'.replace(':id', countryId);
-
-                        AdminAjax.request(url, 'DELETE')
-                            .then(response => {
-                                console.log('✅ Country deleted successfully');
-                                showToastInModal(null, response.message || 'Country deleted successfully', 'success');
-                                modal.hide();
-
-                                // Reload table with current page preserved
-                                reloadCountriesTable();
-                            })
-                            .catch(error => {
-                                console.error('❌ Error deleting country:', error);
-                                showToastInModal(null, error.message || 'Failed to delete country.', 'error');
-                                deleteBtn.disabled = false;
-                                deleteBtn.innerHTML = originalText;
-                            });
-                    }
-
-                    /* -----------------------------------
-                     LOAD TABLE FROM URL ON PAGE LOAD
-                    ----------------------------------- */
-                    function loadTableFromURL() {
-                        const urlParams = new URLSearchParams(window.location.search);
-                        const page = urlParams.get('page');
-                        const perPage = urlParams.get('per_page');
-                        const search = urlParams.get('search');
-
-                        // Only load via AJAX if URL has parameters (otherwise use server-rendered content)
-                        if (page || perPage || search) {
-                            const params = {};
-                            if (page) params.page = page;
-                            if (perPage) params.per_page = perPage;
-                            if (search) params.search = search;
-
-                            // Update per page select if URL has per_page
-                            if (perPage && $('#perPageSelect').length) {
-                                $('#perPageSelect').val(perPage);
-                            }
-
-                            // Update search input if URL has search
-                            if (search && $('[data-search]').length) {
-                                $('[data-search]').val(search);
-                            }
-
-                            console.log('📄 Loading table from URL params:', params);
-
-                            AdminAjax.loadTable('{{ route('admin.countries') }}', $('.table-container')[0], {
-                                params: params,
-                    onSuccess: function(response) {
-                        if (response.pagination) {
-                                        $('.pagination-container').html(response.pagination);
-                        }
-                                    // Re-bind event handlers for dynamically loaded content
-                                    bindPaginationHandlers();
-                                }
-                            });
-                        } else {
-                            // No URL params, just bind handlers for existing content
-                            bindPaginationHandlers();
-                        }
-                    }
-
-                    /* -----------------------------------
-                     RELOAD COUNTRIES TABLE (PRESERVE PAGE)
-                    ----------------------------------- */
-                    function reloadCountriesTable() {
-                        // Get current page from URL or pagination
-                        const urlParams = new URLSearchParams(window.location.search);
-                        const currentPage = urlParams.get('page') || 1;
-                        const currentPerPage = urlParams.get('per_page') || $('#perPageSelect').val() || 25;
-                        const currentSearch = urlParams.get('search') || $('[data-search]').val() || '';
-                    
-                        const params = {
-                            page: currentPage,
-                            per_page: currentPerPage
-                        };
-
-                        if (currentSearch) {
-                            params.search = currentSearch;
-                        }
-
-                        console.log('🔄 Reloading table with params:', params);
-                    
-                        AdminAjax.loadTable('{{ route('admin.countries') }}', $('.table-container')[0], {
-                            params: params,
-                        onSuccess: function(response) {
-                            if (response.pagination) {
-                                    $('.pagination-container').html(response.pagination);
-                                }
-                                // Re-bind event handlers for dynamically loaded content
-                                bindPaginationHandlers();
-                            }
+                        $('#searchBox').on('keyup', function() {
+                            showLoader();
+                            table.search(this.value).draw();
                         });
-                    }
 
-                    /* -----------------------------------
-                     BIND PAGINATION HANDLERS (AJAX)
-                    ----------------------------------- */
-                    function bindPaginationHandlers() {
-                        // Remove existing handlers to prevent duplicates
-                        $(document).off('click', '.pagination a');
+                        $('#activeFilter').on('change', function() {
+                            showLoader();
+                            table.ajax.reload();
+                        });
 
-                        // Bind pagination links to use AJAX
-                        $(document).on('click', '.pagination a', function(e) {
+                        // 📄 Per Page Select Handler
+                        $('#perPageSelect').on('change', function() {
+                            showLoader();
+                            table.page.len(parseInt($(this).val())).draw();
+                        });
+
+                        // View/Edit/Add/Delete handlers
+                        $(document).on('click', '.view-country-btn', function(e) {
                             e.preventDefault();
-                            e.stopPropagation();
+                            const countryId = $(this).data('country-id');
+                            openCountryViewModal(countryId);
+                        });
 
-                            const url = $(this).attr('href');
-                            if (!url || url === '#' || url === 'javascript:void(0)') {
+                        $(document).on('click', '.edit-country-btn', function(e) {
+                            e.preventDefault();
+                            const countryId = $(this).data('country-id');
+                            openCountryFormModal(countryId);
+                        });
+
+                        $(document).on('click', '.add-country-btn', function(e) {
+                            e.preventDefault();
+                            openCountryFormModal();
+                        });
+
+                        $(document).on('click', '.delete-country-btn', function(e) {
+                            e.preventDefault();
+                            deleteCountryId = $(this).data('country-id');
+                            const countryName = $(this).data('country-name') || 'this country';
+                            $('#deleteCountryName').text(countryName);
+                            const deleteModal = new bootstrap.Modal(document.getElementById('deleteCountryModal'));
+                            deleteModal.show();
+                        });
+
+                        $('#confirmDeleteCountryBtn').on('click', function() {
+                            if (deleteCountryId) {
+                                const currentPage = table.page();
+                                const totalPages = table.page.info().pages;
+                                
+                                AdminAjax.request(countryBaseUrl + '/' + deleteCountryId, 'DELETE')
+                                    .then(res => {
+                                        bootstrap.Modal.getInstance(document.getElementById('deleteCountryModal')).hide();
+                                        showToast('Country deleted successfully', 'success');
+                                        
+                                        showLoader();
+                                        table.ajax.reload(function() {
+                                            hideLoader();
+                                            const newTotalPages = table.page.info().pages;
+                                            if (currentPage >= newTotalPages && newTotalPages > 0) {
+                                                table.page(newTotalPages - 1).draw('page');
+                                            } else {
+                                                table.page(currentPage).draw('page');
+                                            }
+                                        }, false);
+                                    })
+                                    .catch(err => {
+                                        showToast(err.message || 'Failed to delete country.', 'error');
+                                    });
+                            }
+                        });
+
+                        // Modal functions
+                        function openCountryViewModal(countryId) {
+                            cleanupModals();
+                            const url = countryBaseUrl + '/' + countryId;
+                            $('#countryViewModalContainer').html(loaderHtml());
+                            const loadingModal = new bootstrap.Modal($('#countryModal')[0], {
+                                backdrop: 'static',
+                                keyboard: false
+                            });
+                            loadingModal.show();
+
+                            AdminAjax.get(url).then(response => {
+                                loadingModal.hide();
+                                cleanupModals();
+                                $('#countryViewModalContainer').html(response.html);
+                                const modalEl = document.getElementById('countryViewModal');
+                                const modal = new bootstrap.Modal(modalEl);
+                                modal.show();
+
+                                modalEl.addEventListener('hidden.bs.modal', function() {
+                                    cleanupModals();
+                                }, { once: true });
+                            }).catch(err => {
+                                loadingModal.hide();
+                                cleanupModals();
+                                AdminAjax.showError('Failed to load country details.');
+                            });
+                        }
+
+                        function openCountryFormModal(countryId = null) {
+                            cleanupModals();
+                            const url = countryId ? countryBaseUrl + '/' + countryId + '/edit' : countryBaseUrl + '/create';
+                            $('#countryModalContainer').html(loaderHtml());
+                            const loadingModal = new bootstrap.Modal($('#countryModal')[0], {
+                                backdrop: 'static',
+                                keyboard: false
+                            });
+                            loadingModal.show();
+
+                            AdminAjax.get(url).then(response => {
+                                loadingModal.hide();
+                                cleanupModals();
+                                $('#countryModalContainer').html(response.html);
+                                const modalEl = document.getElementById('countryModal');
+                                const modal = new bootstrap.Modal(modalEl);
+                                modal.show();
+                                setupCountryValidation(countryId, modal);
+                            }).catch(err => {
+                                loadingModal.hide();
+                                cleanupModals();
+                            });
+                        }
+
+                        function setupCountryValidation(countryId, modal) {
+                            const $form = $('#countryForm');
+                            if (!$form.length || $form.data('validator')) {
                                 return;
                             }
 
-                            console.log('📄 Pagination clicked:', url);
-
-                            // Extract page number from URL
-                            const urlObj = new URL(url, window.location.origin);
-                            const page = urlObj.searchParams.get('page') || 1;
-                            const perPage = urlObj.searchParams.get('per_page') || $('#perPageSelect').val() || 25;
-                            const search = urlObj.searchParams.get('search') || $('[data-search]').val() || '';
-
-                            const params = {
-                                page: page,
-                                per_page: perPage
-                            };
-
-                            if (search) {
-                                params.search = search;
-                            }
-
-                            // Update URL without reload
-                            const newUrl = new URL(window.location.pathname, window.location.origin);
-                            Object.keys(params).forEach(key => {
-                                if (params[key]) {
-                                    newUrl.searchParams.set(key, params[key]);
+                            $form.validate({
+                                rules: {
+                                    countryname: { required: true },
+                                    countrynameAR: { required: true }
+                                },
+                                messages: {
+                                    countryname: 'Country Name(EN) is required.',
+                                    countrynameAR: 'Country Name(AR) is required.'
+                                },
+                                errorElement: 'div',
+                                errorClass: 'invalid-feedback',
+                                highlight(el) {
+                                    $(el).addClass('is-invalid');
+                                },
+                                unhighlight(el) {
+                                    $(el).removeClass('is-invalid').addClass('is-valid');
+                                },
+                                errorPlacement(error, element) {
+                                    error.insertAfter(element);
+                                },
+                                submitHandler(form) {
+                                    submitCountryForm(form, countryId, modal);
                                 }
                             });
-                            window.history.pushState({}, '', newUrl.toString());
-
-                            // Load table via AJAX
-                            AdminAjax.loadTable('{{ route('admin.countries') }}', $('.table-container')[0], {
-                                params: params,
-                                onSuccess: function(response) {
-                                    if (response.pagination) {
-                                        $('.pagination-container').html(response.pagination);
-                                    }
-                                }
-                            });
-                        });
-                    }
-
-                    /* -----------------------------------
-                     PER PAGE SELECT HANDLER
-                    ----------------------------------- */
-                    $(document).on('change', '#perPageSelect', function(e) {
-                        e.preventDefault();
-                        const perPage = $(this).val();
-                        const currentPage = new URLSearchParams(window.location.search).get('page') ||
-                            1;
-                        const currentSearch = $('[data-search]').val() || '';
-
-                        const params = {
-                            page: 1, // Reset to page 1 when changing per page
-                            per_page: perPage
-                        };
-
-                        if (currentSearch) {
-                            params.search = currentSearch;
                         }
 
-                        // Update URL without reload
-                        const newUrl = new URL(window.location.pathname, window.location.origin);
-                        Object.keys(params).forEach(key => {
-                            if (params[key]) {
-                                newUrl.searchParams.set(key, params[key]);
-                            }
-                        });
-                        window.history.pushState({}, '', newUrl.toString());
+                        function submitCountryForm(form, countryId, modal) {
+                            const formData = new FormData(form);
+                            const url = form.action;
+                            const method = form.querySelector('[name="_method"]')?.value || 'POST';
+                            const submitBtn = form.querySelector('button[type="submit"]');
+                            const originalText = submitBtn.innerHTML;
+                            submitBtn.disabled = true;
+                            submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Saving...';
 
-                        // Load table via AJAX
-                        AdminAjax.loadTable('{{ route('admin.countries') }}', $('.table-container')[0], {
-                            params: params,
-                            onSuccess: function(response) {
-                                if (response.pagination) {
-                                    $('.pagination-container').html(response.pagination);
-                                }
-                            }
-                        });
-                    });
-
-                    /* -----------------------------------
-                     SEARCH HANDLER
-                    ----------------------------------- */
-                    let searchTimeout;
-                    $(document).on('input', '[data-search]', function(e) {
-                        clearTimeout(searchTimeout);
-                        const searchInput = $(this);
-
-                        searchTimeout = setTimeout(function() {
-                            const searchValue = searchInput.val();
-                            const currentPage = new URLSearchParams(window.location.search).get(
-                                'page') || 1;
-                            const currentPerPage = $('#perPageSelect').val() || 25;
-
-                            const params = {
-                                page: 1, // Reset to page 1 when searching
-                                per_page: currentPerPage
-                            };
-
-                            if (searchValue) {
-                                params.search = searchValue;
-                            }
-
-                            // Update URL without reload
-                            const newUrl = new URL(window.location.pathname, window.location
-                                .origin);
-                            Object.keys(params).forEach(key => {
-                                if (params[key]) {
-                                    newUrl.searchParams.set(key, params[key]);
-                                }
-                            });
-                            window.history.pushState({}, '', newUrl.toString());
-
-                            // Load table via AJAX
-                            AdminAjax.loadTable('{{ route('admin.countries') }}', $(
-                                '.table-container')[0], {
-                                params: params,
-                                onSuccess: function(response) {
-                                    if (response.pagination) {
-                                        $('.pagination-container').html(response
-                                            .pagination);
+                            AdminAjax.request(url, method, formData)
+                                .then(res => {
+                                    showToast(res.message || 'Country saved successfully', 'success');
+                                    setTimeout(() => {
+                                        modal.hide();
+                                    }, 1500);
+                                    showLoader();
+                                    table.ajax.reload();
+                                })
+                                .catch(err => {
+                                    let errorMessage = 'Failed to save country.';
+                                    if (err.message) {
+                                        errorMessage = err.message;
+                                    } else if (err.errors) {
+                                        const firstError = Object.values(err.errors)[0];
+                                        errorMessage = Array.isArray(firstError) ? firstError[0] : firstError;
                                     }
-                                }
-                            });
-                        }, 500); // Debounce search
-                    });
-
-                    /* -----------------------------------
-                     INITIALIZE PAGINATION HANDLERS
-                    ----------------------------------- */
-                    bindPaginationHandlers();
-
-                    /* -----------------------------------
-                     SHOW TOAST (OUTSIDE MODAL - TOP RIGHT)
-                    ----------------------------------- */
-                    function showToastInModal(modal, message, type = 'error') {
-                        // Create or get toast container at top-right corner of page
-                        let toastContainer = $('#global-toast-container');
-
-                        if (!toastContainer.length) {
-                            toastContainer = $(
-                                '<div id="global-toast-container" class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 9999;"></div>'
-                            );
-                            $('body').append(toastContainer);
+                                    showToast(errorMessage, 'error');
+                                    submitBtn.disabled = false;
+                                    submitBtn.innerHTML = originalText;
+                                });
                         }
 
-                        // Remove any existing toasts of the same type to avoid stacking
-                        toastContainer.find('.toast').each(function() {
-                            const bsToast = bootstrap.Toast.getInstance(this);
-                            if (bsToast) {
-                                bsToast.hide();
-                                }
-                        });
+                        function showToast(message, type = 'error') {
+                            let toastContainer = $('#global-toast-container');
+                            if (!toastContainer.length) {
+                                toastContainer = $('<div id="global-toast-container" class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 9999;"></div>');
+                                $('body').append(toastContainer);
+                            }
 
-                        // Create toast
-                        const toastBg = type === 'error' ? 'bg-danger' : 'bg-success';
-                        const toastId = 'toast-' + Date.now();
-                        const toast = $(`
-                            <div id="${toastId}" class="toast ${toastBg} text-white border-0" role="alert" aria-live="assertive" aria-atomic="true">
-                                <div class="d-flex">
-                                    <div class="toast-body">
-                                        <i class="ti ti-${type === 'error' ? 'alert-circle' : 'check-circle'} me-2"></i>
-                                        ${message}
+                            toastContainer.find('.toast').each(function() {
+                                const bsToast = bootstrap.Toast.getInstance(this);
+                                if (bsToast) bsToast.hide();
+                            });
+
+                            const toastBg = type === 'error' ? 'bg-danger' : 'bg-success';
+                            const toastId = 'toast-' + Date.now();
+                            const toast = $(`
+                                <div id="${toastId}" class="toast ${toastBg} text-white border-0" role="alert">
+                                    <div class="d-flex">
+                                        <div class="toast-body">
+                                            <i class="ti ti-${type === 'error' ? 'alert-circle' : 'check-circle'} me-2"></i>
+                                            ${message}
+                                        </div>
+                                        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
                                     </div>
-                                    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
                                 </div>
-                            </div>
-                        `);
+                            `);
 
-                        toastContainer.append(toast);
+                            toastContainer.append(toast);
+                            const bsToast = new bootstrap.Toast(toast[0], { autohide: true, delay: 5000 });
+                            bsToast.show();
 
-                        // Initialize and show toast
-                        const bsToast = new bootstrap.Toast(toast[0], {
-                            autohide: true,
-                            delay: 5000
-                        });
-                        bsToast.show();
+                            toast.on('hidden.bs.toast', function() {
+                                $(this).remove();
+                                if (toastContainer.find('.toast').length === 0) {
+                                    toastContainer.remove();
+                                }
+                            });
+                        }
 
-                        // Remove toast element after it's hidden
-                        toast.on('hidden.bs.toast', function() {
-                            $(this).remove();
-                            // Remove container if empty
-                            if (toastContainer.find('.toast').length === 0) {
-                                toastContainer.remove();
-                            }
-                        });
-                    }
+                        function cleanupModals() {
+                            $('.modal-backdrop').remove();
+                            $('body').removeClass('modal-open').css({
+                                overflow: '',
+                                paddingRight: ''
+                            });
+                            $('#countryModal').remove();
+                            $('#countryViewModal').remove();
+                        }
 
-                    /* -----------------------------------
-                     HELPERS
-                    ----------------------------------- */
-                    function cleanupModals() {
-                        console.log('🧹 Cleaning modals');
-                        $('.modal-backdrop').remove();
-                        $('body').removeClass('modal-open').css({
-                            overflow: '',
-                            paddingRight: ''
-                        });
-                        $('#countryModal').remove();
-                    }
-
-                    function loaderHtml() {
-                        return `
-        <div class="modal fade" id="countryModal">
-            <div class="modal-dialog">
-                <div class="modal-content">
-                    <div class="modal-body text-center p-4">
-                        <div class="spinner-border"></div>
-                    </div>
-                </div>
-            </div>
-        </div>`;
-                    }
-
+                        function loaderHtml() {
+                            return `
+                                <div class="modal fade" id="countryModal">
+                                    <div class="modal-dialog">
+                                        <div class="modal-content">
+                                            <div class="modal-body text-center p-4">
+                                                <div class="spinner-border"></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>`;
+                        }
+                    });
                 });
             }
 
             // Start initialization
-            initCountriesScript();
+            initCountriesDataTable();
         })();
     </script>
 @endsection
-

@@ -10,50 +10,126 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rule;
 use App\Traits\ImageUploadTrait;
 use Illuminate\Http\UploadedFile;
+use Exception;
 
 class GiftProductController extends Controller
 {
     use ImageUploadTrait;
     public function index(Request $request)
     {
-        $query = Product::with('category')->where('isgift', 1);
-
-        // Filter by category
-        if ($request->has('category') && $request->category) {
-            $query->where('fkcategoryid', $request->category);
+        // Check if this is a DataTables request
+        if ($request->has('draw')) {
+            return $this->getDataTablesData($request);
         }
-
-        // Filter by published status
-        if ($request->has('published') && $request->published !== '') {
-            $query->where('ispublished', $request->published);
-        }
-
-        // Search functionality
-        if ($request->has('search') && $request->search) {
-            $search = $request->search;
-            $query->where(function ($q) use ($search) {
-                $q->where('title', 'like', "%{$search}%")
-                  ->orWhere('titleAR', 'like', "%{$search}%")
-                  ->orWhere('productcode', 'like', "%{$search}%");
-            });
-        }
-
-        $perPage = $request->get('per_page', 25);
-        $products = $query->orderBy('productid', 'desc')->paginate($perPage);
 
         // Get categories for dropdown
         $categories = Category::orderBy('category')->get();
 
-        // Return JSON for AJAX requests
-        if ($request->expectsJson() || $request->ajax()) {
-            return response()->json([
-                'success' => true,
-                'html' => view('admin.partials.gift-products-table', compact('products'))->render(),
-                'pagination' => view('admin.partials.pagination', ['items' => $products])->render(),
-            ]);
-        }
+        // Return view for initial page load
+        return view('admin.gift-products.index', compact('categories'));
+    }
 
-        return view('admin.gift-products.index', compact('products', 'categories'));
+    /**
+     * Get DataTables data for server-side processing
+     */
+    private function getDataTablesData(Request $request)
+    {
+        try {
+            $countQuery = Product::where('isgift', 1);
+            $totalRecords = $countQuery->count();
+
+            $query = Product::with('category')
+                ->where('isgift', 1)
+                ->select('products.*')
+                ->selectRaw('IFNULL((SELECT SUM(qty) FROM productsfilter WHERE fkproductid=products.productid AND filtercode=\'size\'), 0) as quantity');
+            $filteredCountQuery = Product::where('isgift', 1);
+
+            // Filter by category
+            $category = $request->input('category');
+            if (!empty($category)) {
+                $query->where('fkcategoryid', $category);
+                $filteredCountQuery->where('fkcategoryid', $category);
+            }
+
+            // Filter by published status
+            $published = $request->input('published');
+            if ($published !== null && $published !== '' && ($published === '0' || $published === '1')) {
+                $publishedValue = (int)$published;
+                $query->where('ispublished', $publishedValue);
+                $filteredCountQuery->where('ispublished', $publishedValue);
+            }
+
+            $filteredCount = $filteredCountQuery->count();
+
+            // DataTables search
+            $searchValue = $request->input('search.value', '');
+            if (!empty($searchValue)) {
+                $query->where(function ($q) use ($searchValue) {
+                    $q->where('title', 'like', "%{$searchValue}%")
+                        ->orWhere('titleAR', 'like', "%{$searchValue}%")
+                        ->orWhere('productcode', 'like', "%{$searchValue}%");
+                });
+
+                $filteredCountQuery->where(function ($q) use ($searchValue) {
+                    $q->where('title', 'like', "%{$searchValue}%")
+                        ->orWhere('titleAR', 'like', "%{$searchValue}%")
+                        ->orWhere('productcode', 'like', "%{$searchValue}%");
+                });
+            }
+
+            $filteredAfterSearch = $filteredCountQuery->count();
+
+            // Ordering
+            $orderColumnIndex = $request->input('order.0.column', 0);
+            $orderDir = $request->input('order.0.dir', 'desc');
+            $columns = ['productcode', 'title', 'sellingprice', 'fkcategoryid', 'photo1', 'quantity', 'ispublished', 'updateddate', 'productid'];
+            $orderColumn = $columns[$orderColumnIndex] ?? 'productid';
+
+            if ($orderColumn === 'fkcategoryid') {
+                $query->join('category as c_sort', 'c_sort.categoryid', '=', 'products.fkcategoryid');
+                $query->orderBy('c_sort.category', $orderDir);
+            } else {
+                $query->orderBy('products.' . $orderColumn, $orderDir);
+            }
+
+            // Pagination
+            $start = $request->input('start', 0);
+            $length = $request->input('length', 25);
+            $products = $query->skip($start)->take($length)->get();
+
+            // Format data
+            $data = [];
+            foreach ($products as $product) {
+                $photoUrl = $product->photo1 ? asset('storage/' . $product->photo1) : null;
+                $data[] = [
+                    'productcode' => $product->productcode ?? '',
+                    'title' => $product->title ?? '',
+                    'sellingprice' => number_format($product->sellingprice ?? 0, 3),
+                    'category' => $product->category->category ?? 'N/A',
+                    'photo' => $photoUrl ? '<img src="' . $photoUrl . '" alt="Product" style="width: 50px; height: 50px; object-fit: cover; border-radius: 4px;">' : '<span class="text-muted">-</span>',
+                    'quantity' => $product->quantity ?? 0,
+                    'isactive' => $product->ispublished ? 'Yes' : 'No',
+                    'updateddate' => $product->updateddate ? \Carbon\Carbon::parse($product->updateddate)->format('d/M/Y') : 'N/A',
+                    'action' => $product->productid
+                ];
+            }
+
+            return response()->json([
+                'draw' => intval($request->input('draw')),
+                'recordsTotal' => $totalRecords,
+                'recordsFiltered' => $filteredAfterSearch,
+                'data' => $data
+            ]);
+        } catch (Exception $e) {
+            Log::error('GiftProduct DataTables Error: ' . $e->getMessage());
+            return response()->json([
+                'draw' => intval($request->input('draw', 1)),
+                'recordsTotal' => 0,
+                'recordsFiltered' => 0,
+                'data' => [],
+                'error' => 'An error occurred while loading data.'
+            ], 500);
+        }
     }
 
     public function create(Request $request)
@@ -282,7 +358,7 @@ class GiftProductController extends Controller
                         $fileName = $fileMatches[2];
                         $contentType = isset($fileMatches[3]) && !empty($fileMatches[3]) ? trim($fileMatches[3]) : 'application/octet-stream';
                         $fileContent = $fileMatches[4];
-                        
+
                         // Remove trailing boundary if present
                         $fileContent = preg_replace('/\r?\n--.*$/s', '', $fileContent);
                         $fileContent = rtrim($fileContent, "\r\n");
@@ -308,7 +384,7 @@ class GiftProductController extends Controller
                     elseif (preg_match('/Content-Disposition:\s*form-data;\s*name="([^"]+)"\s*\r?\n\r?\n(.*)/s', $part, $textMatches)) {
                         $fieldName = $textMatches[1];
                         $fieldValue = $textMatches[2];
-                        
+
                         // Remove trailing boundary if present
                         $fieldValue = preg_replace('/\r?\n--.*$/s', '', $fieldValue);
                         $fieldValue = trim($fieldValue, "\r\n");
@@ -409,12 +485,12 @@ class GiftProductController extends Controller
         // Handle photo1-5 uploads using trait
         for ($i = 1; $i <= 5; $i++) {
             $photoFile = $request->file("photo{$i}");
-            
+
             // If not found, try accessing directly from files bag
             if (!$photoFile && $request->files->has("photo{$i}")) {
                 $photoFile = $request->files->get("photo{$i}");
             }
-            
+
             if ($photoFile && $photoFile->isValid()) {
                 $validated["photo{$i}"] = $this->uploadImage($photoFile, $product->{"photo{$i}"}, 'product');
             } else {

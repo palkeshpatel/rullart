@@ -9,49 +9,134 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rule;
 use App\Traits\ImageUploadTrait;
 use Illuminate\Http\UploadedFile;
+use Exception;
 
 class CategoryController extends Controller
 {
     use ImageUploadTrait;
     public function index(Request $request)
     {
-        $query = Category::query();
-
-        // Filter by parent category
-        if ($request->filled('parent_category') && $request->parent_category !== '' && $request->parent_category !== '--Parent--') {
-            if ($request->parent_category == '0') {
-                $query->where('parentid', 0)->orWhereNull('parentid');
-            } else {
-                $query->where('parentid', $request->parent_category);
-            }
+        // Check if this is a DataTables request
+        if ($request->has('draw')) {
+            return $this->getDataTablesData($request);
         }
-
-        // Search functionality
-        if ($request->has('search') && $request->search) {
-            $search = $request->search;
-            $query->where(function ($q) use ($search) {
-                $q->where('category', 'like', "%{$search}%")
-                    ->orWhere('categoryAR', 'like', "%{$search}%")
-                    ->orWhere('categorycode', 'like', "%{$search}%");
-            });
-        }
-
-        $perPage = $request->get('per_page', 25);
-        $categories = $query->orderBy('categoryid', 'desc')->paginate($perPage);
 
         // Get parent categories for dropdown
         $parentCategories = Category::where('parentid', 0)->orWhereNull('parentid')->orderBy('category')->get();
 
-        // Return JSON for AJAX requests
-        if ($request->expectsJson() || $request->ajax()) {
-            return response()->json([
-                'success' => true,
-                'html' => view('admin.partials.categories-table', compact('categories'))->render(),
-                'pagination' => view('admin.partials.pagination', ['items' => $categories])->render(),
-            ]);
-        }
+        // Return view for initial page load
+        return view('admin.category.index', compact('parentCategories'));
+    }
 
-        return view('admin.category.index', compact('categories', 'parentCategories'));
+    /**
+     * Get DataTables data for server-side processing
+     */
+    private function getDataTablesData(Request $request)
+    {
+        try {
+            // Base query for counting
+            $countQuery = Category::query();
+
+            // Get total records count (before filtering)
+            $totalRecords = $countQuery->count();
+
+            // Build base query for data
+            $query = Category::query();
+
+            // Build count query for filtered results
+            $filteredCountQuery = Category::query();
+
+            // Filter by parent category
+            $parentCategory = $request->input('parent_category');
+            if (!empty($parentCategory) && $parentCategory !== '--Parent--') {
+                if ($parentCategory == '0') {
+                    $query->where(function($q) {
+                        $q->where('parentid', 0)->orWhereNull('parentid');
+                    });
+                    $filteredCountQuery->where(function($q) {
+                        $q->where('parentid', 0)->orWhereNull('parentid');
+                    });
+                } else {
+                    $query->where('parentid', $parentCategory);
+                    $filteredCountQuery->where('parentid', $parentCategory);
+                }
+            }
+
+            // Get filtered count (after filters but before search)
+            $filteredCount = $filteredCountQuery->count();
+
+            // DataTables search (global search)
+            $searchValue = $request->input('search.value', '');
+            if (!empty($searchValue)) {
+                $query->where(function ($q) use ($searchValue) {
+                    $q->where('category', 'like', "%{$searchValue}%")
+                        ->orWhere('categoryAR', 'like', "%{$searchValue}%")
+                        ->orWhere('categorycode', 'like', "%{$searchValue}%");
+                });
+
+                // Apply same search to count query
+                $filteredCountQuery->where(function ($q) use ($searchValue) {
+                    $q->where('category', 'like', "%{$searchValue}%")
+                        ->orWhere('categoryAR', 'like', "%{$searchValue}%")
+                        ->orWhere('categorycode', 'like', "%{$searchValue}%");
+                });
+            }
+
+            // Get filtered count after search
+            $filteredAfterSearch = $filteredCountQuery->count();
+
+            // Ordering
+            $orderColumnIndex = $request->input('order.0.column', 0);
+            $orderDir = $request->input('order.0.dir', 'desc');
+
+            $columns = [
+                'category',
+                'categoryAR',
+                'ispublished',
+                'displayorder',
+                'updateddate',
+                'categoryid' // For action column
+            ];
+
+            $orderColumn = $columns[$orderColumnIndex] ?? 'categoryid';
+            $query->orderBy($orderColumn, $orderDir);
+
+            // Pagination
+            $start = $request->input('start', 0);
+            $length = $request->input('length', 25);
+            $categories = $query->skip($start)->take($length)->get();
+
+            // Format data for DataTables
+            $data = [];
+            $categoryBaseUrl = url('/admin/category');
+            foreach ($categories as $category) {
+                $data[] = [
+                    'category' => $category->category ?? '',
+                    'categoryAR' => $category->categoryAR ?? 'N/A',
+                    'isactive' => $category->ispublished ? 'Yes' : 'No',
+                    'displayorder' => $category->displayorder ?? 0,
+                    'updateddate' => $category->updateddate ? \Carbon\Carbon::parse($category->updateddate)->format('d/M/Y') : 'N/A',
+                    'action' => $category->categoryid // For action buttons
+                ];
+            }
+
+            return response()->json([
+                'draw' => intval($request->input('draw')),
+                'recordsTotal' => $totalRecords,
+                'recordsFiltered' => $filteredAfterSearch,
+                'data' => $data
+            ]);
+        } catch (Exception $e) {
+            Log::error('Category DataTables Error: ' . $e->getMessage());
+            Log::error('Stack trace: ' . $e->getTraceAsString());
+            return response()->json([
+                'draw' => intval($request->input('draw', 1)),
+                'recordsTotal' => 0,
+                'recordsFiltered' => 0,
+                'data' => [],
+                'error' => 'An error occurred while loading data.'
+            ], 500);
+        }
     }
 
     public function create(Request $request)

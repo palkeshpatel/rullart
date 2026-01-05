@@ -9,37 +9,95 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rule;
 use App\Traits\ImageUploadTrait;
 use Illuminate\Http\UploadedFile;
+use Exception;
 
 class OccassionController extends Controller
 {
     use ImageUploadTrait;
     public function index(Request $request)
     {
-        $query = Occassion::query();
-
-        // Search functionality
-        if ($request->has('search') && $request->search) {
-            $search = $request->search;
-            $query->where(function ($q) use ($search) {
-                $q->where('occassion', 'like', "%{$search}%")
-                  ->orWhere('occassionAR', 'like', "%{$search}%")
-                  ->orWhere('occassioncode', 'like', "%{$search}%");
-            });
+        // Check if this is a DataTables request
+        if ($request->has('draw')) {
+            return $this->getDataTablesData($request);
         }
 
-        $perPage = $request->get('per_page', 25);
-        $occassions = $query->orderBy('occassionid', 'desc')->paginate($perPage);
+        // Return view for initial page load
+        return view('admin.occassion.index');
+    }
 
-        // Return JSON for AJAX requests
-        if ($request->expectsJson() || $request->ajax()) {
+    /**
+     * Get DataTables data for server-side processing
+     */
+    private function getDataTablesData(Request $request)
+    {
+        try {
+            // Base query for counting
+            $countQuery = Occassion::query();
+            $totalRecords = $countQuery->count();
+
+            // Build base query for data
+            $query = Occassion::query();
+            $filteredCountQuery = Occassion::query();
+
+            // DataTables search (global search)
+            $searchValue = $request->input('search.value', '');
+            if (!empty($searchValue)) {
+                $query->where(function ($q) use ($searchValue) {
+                    $q->where('occassion', 'like', "%{$searchValue}%")
+                        ->orWhere('occassionAR', 'like', "%{$searchValue}%")
+                        ->orWhere('occassioncode', 'like', "%{$searchValue}%");
+                });
+
+                $filteredCountQuery->where(function ($q) use ($searchValue) {
+                    $q->where('occassion', 'like', "%{$searchValue}%")
+                        ->orWhere('occassionAR', 'like', "%{$searchValue}%")
+                        ->orWhere('occassioncode', 'like', "%{$searchValue}%");
+                });
+            }
+
+            $filteredAfterSearch = $filteredCountQuery->count();
+
+            // Ordering
+            $orderColumnIndex = $request->input('order.0.column', 0);
+            $orderDir = $request->input('order.0.dir', 'desc');
+            $columns = ['occassion', 'photo', 'ispublished', 'updateddate', 'occassionid'];
+            $orderColumn = $columns[$orderColumnIndex] ?? 'occassionid';
+            $query->orderBy($orderColumn, $orderDir);
+
+            // Pagination
+            $start = $request->input('start', 0);
+            $length = $request->input('length', 25);
+            $occassions = $query->skip($start)->take($length)->get();
+
+            // Format data for DataTables
+            $data = [];
+            foreach ($occassions as $occassion) {
+                $photoUrl = $occassion->photo ? asset('storage/' . $occassion->photo) : null;
+                $data[] = [
+                    'occassion' => $occassion->occassion ?? '',
+                    'photo' => $photoUrl ? '<img src="' . $photoUrl . '" alt="Photo" style="width: 50px; height: 50px; object-fit: cover; border-radius: 4px;">' : '(No photo)',
+                    'ispublished' => $occassion->ispublished ? 'Yes' : 'No',
+                    'updateddate' => $occassion->updateddate ? \Carbon\Carbon::parse($occassion->updateddate)->format('d/M/Y') : 'N/A',
+                    'action' => $occassion->occassionid
+                ];
+            }
+
             return response()->json([
-                'success' => true,
-                'html' => view('admin.partials.occassions-table', compact('occassions'))->render(),
-                'pagination' => view('admin.partials.pagination', ['items' => $occassions])->render(),
+                'draw' => intval($request->input('draw')),
+                'recordsTotal' => $totalRecords,
+                'recordsFiltered' => $filteredAfterSearch,
+                'data' => $data
             ]);
+        } catch (Exception $e) {
+            Log::error('Occasion DataTables Error: ' . $e->getMessage());
+            return response()->json([
+                'draw' => intval($request->input('draw', 1)),
+                'recordsTotal' => 0,
+                'recordsFiltered' => 0,
+                'data' => [],
+                'error' => 'An error occurred while loading data.'
+            ], 500);
         }
-
-        return view('admin.occassion.index', compact('occassions'));
     }
 
     public function create(Request $request)

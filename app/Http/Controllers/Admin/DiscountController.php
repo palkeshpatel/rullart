@@ -7,44 +7,94 @@ use App\Models\Discount;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rule;
+use Exception;
 
 class DiscountController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Discount::query();
-
-        // Filter by active status
-        if ($request->has('active') && $request->active !== '') {
-            $query->where('isactive', $request->active);
+        // Check if this is a DataTables request
+        if ($request->has('draw')) {
+            return $this->getDataTablesData($request);
         }
 
-        // Filter by date range
-        if ($request->has('start_date') && $request->start_date) {
-            $query->where('startdate', '>=', $request->start_date);
-        }
-        if ($request->has('end_date') && $request->end_date) {
-            $query->where('enddate', '<=', $request->end_date);
-        }
+        // Return view for initial page load
+        return view('admin.masters.discounts');
+    }
 
-        // Sorting
-        $sortColumn = $request->get('sort', 'id');
-        $sortDirection = $request->get('direction', 'desc');
-        $query->orderBy($sortColumn, $sortDirection);
+    /**
+     * Get DataTables data for server-side processing
+     */
+    private function getDataTablesData(Request $request)
+    {
+        try {
+            $countQuery = Discount::query();
+            $totalRecords = $countQuery->count();
 
-        $perPage = $request->get('per_page', 25);
-        $discounts = $query->paginate($perPage);
+            $query = Discount::query();
+            $filteredCountQuery = Discount::query();
 
-        // Return JSON for AJAX requests
-        if ($request->expectsJson() || $request->ajax()) {
+            // Filter by active status
+            if ($request->has('active') && $request->active !== '') {
+                $query->where('isactive', $request->active);
+                $filteredCountQuery->where('isactive', $request->active);
+            }
+
+            // DataTables search
+            $searchValue = $request->input('search.value', '');
+            if (!empty($searchValue)) {
+                $query->where(function ($q) use ($searchValue) {
+                    $q->where('rate', 'like', "%{$searchValue}%");
+                });
+                $filteredCountQuery->where(function ($q) use ($searchValue) {
+                    $q->where('rate', 'like', "%{$searchValue}%");
+                });
+            }
+
+            $filteredAfterSearch = $filteredCountQuery->count();
+
+            // Ordering
+            $orderColumnIndex = $request->input('order.0.column', 0);
+            $orderDir = $request->input('order.0.dir', 'desc');
+            $columns = ['id', 'rate', 'startdate', 'enddate', 'days', 'isactive', 'id'];
+            $orderColumn = $columns[$orderColumnIndex] ?? 'id';
+            $query->orderBy($orderColumn, $orderDir);
+
+            // Pagination
+            $start = $request->input('start', 0);
+            $length = $request->input('length', 25);
+            $discounts = $query->skip($start)->take($length)->get();
+
+            // Format data
+            $data = [];
+            foreach ($discounts as $discount) {
+                $data[] = [
+                    'id' => $discount->id ?? '',
+                    'rate' => ($discount->rate ?? '') . '%',
+                    'startdate' => $discount->startdate ? \Carbon\Carbon::parse($discount->startdate)->format('d-M-Y') : 'N/A',
+                    'enddate' => $discount->enddate ? \Carbon\Carbon::parse($discount->enddate)->format('d-M-Y') : 'N/A',
+                    'days' => $discount->days ?? 'N/A',
+                    'isactive' => $discount->isactive ? 'Yes' : 'No',
+                    'action' => $discount->id
+                ];
+            }
+
             return response()->json([
-                'success' => true,
-                'html' => view('admin.masters.partials.discounts.discounts-table', compact('discounts'))->render(),
-                'pagination' => view('admin.partials.pagination', ['items' => $discounts])->render(),
+                'draw' => intval($request->input('draw')),
+                'recordsTotal' => $totalRecords,
+                'recordsFiltered' => $filteredAfterSearch,
+                'data' => $data
             ]);
+        } catch (Exception $e) {
+            Log::error('Discount DataTables Error: ' . $e->getMessage());
+            return response()->json([
+                'draw' => intval($request->input('draw', 1)),
+                'recordsTotal' => 0,
+                'recordsFiltered' => 0,
+                'data' => [],
+                'error' => 'An error occurred while loading data.'
+            ], 500);
         }
-
-        return view('admin.masters.discounts', compact('discounts'));
     }
 
     public function create(Request $request)

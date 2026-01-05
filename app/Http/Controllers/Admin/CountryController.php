@@ -7,46 +7,101 @@ use App\Models\Country;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rule;
+use Exception;
 
 class CountryController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Country::query();
-
-        // Search functionality
-        if ($request->has('search') && $request->search) {
-            $search = $request->search;
-            $query->where(function($q) use ($search) {
-                $q->where('countryname', 'like', "%{$search}%")
-                  ->orWhere('countrynameAR', 'like', "%{$search}%")
-                  ->orWhere('isocode', 'like', "%{$search}%");
-            });
+        // Check if this is a DataTables request
+        if ($request->has('draw')) {
+            return $this->getDataTablesData($request);
         }
 
-        // Filter by active status
-        if ($request->has('active') && $request->active !== '') {
-            $query->where('isactive', $request->active);
-        }
+        // Return view for initial page load
+        return view('admin.masters.countries');
+    }
 
-        // Sorting
-        $sortColumn = $request->get('sort', 'countryname');
-        $sortDirection = $request->get('direction', 'asc');
-        $query->orderBy($sortColumn, $sortDirection);
+    /**
+     * Get DataTables data for server-side processing
+     */
+    private function getDataTablesData(Request $request)
+    {
+        try {
+            $countQuery = Country::query();
+            $totalRecords = $countQuery->count();
 
-        $perPage = $request->get('per_page', 25);
-        $countries = $query->paginate($perPage);
+            $query = Country::query();
+            $filteredCountQuery = Country::query();
 
-        // Return JSON for AJAX requests
-        if ($request->expectsJson() || $request->ajax()) {
+            // Filter by active status
+            if ($request->has('active') && $request->active !== '') {
+                $query->where('isactive', $request->active);
+                $filteredCountQuery->where('isactive', $request->active);
+            }
+
+            // DataTables search
+            $searchValue = $request->input('search.value', '');
+            if (!empty($searchValue)) {
+                $query->where(function ($q) use ($searchValue) {
+                    $q->where('countryname', 'like', "%{$searchValue}%")
+                        ->orWhere('countrynameAR', 'like', "%{$searchValue}%")
+                        ->orWhere('isocode', 'like', "%{$searchValue}%");
+                });
+
+                $filteredCountQuery->where(function ($q) use ($searchValue) {
+                    $q->where('countryname', 'like', "%{$searchValue}%")
+                        ->orWhere('countrynameAR', 'like', "%{$searchValue}%")
+                        ->orWhere('isocode', 'like', "%{$searchValue}%");
+                });
+            }
+
+            $filteredAfterSearch = $filteredCountQuery->count();
+
+            // Ordering
+            $orderColumnIndex = $request->input('order.0.column', 0);
+            $orderDir = $request->input('order.0.dir', 'asc');
+            $columns = ['countryname', 'countrynameAR', 'currencycode', 'currencyrate', 'shipping_charge', 'free_shipping_over', 'isocode', 'isactive', 'countryid'];
+            $orderColumn = $columns[$orderColumnIndex] ?? 'countryname';
+            $query->orderBy($orderColumn, $orderDir);
+
+            // Pagination
+            $start = $request->input('start', 0);
+            $length = $request->input('length', 25);
+            $countries = $query->skip($start)->take($length)->get();
+
+            // Format data
+            $data = [];
+            foreach ($countries as $country) {
+                $data[] = [
+                    'countryname' => $country->countryname ?? '',
+                    'countrynameAR' => $country->countrynameAR ?? 'N/A',
+                    'currencycode' => $country->currencycode ?? 'N/A',
+                    'currencyrate' => number_format($country->currencyrate ?? 0, 6),
+                    'shipping_charge' => number_format($country->shipping_charge ?? 0, 2),
+                    'free_shipping_over' => number_format($country->free_shipping_over ?? 0, 3),
+                    'isocode' => $country->isocode ?? 'N/A',
+                    'isactive' => $country->isactive ? 'Yes' : 'No',
+                    'action' => $country->countryid
+                ];
+            }
+
             return response()->json([
-                'success' => true,
-                'html' => view('admin.masters.partials.countries.countries-table', compact('countries'))->render(),
-                'pagination' => view('admin.partials.pagination', ['items' => $countries])->render(),
+                'draw' => intval($request->input('draw')),
+                'recordsTotal' => $totalRecords,
+                'recordsFiltered' => $filteredAfterSearch,
+                'data' => $data
             ]);
+        } catch (Exception $e) {
+            Log::error('Country DataTables Error: ' . $e->getMessage());
+            return response()->json([
+                'draw' => intval($request->input('draw', 1)),
+                'recordsTotal' => 0,
+                'recordsFiltered' => 0,
+                'data' => [],
+                'error' => 'An error occurred while loading data.'
+            ], 500);
         }
-
-        return view('admin.masters.countries', compact('countries'));
     }
 
     public function create(Request $request)

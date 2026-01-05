@@ -6,32 +6,28 @@
     <div class="row">
         <div class="col-12">
             <!-- Filters Section - Top Bar -->
-            <form method="GET" action="{{ route('admin.orders-not-process') }}" data-table-filters id="cartsFilterForm">
-                <div class="card mb-3">
-                    <div class="card-body">
-                        <div class="row align-items-end">
-                            <div class="col-md-3">
-                                <label class="form-label mb-1">Country</label>
-                                <select name="country" class="form-select form-select-sm" data-filter>
-                                    <option value="">--All Country--</option>
-                                    @foreach ($countries ?? [] as $country)
-                                        <option value="{{ $country }}"
-                                            {{ request('country') == $country ? 'selected' : '' }}>{{ $country }}
-                                        </option>
-                                    @endforeach
-                                </select>
-                            </div>
+            <div class="card mb-3">
+                <div class="card-body">
+                    <div class="row align-items-end">
+                        <div class="col-md-3">
+                            <label class="form-label mb-1">Country</label>
+                            <select id="countryFilter" class="form-select form-select-sm">
+                                <option value="">--All Country--</option>
+                                @foreach ($countries ?? [] as $country)
+                                    <option value="{{ $country }}">{{ $country }}</option>
+                                @endforeach
+                            </select>
                         </div>
                     </div>
                 </div>
-            </form>
+            </div>
 
             <!-- Carts Table Card -->
             <div class="card">
                 <div class="card-header justify-content-between align-items-center border-dashed">
                     <h4 class="card-title mb-0">Shopping Cart Not Complete Payment</h4>
-                    <a href="{{ route('admin.orders-not-process.export', ['country' => request('country'), 'search' => request('search')]) }}" 
-                        class="btn btn-success btn-sm" title="Export to Excel">
+                    <a href="{{ url('/admin/ordersnotprocess/export') }}" class="btn btn-success btn-sm"
+                        title="Export to Excel" id="exportBtn">
                         <i class="ti ti-file-excel me-1"></i> Export
                     </a>
                 </div>
@@ -41,22 +37,17 @@
                         <div class="col-md-12">
                             <div class="d-flex gap-2 justify-content-between align-items-center">
                                 <div class="app-search app-search-sm" style="max-width: 300px;">
-                                    <input type="text" name="search" class="form-control form-control-sm" data-search
-                                        placeholder="Search cart..." value="{{ request('search') }}">
+                                    <input type="text" id="searchBox" class="form-control form-control-sm"
+                                        placeholder="Search cart...">
                                     <i data-lucide="search" class="app-search-icon text-muted"></i>
                                 </div>
                                 <div class="d-flex align-items-center">
                                     <label class="mb-0 me-2">Show
                                         <select class="form-select form-select-sm d-inline-block" style="width: auto;"
                                             id="perPageSelect">
-                                            @php
-                                                $currentPerPage = request('per_page', 25);
-                                            @endphp
-                                            <option value="25" {{ $currentPerPage == 25 ? 'selected' : '' }}>25</option>
-                                            <option value="50" {{ $currentPerPage == 50 ? 'selected' : '' }}>50
-                                            </option>
-                                            <option value="100" {{ $currentPerPage == 100 ? 'selected' : '' }}>100
-                                            </option>
+                                            <option value="25">25</option>
+                                            <option value="50">50</option>
+                                            <option value="100">100</option>
                                         </select>
                                     </label>
                                 </div>
@@ -64,14 +55,27 @@
                         </div>
                     </div>
 
-                    <!-- Table Container -->
-                    <div class="table-container">
-                        @include('admin.orders-not-process.partials.table', ['carts' => $carts])
-                    </div>
-
-                    <!-- Pagination -->
-                    <div class="pagination-container">
-                        @include('admin.partials.pagination', ['items' => $carts])
+                    <!-- DataTable -->
+                    <div class="table-responsive">
+                        <table id="cartsTable" class="table table-bordered table-striped table-hover" style="width:100%">
+                            <thead>
+                                <tr>
+                                    <th>Ref #</th>
+                                    <th>Name</th>
+                                    <th>Email</th>
+                                    <th>Total</th>
+                                    <th>Order Date</th>
+                                    <th>Payment Method</th>
+                                    <th>Order From</th>
+                                    <th>Email Count</th>
+                                    <th>Email Send Date</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- DataTables will populate this -->
+                            </tbody>
+                        </table>
                     </div>
                 </div>
             </div>
@@ -81,198 +85,401 @@
 
 @section('scripts')
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            // Initialize AJAX data table
-            AdminAjax.initDataTable({
-                tableSelector: '#cartsTable',
-                searchSelector: '[data-search]',
-                filterSelector: '[data-filter]',
-                paginationSelector: '.pagination a',
-                loadUrl: '{{ route('admin.orders-not-process') }}',
-                containerSelector: '.table-container',
-                onSuccess: function(response) {
-                    // Update pagination if provided
-                    if (response.pagination) {
-                        const paginationContainer = document.querySelector('.pagination-container');
-                        if (paginationContainer) {
-                            paginationContainer.innerHTML = response.pagination;
-                        }
-                    }
+        (function() {
+            let dataTablesLoaded = false;
+
+            function loadDataTables(callback) {
+                if (dataTablesLoaded && typeof jQuery !== 'undefined' && typeof jQuery.fn.DataTable !== 'undefined') {
+                    callback();
+                    return;
                 }
-            });
 
-            // Per page change handler
-            document.getElementById('perPageSelect')?.addEventListener('change', function() {
-                const form = document.getElementById('cartsFilterForm');
-                const formData = new FormData(form);
-                formData.set('per_page', this.value);
-                formData.delete('page'); // Reset to page 1 when changing per_page
+                if (typeof jQuery === 'undefined') {
+                    setTimeout(function() {
+                        loadDataTables(callback);
+                    }, 50);
+                    return;
+                }
 
-                const params = new URLSearchParams();
-                formData.forEach((value, key) => {
-                    if (value) params.set(key, value);
-                });
+                if (!dataTablesLoaded) {
+                    const dtScript = document.createElement('script');
+                    dtScript.src = 'https://cdn.datatables.net/1.13.8/js/jquery.dataTables.min.js';
+                    dtScript.onload = function() {
+                        const dtRespScript = document.createElement('script');
+                        dtRespScript.src =
+                            'https://cdn.datatables.net/responsive/2.5.0/js/dataTables.responsive.min.js';
+                        dtRespScript.onload = function() {
+                            dataTablesLoaded = true;
+                            callback();
+                        };
+                        document.head.appendChild(dtRespScript);
+                    };
+                    document.head.appendChild(dtScript);
+                } else {
+                    setTimeout(function() {
+                        loadDataTables(callback);
+                    }, 50);
+                }
+            }
 
-                AdminAjax.loadTable('{{ route('admin.orders-not-process') }}', document.querySelector(
-                    '.table-container'), {
-                    params: Object.fromEntries(params),
-                    onSuccess: function(response) {
-                        // Update pagination if provided
-                        if (response.pagination) {
-                            const paginationContainer = document.querySelector(
-                                '.pagination-container');
-                            if (paginationContainer) {
-                                paginationContainer.innerHTML = response.pagination;
+            function initCartsDataTable() {
+                loadDataTables(function() {
+                    if (typeof jQuery === 'undefined' || typeof jQuery.fn.DataTable === 'undefined') {
+                        setTimeout(initCartsDataTable, 50);
+                        return;
+                    }
+
+                    const $ = jQuery;
+                    const cartBaseUrl = '{{ url('/admin/ordersnotprocess') }}';
+                    let deleteCartId = null;
+
+                    $(document).ready(function() {
+                        let loadingModal = null;
+
+                        function showLoader() {
+                            if (!loadingModal) {
+                                $('body').append(loaderHtml());
+                                const modalEl = document.getElementById('cartDataTableLoader');
+                                loadingModal = new bootstrap.Modal(modalEl, {
+                                    backdrop: 'static',
+                                    keyboard: false
+                                });
+                            }
+                            loadingModal.show();
+                        }
+
+                        function hideLoader() {
+                            if (loadingModal) {
+                                loadingModal.hide();
+                                cleanupLoader();
                             }
                         }
-                        // Re-initialize view and delete buttons after table reload
-                        initCartActions();
-                    }
-                });
-            });
 
-            // Initialize view and delete buttons
-            function initCartActions() {
-                // View cart button
-                document.querySelectorAll('.view-cart-btn').forEach(btn => {
-                    btn.addEventListener('click', function() {
-                        const cartId = this.getAttribute('data-cart-id');
-                        loadCartView(cartId);
-                    });
-                });
-
-                // Delete cart button
-                document.querySelectorAll('.delete-cart-btn').forEach(btn => {
-                    btn.addEventListener('click', function() {
-                        const cartId = this.getAttribute('data-cart-id');
-                        deleteCart(cartId);
-                    });
-                });
-            }
-
-            // Load cart view in modal
-            function loadCartView(cartId) {
-                fetch(`{{ route('admin.orders-not-process.show', ':id') }}`.replace(':id', cartId), {
-                    headers: {
-                        'X-Requested-With': 'XMLHttpRequest',
-                        'Accept': 'application/json'
-                    }
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        // Create modal if it doesn't exist
-                        let modalContainer = document.getElementById('cartViewModalContainer');
-                        if (!modalContainer) {
-                            modalContainer = document.createElement('div');
-                            modalContainer.id = 'cartViewModalContainer';
-                            document.body.appendChild(modalContainer);
+                        function cleanupLoader() {
+                            $('#cartDataTableLoader').remove();
+                            $('.modal-backdrop').remove();
+                            $('body').removeClass('modal-open').css({
+                                overflow: '',
+                                paddingRight: ''
+                            });
+                            loadingModal = null;
                         }
-                        modalContainer.innerHTML = data.html;
-                        
-                        // Show modal
-                        const modal = new bootstrap.Modal(document.getElementById('cartViewModal'));
-                        modal.show();
-                    }
-                })
-                .catch(error => {
-                    console.error('Error loading cart view:', error);
-                    alert('Error loading cart details');
-                });
-            }
 
-            // Show confirmation modal
-            function showConfirmModal(message, onConfirm) {
-                // Create or get modal container
-                let modalContainer = document.getElementById('confirmModalContainer');
-                if (!modalContainer) {
-                    modalContainer = document.createElement('div');
-                    modalContainer.id = 'confirmModalContainer';
-                    document.body.appendChild(modalContainer);
-                }
+                        let isFirstDraw = true;
+                        showLoader();
 
-                // Create modal HTML
-                modalContainer.innerHTML = `
-                    <div class="modal fade" id="confirmDeleteModal" tabindex="-1" aria-labelledby="confirmDeleteModalLabel" aria-hidden="true">
-                        <div class="modal-dialog modal-dialog-centered">
-                            <div class="modal-content">
-                                <div class="modal-header border-0 pb-0">
-                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                                </div>
-                                <div class="modal-body text-center px-4 pb-4">
-                                    <div class="mb-3">
-                                        <i class="ti ti-alert-triangle text-danger" style="font-size: 48px;"></i>
-                                    </div>
-                                    <h5 class="modal-title mb-3" id="confirmDeleteModalLabel">Confirm Delete</h5>
-                                    <p class="text-muted mb-0">${message}</p>
-                                </div>
-                                <div class="modal-footer border-0 justify-content-center gap-2 pb-4">
-                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                                    <button type="button" class="btn btn-danger" id="confirmDeleteBtn">Delete</button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                `;
-
-                // Show modal
-                const modal = new bootstrap.Modal(document.getElementById('confirmDeleteModal'));
-                modal.show();
-
-                // Handle confirm button click
-                document.getElementById('confirmDeleteBtn').addEventListener('click', function() {
-                    modal.hide();
-                    if (onConfirm) {
-                        onConfirm();
-                    }
-                });
-
-                // Clean up when modal is hidden
-                document.getElementById('confirmDeleteModal').addEventListener('hidden.bs.modal', function() {
-                    modalContainer.innerHTML = '';
-                });
-            }
-
-            // Delete cart
-            function deleteCart(cartId) {
-                showConfirmModal('Are you sure you want to delete this cart? This action cannot be undone.', function() {
-                    fetch(`{{ route('admin.orders-not-process.destroy', ':id') }}`.replace(':id', cartId), {
-                        method: 'DELETE',
-                        headers: {
-                            'X-Requested-With': 'XMLHttpRequest',
-                            'Accept': 'application/json',
-                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || ''
-                        }
-                    })
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.success) {
-                            // Reload table
-                            AdminAjax.loadTable('{{ route('admin.orders-not-process') }}', document.querySelector('.table-container'), {
-                                onSuccess: function(response) {
-                                    if (response.pagination) {
-                                        const paginationContainer = document.querySelector('.pagination-container');
-                                        if (paginationContainer) {
-                                            paginationContainer.innerHTML = response.pagination;
-                                        }
+                        let table = $('#cartsTable').DataTable({
+                            processing: true,
+                            serverSide: true,
+                            dom: 'rtip', // Hide default search (f) and length menu (l), show only table, info, pagination
+                            ajax: {
+                                url: cartBaseUrl,
+                                type: 'GET',
+                                data: function(d) {
+                                    if (!isFirstDraw) {
+                                        showLoader();
                                     }
-                                    initCartActions();
+                                    d.country = $('#countryFilter').val();
+                                    console.log('📤 DataTables request:', d);
+                                },
+                                dataSrc: function(json) {
+                                    hideLoader();
+                                    isFirstDraw = false;
+                                    console.log('📥 DataTables response:', json);
+                                    if (json.error) {
+                                        console.error('❌ Server error:', json.error);
+                                        alert('Error: ' + json.error);
+                                    }
+                                    return json.data;
+                                },
+                                error: function(xhr, error, thrown) {
+                                    hideLoader();
+                                    console.error('❌ DataTables AJAX Error:', error);
+                                    alert('Error loading data. Status: ' + xhr.status);
+                                }
+                            },
+                            columns: [{
+                                    data: 'ref',
+                                    name: 'ref'
+                                },
+                                {
+                                    data: 'name',
+                                    name: 'name'
+                                },
+                                {
+                                    data: 'email',
+                                    name: 'email'
+                                },
+                                {
+                                    data: 'total',
+                                    name: 'total'
+                                },
+                                {
+                                    data: 'orderdate',
+                                    name: 'orderdate'
+                                },
+                                {
+                                    data: 'paymentmethod',
+                                    name: 'paymentmethod'
+                                },
+                                {
+                                    data: 'orderfrom',
+                                    name: 'orderfrom'
+                                },
+                                {
+                                    data: 'emailcount',
+                                    name: 'emailcount'
+                                },
+                                {
+                                    data: 'emailsenddate',
+                                    name: 'emailsenddate'
+                                },
+                                {
+                                    data: 'action',
+                                    name: 'action',
+                                    orderable: false,
+                                    searchable: false,
+                                    render: function(data, type, row) {
+                                        let html = '<div class="d-flex gap-1">';
+                                        html +=
+                                            '<a href="javascript:void(0);" class="btn btn-light btn-icon btn-sm rounded-circle view-cart-btn" data-cart-id="' +
+                                            row.action + '" title="View">';
+                                        html += '<i class="ti ti-eye fs-lg"></i></a>';
+                                        html +=
+                                            '<a href="javascript:void(0);" class="btn btn-light btn-icon btn-sm rounded-circle delete-cart-btn" data-cart-id="' +
+                                            row.action + '" title="Delete">';
+                                        html += '<i class="ti ti-trash fs-lg"></i></a>';
+                                        html += '</div>';
+                                        return html;
+                                    }
+                                }
+                            ],
+                            pageLength: 25,
+                            lengthMenu: [
+                                [25, 50, 100],
+                                [25, 50, 100]
+                            ],
+                            order: [
+                                [4, 'desc']
+                            ],
+                            language: {
+                                processing: '<div class="spinner-border spinner-border-sm" role="status"><span class="visually-hidden">Loading...</span></div>',
+                                emptyTable: "No incomplete shopping carts found",
+                                zeroRecords: "No matching carts found"
+                            },
+                            responsive: true,
+                            columnDefs: [{
+                                    responsivePriority: 1,
+                                    targets: [0, 1, 2, 9]
+                                },
+                                {
+                                    responsivePriority: 2,
+                                    targets: [3, 4]
+                                },
+                                {
+                                    responsivePriority: 3,
+                                    targets: [5, 6, 7, 8]
+                                }
+                            ]
+                        });
+
+                        $('#searchBox').on('keyup', function() {
+                            showLoader();
+                            table.search(this.value).draw();
+                        });
+
+                        $('#countryFilter').on('change', function() {
+                            showLoader();
+                            table.ajax.reload();
+                        });
+
+                        // 📄 Per Page Select Handler
+                        $('#perPageSelect').on('change', function() {
+                            showLoader();
+                            table.page.len(parseInt($(this).val())).draw();
+                        });
+
+                        // View Cart Button
+                        $(document).on('click', '.view-cart-btn', function(e) {
+                            e.preventDefault();
+                            const cartId = $(this).data('cart-id');
+                            openCartModal(cartId);
+                        });
+
+                        // Delete Cart Button
+                        $(document).on('click', '.delete-cart-btn', function(e) {
+                            e.preventDefault();
+                            deleteCartId = $(this).data('cart-id');
+                            $('#deleteCartName').text('Cart #' + deleteCartId);
+                            const deleteModal = new bootstrap.Modal(document.getElementById(
+                                'deleteCartModal'));
+                            deleteModal.show();
+                        });
+
+                        // Confirm Delete
+                        $('#confirmDeleteCartBtn').on('click', function() {
+                            if (deleteCartId) {
+                                const currentPage = table.page();
+                                const totalPages = table.page.info().pages;
+
+                                AdminAjax.request(cartBaseUrl + '/' + deleteCartId, 'DELETE')
+                                    .then(res => {
+                                        bootstrap.Modal.getInstance(document.getElementById(
+                                            'deleteCartModal')).hide();
+                                        showToast('Cart deleted successfully', 'success');
+
+                                        showLoader();
+                                        table.ajax.reload(function() {
+                                            hideLoader();
+                                            const newTotalPages = table.page.info()
+                                                .pages;
+                                            if (currentPage >= newTotalPages &&
+                                                newTotalPages > 0) {
+                                                table.page(newTotalPages - 1).draw(
+                                                    'page');
+                                            } else {
+                                                table.page(currentPage).draw(
+                                                    'page');
+                                            }
+                                        }, false);
+                                    })
+                                    .catch(err => {
+                                        showToast(err.message || 'Failed to delete cart.',
+                                            'error');
+                                    });
+                            }
+                        });
+
+                        // Open Cart Modal
+                        function openCartModal(cartId) {
+                            const modalContainer = document.getElementById('cartViewModalContainer');
+                            modalContainer.innerHTML =
+                                '<div class="modal fade" id="cartViewModal" tabindex="-1"><div class="modal-dialog modal-xl"><div class="modal-content"><div class="modal-body"><div class="text-center p-4"><div class="spinner-border" role="status"><span class="visually-hidden">Loading...</span></div></div></div></div></div></div>';
+
+                            const loadingModal = new bootstrap.Modal(document.getElementById(
+                                'cartViewModal'));
+                            loadingModal.show();
+
+                            AdminAjax.get(cartBaseUrl + '/' + cartId)
+                                .then(response => {
+                                    loadingModal.hide();
+                                    modalContainer.innerHTML = response.html;
+                                    const modal = document.getElementById('cartViewModal');
+                                    const bsModal = new bootstrap.Modal(modal);
+                                    bsModal.show();
+
+                                    modal.addEventListener('hidden.bs.modal', function() {
+                                        modalContainer.innerHTML = '';
+                                    }, {
+                                        once: true
+                                    });
+                                })
+                                .catch(error => {
+                                    loadingModal.hide();
+                                    showToast('Failed to load cart details.', 'error');
+                                    modalContainer.innerHTML = '';
+                                });
+                        }
+
+                        function showToast(message, type = 'error') {
+                            let toastContainer = $('#global-toast-container');
+                            if (!toastContainer.length) {
+                                toastContainer = $(
+                                    '<div id="global-toast-container" class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 9999;"></div>'
+                                );
+                                $('body').append(toastContainer);
+                            }
+
+                            toastContainer.find('.toast').each(function() {
+                                const bsToast = bootstrap.Toast.getInstance(this);
+                                if (bsToast) bsToast.hide();
+                            });
+
+                            const toastBg = type === 'error' ? 'bg-danger' : 'bg-success';
+                            const toastId = 'toast-' + Date.now();
+                            const toast = $(`
+                                <div id="${toastId}" class="toast ${toastBg} text-white border-0" role="alert">
+                                    <div class="d-flex">
+                                        <div class="toast-body">
+                                            <i class="ti ti-${type === 'error' ? 'alert-circle' : 'check-circle'} me-2"></i>
+                                            ${message}
+                                        </div>
+                                        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+                                    </div>
+                                </div>
+                            `);
+
+                            toastContainer.append(toast);
+                            const bsToast = new bootstrap.Toast(toast[0], {
+                                autohide: true,
+                                delay: 5000
+                            });
+                            bsToast.show();
+
+                            toast.on('hidden.bs.toast', function() {
+                                $(this).remove();
+                                if (toastContainer.find('.toast').length === 0) {
+                                    toastContainer.remove();
                                 }
                             });
-                        } else {
-                            alert(data.message || 'Error deleting cart');
                         }
-                    })
-                    .catch(error => {
-                        console.error('Error deleting cart:', error);
-                        alert('Error deleting cart');
+
+                        function cleanupLoader() {
+                            $('#cartDataTableLoader').remove();
+                            $('.modal-backdrop').remove();
+                            $('body').removeClass('modal-open').css({
+                                overflow: '',
+                                paddingRight: ''
+                            });
+                            loadingModal = null;
+                        }
+
+                        function loaderHtml() {
+                            return `
+                                <div class="modal fade" id="cartDataTableLoader" tabindex="-1" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+                                    <div class="modal-dialog modal-dialog-centered">
+                                        <div class="modal-content">
+                                            <div class="modal-body text-center p-4">
+                                                <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;">
+                                                    <span class="visually-hidden">Loading...</span>
+                                                </div>
+                                                <h5 class="mt-3 mb-1">Loading Carts...</h5>
+                                                <p class="text-muted mb-0">Please wait while we fetch the data.</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>`;
+                        }
                     });
                 });
             }
 
-            // Initialize on page load
-            initCartActions();
-        });
+            initCartsDataTable();
+        })();
     </script>
-@endsection
 
+    <!-- Delete Confirmation Modal -->
+    <div class="modal fade" id="deleteCartModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="ti ti-alert-triangle text-warning me-2"></i>Confirm Delete
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Are you sure you want to delete <strong id="deleteCartName"></strong>?</p>
+                    <p class="text-danger mb-0"><small>This action cannot be undone.</small></p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-danger" id="confirmDeleteCartBtn">Delete</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Cart View Modal Container -->
+    <div id="cartViewModalContainer"></div>
+@endsection

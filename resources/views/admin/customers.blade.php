@@ -9,8 +9,7 @@
                 <div class="card-header justify-content-between align-items-center border-dashed">
                     <h4 class="card-title mb-0">Customers List</h4>
                     <div class="d-flex gap-2">
-                        <a href="{{ route('admin.customers.export', ['search' => request('search')]) }}"
-                            class="btn btn-success btn-sm" title="Export to Excel">
+                        <a href="{{ url('/admin/customers/export') }}" class="btn btn-success btn-sm" title="Export to Excel" id="exportBtn">
                             <i class="ti ti-file-excel me-1"></i> Export
                         </a>
                         @unless(\App\Helpers\ViewHelper::isView('customers'))
@@ -21,41 +20,49 @@
                     </div>
                 </div>
                 <div class="card-body">
-                    <!-- Filters Form -->
-                    <form method="GET" action="{{ route('admin.customers') }}" data-table-filters
-                        id="customersFilterForm">
-                        <div class="row mb-3">
-                            <div class="col-md-6">
-                                <label class="mb-0">Show
-                                    <select class="form-select form-select-sm d-inline-block" style="width: auto;"
-                                        id="perPageSelect">
-                                        <option value="25" {{ request('per_page', 25) == 25 ? 'selected' : '' }}>25
-                                        </option>
-                                        <option value="50" {{ request('per_page', 25) == 50 ? 'selected' : '' }}>50
-                                        </option>
-                                        <option value="100" {{ request('per_page', 25) == 100 ? 'selected' : '' }}>100
-                                        </option>
-                                    </select> entries
-                                </label>
-                            </div>
-                            <div class="col-md-6 text-end">
-                                <div class="input-group" style="max-width: 300px; margin-left: auto;">
-                                    <span class="input-group-text">Search:</span>
-                                    <input type="text" name="search" class="form-control form-control-sm" data-search
-                                        placeholder="Search..." value="{{ request('search') }}">
+                    <!-- Search and Per Page Controls -->
+                    <div class="row mb-3">
+                        <div class="col-md-12">
+                            <div class="d-flex gap-2 justify-content-between align-items-center">
+                                <div class="app-search app-search-sm" style="max-width: 300px;">
+                                    <input type="text" id="searchBox" class="form-control form-control-sm"
+                                        placeholder="Search customer...">
+                                    <i data-lucide="search" class="app-search-icon text-muted"></i>
+                                </div>
+                                <div class="d-flex align-items-center">
+                                    <label class="mb-0 me-2">Show
+                                        <select class="form-select form-select-sm d-inline-block" style="width: auto;"
+                                            id="perPageSelect">
+                                            <option value="25">25</option>
+                                            <option value="50">50</option>
+                                            <option value="100">100</option>
+                                        </select>
+                                    </label>
                                 </div>
                             </div>
                         </div>
-                    </form>
-
-                    <!-- Table Container -->
-                    <div class="table-container">
-                        @include('admin.partials.customers-table', ['customers' => $customers])
                     </div>
 
-                    <!-- Pagination -->
-                    <div class="pagination-container">
-                        @include('admin.partials.pagination', ['items' => $customers])
+                    <!-- DataTable -->
+                    <div class="table-responsive">
+                        <table id="customersTable" class="table table-bordered table-striped table-hover" style="width:100%">
+                            <thead>
+                                <tr>
+                                    <th>First Name</th>
+                                    <th>Last Name</th>
+                                    <th>Email</th>
+                                    <th>Site</th>
+                                    <th>Login Type</th>
+                                    <th>Is Active?</th>
+                                    <th>Last Login</th>
+                                    <th>Register Date</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- DataTables will populate this -->
+                            </tbody>
+                        </table>
                     </div>
                 </div>
             </div>
@@ -71,620 +78,438 @@
     <script>
         // Wait for jQuery to be available (Vite loads scripts asynchronously)
         (function() {
-            function initCustomersScript() {
-                if (typeof jQuery === 'undefined' || typeof jQuery.fn.validate === 'undefined') {
-                    setTimeout(initCustomersScript, 50);
+            let dataTablesLoaded = false;
+
+            function loadDataTables(callback) {
+                if (dataTablesLoaded && typeof jQuery !== 'undefined' && typeof jQuery.fn.DataTable !== 'undefined') {
+                    callback();
                     return;
                 }
 
-                const $ = jQuery;
+                if (typeof jQuery === 'undefined') {
+                    setTimeout(function() {
+                        loadDataTables(callback);
+                    }, 50);
+                    return;
+                }
 
-                $(document).ready(function() {
-
-                    console.log('✅ Document ready');
-
-                    // Load table from URL parameters on page load
-                    loadTableFromURL();
-
-                    /* -----------------------------------
-                     HARD BLOCK native submit (AJAX forms)
-                    ----------------------------------- */
-                    $(document).off('submit', '#customerForm');
-                    $(document).on('submit', '#customerForm', function(e) {
-                        console.log('🚫 Native submit blocked');
-                        e.preventDefault();
-                        return false;
-                    });
-
-                    /* -----------------------------------
-                     ADD CUSTOMER BUTTON (OPEN MODAL ONLY)
-                    ----------------------------------- */
-                    $(document).on('click', '.add-customer-btn', function(e) {
-                        e.preventDefault();
-                        console.log('➕ Add Customer clicked (open modal)');
-                        openCustomerFormModal();
-                    });
-
-                    /* -----------------------------------
-                     EDIT CUSTOMER BUTTON
-                    ----------------------------------- */
-                    $(document).on('click', '.edit-customer-btn', function(e) {
-                        e.preventDefault();
-                        const customerId = $(this).data('customer-id');
-                        console.log('✏️ Edit Customer clicked, ID:', customerId);
-                        openCustomerFormModal(customerId);
-                    });
-
-                    /* -----------------------------------
-                     VIEW CUSTOMER BUTTON
-                    ----------------------------------- */
-                    $(document).on('click', '.view-customer-btn', function(e) {
-                        e.preventDefault();
-                        const customerId = $(this).data('customer-id');
-                        console.log('👁️ View Customer clicked, ID:', customerId);
-                        openCustomerViewModal(customerId);
-                    });
-
-                    /* -----------------------------------
-                     OPEN VIEW MODAL
-                    ----------------------------------- */
-                    function openCustomerViewModal(customerId) {
-                        console.log('📦 Opening customer view modal, ID:', customerId);
-
-                        cleanupModals();
-
-                        const url = '{{ route('admin.customers.show', ':id') }}'.replace(':id', customerId);
-
-                        $('#customerViewModalContainer').html(loaderHtml());
-
-                        const loadingModal = new bootstrap.Modal($('#customerModal')[0], {
-                            backdrop: 'static',
-                            keyboard: false
-                        });
-
-                        loadingModal.show();
-
-                        AdminAjax.get(url).then(response => {
-                            console.log('📥 View HTML loaded');
-
-                            loadingModal.hide();
-                            cleanupModals();
-
-                            $('#customerViewModalContainer').html(response.html);
-
-                            const modalEl = document.getElementById('customerViewModal');
-                            const modal = new bootstrap.Modal(modalEl);
-                            modal.show();
-
-                            // Handle edit button click from view modal
-                            $(modalEl).find('.edit-customer-btn').on('click', function(e) {
-                                e.preventDefault();
-                                const editCustomerId = $(this).data('customer-id');
-                                modal.hide();
-                                cleanupModals();
-                                // Open edit modal
-                                setTimeout(() => {
-                                    openCustomerFormModal(editCustomerId);
-                                }, 300);
-                            });
-
-                            // Cleanup on close
-                            modalEl.addEventListener('hidden.bs.modal', function() {
-                                cleanupModals();
-                            }, {
-                                once: true
-                            });
-
-                        }).catch(err => {
-                            console.error('❌ Failed to load view', err);
-                            loadingModal.hide();
-                            cleanupModals();
-                            AdminAjax.showError('Failed to load customer details.');
-                        });
-                    }
-
-                    /* -----------------------------------
-                     OPEN FORM MODAL
-                    ----------------------------------- */
-                    function openCustomerFormModal(customerId = null) {
-
-                        console.log('📦 Opening customer form modal, ID:', customerId);
-
-                        cleanupModals();
-
-                        const url = customerId ?
-                            '{{ route('admin.customers.edit', ':id') }}'.replace(':id', customerId) :
-                            '{{ route('admin.customers.create') }}';
-
-                        $('#customerModalContainer').html(loaderHtml());
-
-                        const loadingModal = new bootstrap.Modal($('#customerModal')[0], {
-                            backdrop: 'static',
-                            keyboard: false
-                        });
-
-                        loadingModal.show();
-
-                        AdminAjax.get(url).then(response => {
-
-                            console.log('📥 Form HTML loaded');
-
-                            loadingModal.hide();
-                            cleanupModals();
-
-                            $('#customerModalContainer').html(response.html);
-
-                            const modalEl = document.getElementById('customerModal');
-                            const modal = new bootstrap.Modal(modalEl);
-                            modal.show();
-
-                            // IMPORTANT
-                            setupCustomerValidation(customerId, modal);
-
-                        }).catch(err => {
-                            console.error('❌ Failed to load form', err);
-                            loadingModal.hide();
-                            cleanupModals();
-                        });
-                    }
-
-                    /* -----------------------------------
-                     VALIDATION SETUP
-                    ----------------------------------- */
-                    function setupCustomerValidation(customerId, modal) {
-
-                        const $form = $('#customerForm');
-
-                        console.log('🧪 setupCustomerValidation called');
-                        console.log('Form exists:', $form.length);
-
-                        if (!$form.length) {
-                            console.warn('❌ #customerForm not found');
-                            return;
-                        }
-
-                        if ($form.data('validator')) {
-                            console.warn('⚠️ Validator already exists');
-                            return;
-                        }
-
-                        console.log('✅ Initializing jQuery Validation');
-
-                        $form.validate({
-                            rules: {
-                                firstname: {
-                                    required: true
-                                },
-                                email: {
-                                    required: true,
-                                    email: true
-                                },
-                                password: {
-                                    required: !customerId, // Required only for new customers
-                                    minlength: 6
-                                }
-                            },
-                            messages: {
-                                firstname: 'First name is required',
-                                email: {
-                                    required: 'Email is required',
-                                    email: 'Please enter a valid email address'
-                                },
-                                password: {
-                                    required: 'Password is required',
-                                    minlength: 'Password must be at least 6 characters'
-                                }
-                            },
-                            errorElement: 'div',
-                            errorClass: 'invalid-feedback',
-                            highlight(el) {
-                                console.log('❌ Invalid:', el.name);
-                                $(el).addClass('is-invalid');
-                            },
-                            unhighlight(el) {
-                                console.log('✅ Valid:', el.name);
-                                $(el).removeClass('is-invalid').addClass('is-valid');
-                            },
-                            errorPlacement(error, element) {
-                                error.insertAfter(element);
-                            },
-                            invalidHandler(event, validator) {
-                                console.warn('🚫 Validation failed');
-                                console.log('Errors:', validator.errorList);
-                            },
-                            submitHandler(form) {
-                                console.log('🚀 Validation passed → submitCustomerForm()');
-                                submitCustomerForm(form, customerId, modal);
-                            }
-                        });
-                    }
-
-                    /* -----------------------------------
-                     SUBMIT FORM (AJAX)
-                    ----------------------------------- */
-                    function submitCustomerForm(form, customerId, modal) {
-
-                        console.log('📤 submitCustomerForm called');
-
-                        // Create FormData
-                        const formData = new FormData(form);
-
-                        const url = form.action;
-                        const method = form.querySelector('[name="_method"]')?.value || 'POST';
-
-                        const submitBtn = form.querySelector('button[type="submit"]');
-                        const originalText = submitBtn.innerHTML;
-                        // Store original text as data attribute for recovery
-                        submitBtn.setAttribute('data-original-text', originalText);
-                        submitBtn.disabled = true;
-                        submitBtn.innerHTML =
-                            '<span class="spinner-border spinner-border-sm me-1"></span> Saving...';
-
-                        AdminAjax.request(url, method, formData)
-                            .then(res => {
-                                console.log('✅ AJAX success:', res);
-                                // Show success toast before closing modal
-                                showToastInModal(modal, res.message || 'Customer saved successfully',
-                                    'success');
-
-                                // Close modal after a short delay to show success message
-                                setTimeout(() => {
-                                    modal.hide();
-                                }, 1500);
-
-                                // Reload table with current page preserved
-                                reloadCustomersTable();
-                            })
-                            .catch(err => {
-                                console.error('❌ AJAX error:', err);
-
-                                // Get error message from server response
-                                let errorMessage = 'Failed to save customer.';
-
-                                if (err.message) {
-                                    errorMessage = err.message;
-                                } else if (err.errors) {
-                                    // Handle validation errors
-                                    const firstError = Object.values(err.errors)[0];
-                                    if (Array.isArray(firstError)) {
-                                        errorMessage = firstError[0];
-                                    } else {
-                                        errorMessage = firstError;
-                                    }
-                                }
-
-                                // Show red error toast outside modal (top-right corner)
-                                showToastInModal(modal, errorMessage, 'error');
-
-                                // Clear any previous validation states (keep form clean - no field errors shown)
-                                const $form = $('#customerForm');
-                                $form.find('.is-invalid').removeClass('is-invalid');
-                                $form.find('.is-valid').removeClass('is-valid');
-                                $form.find('[id$="-error"]').remove();
-                                $form.find('.invalid-feedback').html('').removeClass('d-block').hide();
-
-                                submitBtn.disabled = false;
-                                submitBtn.innerHTML = submitBtn.getAttribute('data-original-text') ||
-                                    originalText;
-                            });
-                    }
-
-                    /* -----------------------------------
-                     LOAD TABLE FROM URL ON PAGE LOAD
-                    ----------------------------------- */
-                    function loadTableFromURL() {
-                        const urlParams = new URLSearchParams(window.location.search);
-                        const page = urlParams.get('page');
-                        const perPage = urlParams.get('per_page');
-                        const search = urlParams.get('search');
-
-                        // Only load via AJAX if URL has parameters (otherwise use server-rendered content)
-                        if (page || perPage || search) {
-                            const params = {};
-                            if (page) params.page = page;
-                            if (perPage) params.per_page = perPage;
-                            if (search) params.search = search;
-
-                            // Update per page select if URL has per_page
-                            if (perPage && $('#perPageSelect').length) {
-                                $('#perPageSelect').val(perPage);
-                            }
-
-                            // Update search input if URL has search
-                            if (search && $('[data-search]').length) {
-                                $('[data-search]').val(search);
-                            }
-
-                            console.log('📄 Loading table from URL params:', params);
-
-                            AdminAjax.loadTable('{{ route('admin.customers') }}', $('.table-container')[0], {
-                                params: params,
-                                onSuccess: function(response) {
-                                    if (response.pagination) {
-                                        $('.pagination-container').html(response.pagination);
-                                    }
-                                    // Re-bind event handlers for dynamically loaded content
-                                    bindPaginationHandlers();
-                                }
-                            });
-                        } else {
-                            // No URL params, just bind handlers for existing content
-                            bindPaginationHandlers();
-                        }
-                    }
-
-                    /* -----------------------------------
-                     RELOAD CUSTOMERS TABLE (PRESERVE PAGE)
-                    ----------------------------------- */
-                    function reloadCustomersTable() {
-                        // Get current page from URL or pagination
-                        const urlParams = new URLSearchParams(window.location.search);
-                        const currentPage = urlParams.get('page') || 1;
-                        const currentPerPage = urlParams.get('per_page') || $('#perPageSelect').val() || 25;
-                        const currentSearch = urlParams.get('search') || $('[data-search]').val() || '';
-
-                        const params = {
-                            page: currentPage,
-                            per_page: currentPerPage
+                // jQuery is ready, now load DataTables
+                if (!dataTablesLoaded) {
+                    const dtScript = document.createElement('script');
+                    dtScript.src = 'https://cdn.datatables.net/1.13.8/js/jquery.dataTables.min.js';
+                    dtScript.onload = function() {
+                        const dtRespScript = document.createElement('script');
+                        dtRespScript.src =
+                            'https://cdn.datatables.net/responsive/2.5.0/js/dataTables.responsive.min.js';
+                        dtRespScript.onload = function() {
+                            dataTablesLoaded = true;
+                            callback();
                         };
+                        document.head.appendChild(dtRespScript);
+                    };
+                    document.head.appendChild(dtScript);
+                } else {
+                    setTimeout(function() {
+                        loadDataTables(callback);
+                    }, 50);
+                }
+            }
 
-                        if (currentSearch) {
-                            params.search = currentSearch;
-                        }
-
-                        console.log('🔄 Reloading table with params:', params);
-
-                        AdminAjax.loadTable('{{ route('admin.customers') }}', $('.table-container')[0], {
-                            params: params,
-                            onSuccess: function(response) {
-                                if (response.pagination) {
-                                    $('.pagination-container').html(response.pagination);
-                                }
-                                // Re-bind event handlers for dynamically loaded content
-                                bindPaginationHandlers();
-                            }
-                        });
+            function initCustomersDataTable() {
+                loadDataTables(function() {
+                    if (typeof jQuery === 'undefined' || typeof jQuery.fn.DataTable === 'undefined') {
+                        setTimeout(initCustomersDataTable, 50);
+                        return;
                     }
 
-                    /* -----------------------------------
-                     BIND PAGINATION HANDLERS (AJAX)
-                    ----------------------------------- */
-                    function bindPaginationHandlers() {
-                        // Remove existing handlers to prevent duplicates
-                        $(document).off('click', '.pagination a');
+                    const $ = jQuery;
 
-                        // Bind pagination links to use AJAX
-                        $(document).on('click', '.pagination a', function(e) {
+                    // Base URLs for actions (use URL instead of route helper)
+                    const customerBaseUrl = '{{ url("/admin/customers") }}';
+
+                    $(document).ready(function() {
+                        // Loader modal for AJAX calls
+                        let loadingModal = null;
+                        
+                        function showLoader() {
+                            if (!loadingModal) {
+                                $('body').append(loaderHtml());
+                                const modalEl = document.getElementById('customerDataTableLoader');
+                                loadingModal = new bootstrap.Modal(modalEl, {
+                                    backdrop: 'static',
+                                    keyboard: false
+                                });
+                            }
+                            loadingModal.show();
+                        }
+                        
+                        function hideLoader() {
+                            if (loadingModal) {
+                                loadingModal.hide();
+                                cleanupLoader();
+                            }
+                        }
+                        
+                        function cleanupLoader() {
+                            $('#customerDataTableLoader').remove();
+                            $('.modal-backdrop').remove();
+                            $('body').removeClass('modal-open').css({
+                                overflow: '',
+                                paddingRight: ''
+                            });
+                            loadingModal = null;
+                        }
+
+                        // Track if this is the first draw (initial load)
+                        let isFirstDraw = true;
+                        
+                        // Show loader on initial load
+                        showLoader();
+                        
+                        let table = $('#customersTable').DataTable({
+                            processing: true,
+                            serverSide: true,
+                            dom: 'rtip', // Hide default search (f) and length menu (l), show only table, info, pagination
+                            ajax: {
+                                url: customerBaseUrl,
+                                type: 'GET',
+                                data: function(d) {
+                                    // Show loader on pagination/sorting changes (but not on first request)
+                                    if (!isFirstDraw) {
+                                        showLoader();
+                                    }
+                                    console.log('📤 DataTables request:', d);
+                                },
+                                dataSrc: function(json) {
+                                    hideLoader();
+                                    // Mark that first draw is complete
+                                    isFirstDraw = false;
+                                    console.log('📥 DataTables response:', json);
+                                    if (json.error) {
+                                        console.error('❌ Server error:', json.error);
+                                        alert('Error: ' + json.error);
+                                    }
+                                    return json.data;
+                                },
+                                error: function(xhr, error, thrown) {
+                                    hideLoader();
+                                    console.error('❌ DataTables AJAX Error:', error);
+                                    alert('Error loading data. Status: ' + xhr.status);
+                                }
+                            },
+                            columns: [{
+                                    data: 'firstname',
+                                    name: 'firstname'
+                                },
+                                {
+                                    data: 'lastname',
+                                    name: 'lastname'
+                                },
+                                {
+                                    data: 'email',
+                                    name: 'email'
+                                },
+                                {
+                                    data: 'site',
+                                    name: 'site'
+                                },
+                                {
+                                    data: 'login_type',
+                                    name: 'login_type'
+                                },
+                                {
+                                    data: 'isactive',
+                                    name: 'isactive'
+                                },
+                                {
+                                    data: 'last_login',
+                                    name: 'last_login'
+                                },
+                                {
+                                    data: 'regdate',
+                                    name: 'regdate'
+                                },
+                                {
+                                    data: 'action',
+                                    name: 'action',
+                                    orderable: false,
+                                    searchable: false,
+                                    render: function(data, type, row) {
+                                        let html = '<div class="d-flex gap-1">';
+                                        html +=
+                                            '<a href="javascript:void(0);" class="btn btn-light btn-icon btn-sm rounded-circle view-customer-btn" data-customer-id="' +
+                                            row.action + '" title="View">';
+                                        html += '<i class="ti ti-eye fs-lg"></i></a>';
+                                        html += '</div>';
+                                        return html;
+                                    }
+                                }
+                            ],
+                            pageLength: 25,
+                            lengthMenu: [
+                                [25, 50, 100],
+                                [25, 50, 100]
+                            ],
+                            order: [
+                                [2, 'desc']
+                            ], // Default sort by Reg. Date desc
+                            language: {
+                                processing: '<div class="spinner-border spinner-border-sm" role="status"><span class="visually-hidden">Loading...</span></div>',
+                                emptyTable: "No customers found",
+                                zeroRecords: "No matching customers found"
+                            },
+                            responsive: true,
+                            columnDefs: [{
+                                    responsivePriority: 1,
+                                    targets: [0, 1, 3] // Name, Email, Action - always visible
+                                },
+                                {
+                                    responsivePriority: 2,
+                                    targets: [2] // Reg. Date
+                                }
+                            ]
+                        });
+
+                        // External Search
+                        $('#searchBox').on('keyup', function() {
+                            showLoader();
+                            table.search(this.value).draw();
+                        });
+
+                        // 📄 Per Page Select Handler
+                        $('#perPageSelect').on('change', function() {
+                            showLoader();
+                            table.page.len(parseInt($(this).val())).draw();
+                        });
+
+                        // Update export button with current search
+                        $('#searchBox').on('keyup', function() {
+                            const searchValue = $(this).val();
+                            const exportUrl = '{{ url("/admin/customers/export") }}' + (searchValue ? '?search=' + encodeURIComponent(searchValue) : '');
+                            $('#exportBtn').attr('href', exportUrl);
+                        });
+
+                        // View Customer Button
+                        $(document).on('click', '.view-customer-btn', function(e) {
                             e.preventDefault();
-                            e.stopPropagation();
+                            const customerId = $(this).data('customer-id');
+                            openCustomerViewModal(customerId);
+                        });
 
-                            const url = $(this).attr('href');
-                            if (!url || url === '#' || url === 'javascript:void(0)') {
+                        // Add Customer Button
+                        $(document).on('click', '.add-customer-btn', function(e) {
+                            e.preventDefault();
+                            openCustomerFormModal();
+                        });
+
+                        // Open View Modal
+                        function openCustomerViewModal(customerId) {
+                            cleanupModals();
+                            const url = customerBaseUrl + '/' + customerId;
+                            $('#customerViewModalContainer').html(loaderHtml());
+                            const loadingModal = new bootstrap.Modal($('#customerModal')[0], {
+                                backdrop: 'static',
+                                keyboard: false
+                            });
+                            loadingModal.show();
+
+                            AdminAjax.get(url).then(response => {
+                                loadingModal.hide();
+                                cleanupModals();
+                                $('#customerViewModalContainer').html(response.html);
+                                const modalEl = document.getElementById('customerViewModal');
+                                const modal = new bootstrap.Modal(modalEl);
+                                modal.show();
+
+                                modalEl.addEventListener('hidden.bs.modal', function() {
+                                    cleanupModals();
+                                }, { once: true });
+                            }).catch(err => {
+                                loadingModal.hide();
+                                cleanupModals();
+                                AdminAjax.showError('Failed to load customer details.');
+                            });
+                        }
+
+                        // Open Form Modal
+                        function openCustomerFormModal(customerId = null) {
+                            cleanupModals();
+                            const url = customerId ? customerBaseUrl + '/' + customerId + '/edit' : customerBaseUrl + '/create';
+                            $('#customerModalContainer').html(loaderHtml());
+                            const loadingModal = new bootstrap.Modal($('#customerModal')[0], {
+                                backdrop: 'static',
+                                keyboard: false
+                            });
+                            loadingModal.show();
+
+                            AdminAjax.get(url).then(response => {
+                                loadingModal.hide();
+                                cleanupModals();
+                                $('#customerModalContainer').html(response.html);
+                                const modalEl = document.getElementById('customerModal');
+                                const modal = new bootstrap.Modal(modalEl);
+                                modal.show();
+                                setupCustomerValidation(customerId, modal);
+                            }).catch(err => {
+                                loadingModal.hide();
+                                cleanupModals();
+                            });
+                        }
+
+                        // Validation Setup
+                        function setupCustomerValidation(customerId, modal) {
+                            const $form = $('#customerForm');
+                            if (!$form.length || $form.data('validator')) {
                                 return;
                             }
 
-                            console.log('📄 Pagination clicked:', url);
-
-                            // Extract page number from URL
-                            const urlObj = new URL(url, window.location.origin);
-                            const page = urlObj.searchParams.get('page') || 1;
-                            const perPage = urlObj.searchParams.get('per_page') || $('#perPageSelect')
-                                .val() || 25;
-                            const search = urlObj.searchParams.get('search') || $('[data-search]')
-                                .val() || '';
-
-                            const params = {
-                                page: page,
-                                per_page: perPage
-                            };
-
-                            if (search) {
-                                params.search = search;
-                            }
-
-                            // Update URL without reload
-                            const newUrl = new URL(window.location.pathname, window.location.origin);
-                            Object.keys(params).forEach(key => {
-                                if (params[key]) {
-                                    newUrl.searchParams.set(key, params[key]);
-                                }
-                            });
-                            window.history.pushState({}, '', newUrl.toString());
-
-                            // Load table via AJAX
-                            AdminAjax.loadTable('{{ route('admin.customers') }}', $(
-                                '.table-container')[
-                                0], {
-                                params: params,
-                                onSuccess: function(response) {
-                                    if (response.pagination) {
-                                        $('.pagination-container').html(response
-                                            .pagination);
+                            $form.validate({
+                                rules: {
+                                    firstname: { required: true },
+                                    email: { required: true, email: true },
+                                    password: { required: !customerId, minlength: 6 }
+                                },
+                                messages: {
+                                    firstname: 'First name is required',
+                                    email: {
+                                        required: 'Email is required',
+                                        email: 'Please enter a valid email address'
+                                    },
+                                    password: {
+                                        required: 'Password is required',
+                                        minlength: 'Password must be at least 6 characters'
                                     }
+                                },
+                                errorElement: 'div',
+                                errorClass: 'invalid-feedback',
+                                highlight(el) {
+                                    $(el).addClass('is-invalid');
+                                },
+                                unhighlight(el) {
+                                    $(el).removeClass('is-invalid').addClass('is-valid');
+                                },
+                                errorPlacement(error, element) {
+                                    error.insertAfter(element);
+                                },
+                                submitHandler(form) {
+                                    submitCustomerForm(form, customerId, modal);
                                 }
                             });
-                        });
-                    }
-
-                    /* -----------------------------------
-                     PER PAGE SELECT HANDLER
-                    ----------------------------------- */
-                    $(document).on('change', '#perPageSelect', function(e) {
-                        e.preventDefault();
-                        const perPage = $(this).val();
-                        const currentPage = new URLSearchParams(window.location.search).get('page') ||
-                            1;
-                        const currentSearch = $('[data-search]').val() || '';
-
-                        const params = {
-                            page: 1, // Reset to page 1 when changing per page
-                            per_page: perPage
-                        };
-
-                        if (currentSearch) {
-                            params.search = currentSearch;
                         }
 
-                        // Update URL without reload
-                        const newUrl = new URL(window.location.pathname, window.location.origin);
-                        Object.keys(params).forEach(key => {
-                            if (params[key]) {
-                                newUrl.searchParams.set(key, params[key]);
-                            }
-                        });
-                        window.history.pushState({}, '', newUrl.toString());
+                        // Submit Form
+                        function submitCustomerForm(form, customerId, modal) {
+                            const formData = new FormData(form);
+                            const url = form.action;
+                            const method = form.querySelector('[name="_method"]')?.value || 'POST';
+                            const submitBtn = form.querySelector('button[type="submit"]');
+                            const originalText = submitBtn.innerHTML;
+                            submitBtn.disabled = true;
+                            submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Saving...';
 
-                        // Load table via AJAX
-                        AdminAjax.loadTable('{{ route('admin.customers') }}', $('.table-container')[
-                            0], {
-                            params: params,
-                            onSuccess: function(response) {
-                                if (response.pagination) {
-                                    $('.pagination-container').html(response.pagination);
-                                }
-                            }
-                        });
-                    });
-
-                    /* -----------------------------------
-                     SEARCH HANDLER
-                    ----------------------------------- */
-                    let searchTimeout;
-                    $(document).on('input', '[data-search]', function(e) {
-                        clearTimeout(searchTimeout);
-                        const searchInput = $(this);
-
-                        searchTimeout = setTimeout(function() {
-                            const searchValue = searchInput.val();
-                            const currentPage = new URLSearchParams(window.location.search).get(
-                                'page') || 1;
-                            const currentPerPage = $('#perPageSelect').val() || 25;
-
-                            const params = {
-                                page: 1, // Reset to page 1 when searching
-                                per_page: currentPerPage
-                            };
-
-                            if (searchValue) {
-                                params.search = searchValue;
-                            }
-
-                            // Update URL without reload
-                            const newUrl = new URL(window.location.pathname, window.location
-                                .origin);
-                            Object.keys(params).forEach(key => {
-                                if (params[key]) {
-                                    newUrl.searchParams.set(key, params[key]);
-                                }
-                            });
-                            window.history.pushState({}, '', newUrl.toString());
-
-                            // Load table via AJAX
-                            AdminAjax.loadTable('{{ route('admin.customers') }}', $(
-                                '.table-container')[0], {
-                                params: params,
-                                onSuccess: function(response) {
-                                    if (response.pagination) {
-                                        $('.pagination-container').html(response
-                                            .pagination);
+                            AdminAjax.request(url, method, formData)
+                                .then(res => {
+                                    showToast(res.message || 'Customer saved successfully', 'success');
+                                    setTimeout(() => {
+                                        modal.hide();
+                                    }, 1500);
+                                    showLoader();
+                                    table.ajax.reload();
+                                })
+                                .catch(err => {
+                                    let errorMessage = 'Failed to save customer.';
+                                    if (err.message) {
+                                        errorMessage = err.message;
+                                    } else if (err.errors) {
+                                        const firstError = Object.values(err.errors)[0];
+                                        errorMessage = Array.isArray(firstError) ? firstError[0] : firstError;
                                     }
-                                }
-                            });
-                        }, 500); // Debounce search
-                    });
-
-                    /* -----------------------------------
-                     INITIALIZE PAGINATION HANDLERS
-                    ----------------------------------- */
-                    bindPaginationHandlers();
-
-                    /* -----------------------------------
-                     SHOW TOAST (OUTSIDE MODAL - TOP RIGHT)
-                    ----------------------------------- */
-                    function showToastInModal(modal, message, type = 'error') {
-                        // Create or get toast container at top-right corner of page
-                        let toastContainer = $('#global-toast-container');
-
-                        if (!toastContainer.length) {
-                            toastContainer = $(
-                                '<div id="global-toast-container" class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 9999;"></div>'
-                            );
-                            $('body').append(toastContainer);
+                                    showToast(errorMessage, 'error');
+                                    submitBtn.disabled = false;
+                                    submitBtn.innerHTML = originalText;
+                                });
                         }
 
-                        // Remove any existing toasts of the same type to avoid stacking
-                        toastContainer.find('.toast').each(function() {
-                            const bsToast = bootstrap.Toast.getInstance(this);
-                            if (bsToast) {
-                                bsToast.hide();
+                        // Show Toast
+                        function showToast(message, type = 'error') {
+                            let toastContainer = $('#global-toast-container');
+                            if (!toastContainer.length) {
+                                toastContainer = $('<div id="global-toast-container" class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 9999;"></div>');
+                                $('body').append(toastContainer);
                             }
-                        });
 
-                        // Create toast
-                        const toastBg = type === 'error' ? 'bg-danger' : 'bg-success';
-                        const toastId = 'toast-' + Date.now();
-                        const toast = $(`
-                            <div id="${toastId}" class="toast ${toastBg} text-white border-0" role="alert" aria-live="assertive" aria-atomic="true">
-                                <div class="d-flex">
-                                    <div class="toast-body">
-                                        <i class="ti ti-${type === 'error' ? 'alert-circle' : 'check-circle'} me-2"></i>
-                                        ${message}
+                            toastContainer.find('.toast').each(function() {
+                                const bsToast = bootstrap.Toast.getInstance(this);
+                                if (bsToast) bsToast.hide();
+                            });
+
+                            const toastBg = type === 'error' ? 'bg-danger' : 'bg-success';
+                            const toastId = 'toast-' + Date.now();
+                            const toast = $(`
+                                <div id="${toastId}" class="toast ${toastBg} text-white border-0" role="alert">
+                                    <div class="d-flex">
+                                        <div class="toast-body">
+                                            <i class="ti ti-${type === 'error' ? 'alert-circle' : 'check-circle'} me-2"></i>
+                                            ${message}
+                                        </div>
+                                        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
                                     </div>
-                                    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
                                 </div>
-                            </div>
-                        `);
+                            `);
 
-                        toastContainer.append(toast);
+                            toastContainer.append(toast);
+                            const bsToast = new bootstrap.Toast(toast[0], { autohide: true, delay: 5000 });
+                            bsToast.show();
 
-                        // Initialize and show toast
-                        const bsToast = new bootstrap.Toast(toast[0], {
-                            autohide: true,
-                            delay: 5000
-                        });
-                        bsToast.show();
+                            toast.on('hidden.bs.toast', function() {
+                                $(this).remove();
+                                if (toastContainer.find('.toast').length === 0) {
+                                    toastContainer.remove();
+                                }
+                            });
+                        }
 
-                        // Remove toast element after it's hidden
-                        toast.on('hidden.bs.toast', function() {
-                            $(this).remove();
-                            // Remove container if empty
-                            if (toastContainer.find('.toast').length === 0) {
-                                toastContainer.remove();
-                            }
-                        });
-                    }
+                        // Cleanup Modals
+                        function cleanupModals() {
+                            $('.modal-backdrop').remove();
+                            $('body').removeClass('modal-open').css({
+                                overflow: '',
+                                paddingRight: ''
+                            });
+                            $('#customerModal').remove();
+                            $('#customerViewModal').remove();
+                        }
 
-                    /* -----------------------------------
-                     HELPERS
-                    ----------------------------------- */
-                    function cleanupModals() {
-                        console.log('🧹 Cleaning modals');
-                        $('.modal-backdrop').remove();
-                        $('body').removeClass('modal-open').css({
-                            overflow: '',
-                            paddingRight: ''
-                        });
-                        $('#customerModal').remove();
-                    }
-
-                    function loaderHtml() {
-                        return `
-        <div class="modal fade" id="customerModal">
-            <div class="modal-dialog">
-                <div class="modal-content">
-                    <div class="modal-body text-center p-4">
-                        <div class="spinner-border"></div>
-                    </div>
-                </div>
-            </div>
-        </div>`;
-                    }
-
+                        function loaderHtml() {
+                            return `
+                                <div class="modal fade" id="customerDataTableLoader" tabindex="-1" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+                                    <div class="modal-dialog modal-dialog-centered">
+                                        <div class="modal-content">
+                                            <div class="modal-body text-center p-4">
+                                                <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;">
+                                                    <span class="visually-hidden">Loading...</span>
+                                                </div>
+                                                <h5 class="mt-3 mb-1">Loading Customers...</h5>
+                                                <p class="text-muted mb-0">Please wait while we fetch the data.</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="modal fade" id="customerModal">
+                                    <div class="modal-dialog">
+                                        <div class="modal-content">
+                                            <div class="modal-body text-center p-4">
+                                                <div class="spinner-border"></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>`;
+                        }
+                    });
                 });
             }
 
-            // Start initialization
-            initCustomersScript();
+            initCustomersDataTable();
         })();
     </script>
 @endsection

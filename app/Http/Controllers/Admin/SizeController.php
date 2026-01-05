@@ -7,40 +7,94 @@ use App\Models\Size;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rule;
+use Exception;
 
 class SizeController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Size::sizes(); // Use scope to filter by fkfilterid = 3
-
-        // Search functionality
-        if ($request->has('search') && $request->search) {
-            $search = $request->search;
-            $query->where(function ($q) use ($search) {
-                $q->where('filtervalue', 'like', "%{$search}%")
-                  ->orWhere('filtervalueAR', 'like', "%{$search}%");
-            });
+        // Check if this is a DataTables request
+        if ($request->has('draw')) {
+            return $this->getDataTablesData($request);
         }
 
-        // Sorting
-        $sortColumn = $request->get('sort', 'displayorder');
-        $sortDirection = $request->get('direction', 'asc');
-        $query->orderBy($sortColumn, $sortDirection);
+        // Load initial view (for non-DataTables requests)
+        return view('admin.masters.sizes');
+    }
 
-        $perPage = $request->get('per_page', 25);
-        $sizes = $query->paginate($perPage);
+    private function getDataTablesData(Request $request)
+    {
+        try {
+            $query = Size::sizes(); // Use scope to filter by fkfilterid = 3
+            $filteredCountQuery = Size::sizes();
 
-        // Return JSON for AJAX requests
-        if ($request->expectsJson() || $request->ajax()) {
+            // Get total records count
+            $totalRecords = Size::sizes()->count();
+
+            // DataTables search (global search)
+            $searchValue = $request->input('search.value', '');
+            if (!empty($searchValue)) {
+                $query->where(function ($q) use ($searchValue) {
+                    $q->where('filtervalue', 'like', "%{$searchValue}%")
+                      ->orWhere('filtervalueAR', 'like', "%{$searchValue}%");
+                });
+
+                $filteredCountQuery->where(function ($q) use ($searchValue) {
+                    $q->where('filtervalue', 'like', "%{$searchValue}%")
+                      ->orWhere('filtervalueAR', 'like', "%{$searchValue}%");
+                });
+            }
+
+            // Get filtered count after search
+            $filteredAfterSearch = $filteredCountQuery->count();
+
+            // Ordering
+            $orderColumnIndex = $request->input('order.0.column', 0);
+            $orderDir = $request->input('order.0.dir', 'asc');
+
+            $columns = [
+                'filtervalue',
+                'filtervalueAR',
+                'displayorder',
+                'filtervalueid' // For action column
+            ];
+
+            $orderColumn = $columns[$orderColumnIndex] ?? 'displayorder';
+            $query->orderBy($orderColumn, $orderDir);
+
+            // Pagination
+            $start = $request->input('start', 0);
+            $length = $request->input('length', 25);
+            $sizes = $query->skip($start)->take($length)->get();
+
+            // Format data for DataTables
+            $data = [];
+            $sizeBaseUrl = url('/admin/sizes');
+            foreach ($sizes as $size) {
+                $data[] = [
+                    'filtervalue' => $size->filtervalue ?? '',
+                    'filtervalueAR' => $size->filtervalueAR ?? 'N/A',
+                    'displayorder' => $size->displayorder ?? 0,
+                    'action' => $size->filtervalueid // For action buttons
+                ];
+            }
+
             return response()->json([
-                'success' => true,
-                'html' => view('admin.masters.partials.sizes.sizes-table', compact('sizes'))->render(),
-                'pagination' => view('admin.partials.pagination', ['items' => $sizes])->render(),
+                'draw' => intval($request->input('draw')),
+                'recordsTotal' => $totalRecords,
+                'recordsFiltered' => $filteredAfterSearch,
+                'data' => $data
             ]);
+        } catch (Exception $e) {
+            Log::error('Size DataTables Error: ' . $e->getMessage());
+            return response()->json([
+                'draw' => intval($request->input('draw', 1)),
+                'recordsTotal' => 0,
+                'recordsFiltered' => 0,
+                'data' => [],
+                'error' => 'An error occurred while loading data.'
+            ], 500);
         }
-
-        return view('admin.masters.sizes', compact('sizes'));
     }
 
     public function create(Request $request)

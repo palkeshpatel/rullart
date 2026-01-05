@@ -7,44 +7,90 @@ use App\Models\CouponCode;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rule;
+use Exception;
 
 class CouponCodeController extends Controller
 {
     public function index(Request $request)
     {
-        $query = CouponCode::query();
-
-        // Search functionality
-        if ($request->has('search') && $request->search) {
-            $search = $request->search;
-            $query->where(function($q) use ($search) {
-                $q->where('couponcode', 'like', "%{$search}%");
-            });
+        // Check if this is a DataTables request
+        if ($request->has('draw')) {
+            return $this->getDataTablesData($request);
         }
 
-        // Filter by active status
-        if ($request->has('active') && $request->active !== '') {
-            $query->where('isactive', $request->active);
-        }
+        // Return view for initial page load
+        return view('admin.masters.coupon-code');
+    }
 
-        // Sorting
-        $sortColumn = $request->get('sort', 'couponcodeid');
-        $sortDirection = $request->get('direction', 'desc');
-        $query->orderBy($sortColumn, $sortDirection);
+    /**
+     * Get DataTables data for server-side processing
+     */
+    private function getDataTablesData(Request $request)
+    {
+        try {
+            $countQuery = CouponCode::query();
+            $totalRecords = $countQuery->count();
 
-        $perPage = $request->get('per_page', 25);
-        $couponCodes = $query->paginate($perPage);
+            $query = CouponCode::query();
+            $filteredCountQuery = CouponCode::query();
 
-        // Return JSON for AJAX requests
-        if ($request->expectsJson() || $request->ajax()) {
+            // Filter by active status
+            if ($request->has('active') && $request->active !== '') {
+                $query->where('isactive', $request->active);
+                $filteredCountQuery->where('isactive', $request->active);
+            }
+
+            // DataTables search
+            $searchValue = $request->input('search.value', '');
+            if (!empty($searchValue)) {
+                $query->where('couponcode', 'like', "%{$searchValue}%");
+                $filteredCountQuery->where('couponcode', 'like', "%{$searchValue}%");
+            }
+
+            $filteredAfterSearch = $filteredCountQuery->count();
+
+            // Ordering
+            $orderColumnIndex = $request->input('order.0.column', 0);
+            $orderDir = $request->input('order.0.dir', 'desc');
+            $columns = ['couponcodeid', 'couponcode', 'couponvalue', 'startdate', 'enddate', 'isactive', 'couponcodeid'];
+            $orderColumn = $columns[$orderColumnIndex] ?? 'couponcodeid';
+            $query->orderBy($orderColumn, $orderDir);
+
+            // Pagination
+            $start = $request->input('start', 0);
+            $length = $request->input('length', 25);
+            $couponCodes = $query->skip($start)->take($length)->get();
+
+            // Format data
+            $data = [];
+            foreach ($couponCodes as $coupon) {
+                $data[] = [
+                    'couponcodeid' => $coupon->couponcodeid ?? '',
+                    'couponcode' => $coupon->couponcode ?? '',
+                    'couponvalue' => $coupon->couponvalue ?? '',
+                    'startdate' => $coupon->startdate ? \Carbon\Carbon::parse($coupon->startdate)->format('d-M-Y') : 'N/A',
+                    'enddate' => $coupon->enddate ? \Carbon\Carbon::parse($coupon->enddate)->format('d-M-Y') : 'N/A',
+                    'isactive' => $coupon->isactive ? 'Yes' : 'No',
+                    'action' => $coupon->couponcodeid
+                ];
+            }
+
             return response()->json([
-                'success' => true,
-                'html' => view('admin.masters.partials.coupon.coupon-code-table', compact('couponCodes'))->render(),
-                'pagination' => view('admin.partials.pagination', ['items' => $couponCodes])->render(),
+                'draw' => intval($request->input('draw')),
+                'recordsTotal' => $totalRecords,
+                'recordsFiltered' => $filteredAfterSearch,
+                'data' => $data
             ]);
+        } catch (Exception $e) {
+            Log::error('CouponCode DataTables Error: ' . $e->getMessage());
+            return response()->json([
+                'draw' => intval($request->input('draw', 1)),
+                'recordsTotal' => 0,
+                'recordsFiltered' => 0,
+                'data' => [],
+                'error' => 'An error occurred while loading data.'
+            ], 500);
         }
-
-        return view('admin.masters.coupon-code', compact('couponCodes'));
     }
 
     public function create(Request $request)
