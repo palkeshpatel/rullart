@@ -16,11 +16,11 @@
     <div class="col-md-6">
         <div class="mb-3">
             <label class="form-label">Category <span class="text-danger">*</span></label>
-            <select name="fkcategoryid" class="form-select" required>
+            <select name="fkcategoryid" id="categorySelect" class="form-select" required>
                 <option value="">-- Select Category --</option>
                 @foreach($categories as $cat)
                     <option value="{{ $cat->categoryid }}" {{ old('fkcategoryid', $product && $product->fkcategoryid == $cat->categoryid ? $product->fkcategoryid : '') == $cat->categoryid ? 'selected' : '' }}>
-                        {{ $cat->category }}
+                        {{ $cat->category }}@if(isset($cat->subcategory_count) && $cat->subcategory_count > 0) ({{ $cat->subcategory_count }})@endif
                     </option>
                 @endforeach
             </select>
@@ -33,13 +33,16 @@
     <div class="col-md-6">
         <div class="mb-3">
             <label class="form-label">Sub Category</label>
-            <select name="productcategoryid" class="form-select">
+            <select name="productcategoryid" id="subCategorySelect" class="form-select">
                 <option value="">-- Select Sub Category --</option>
-                @foreach($categories as $cat)
-                    <option value="{{ $cat->categoryid }}" {{ old('productcategoryid', $product && $product->productcategoryid == $cat->categoryid ? $product->productcategoryid : '') == $cat->categoryid ? 'selected' : '' }}>
-                        {{ $cat->category }}
-                    </option>
-                @endforeach
+                @if($product && $product->productcategoryid)
+                    @php
+                        $selectedSubCategory = \App\Models\Category::find($product->productcategoryid);
+                    @endphp
+                    @if($selectedSubCategory)
+                        <option value="{{ $selectedSubCategory->categoryid }}" selected>{{ $selectedSubCategory->category }}</option>
+                    @endif
+                @endif
             </select>
         </div>
     </div>

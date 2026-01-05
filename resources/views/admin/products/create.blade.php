@@ -54,6 +54,9 @@
                 $(document).ready(function() {
                     // Setup validation
                     setupProductValidation();
+                    
+                    // Setup dependent subcategory dropdown
+                    setupSubcategoryDropdown();
                 });
             }
 
@@ -163,6 +166,58 @@
 
             // Make preview function globally available
             window.previewProductImage = previewProductImage;
+
+            // Setup dependent subcategory dropdown
+            function setupSubcategoryDropdown() {
+                const $categorySelect = $('#categorySelect');
+                const $subCategorySelect = $('#subCategorySelect');
+
+                if (!$categorySelect.length || !$subCategorySelect.length) {
+                    return;
+                }
+
+                // Handle category change
+                $categorySelect.on('change', function() {
+                    const categoryId = $(this).val();
+                    
+                    // Clear subcategory dropdown
+                    $subCategorySelect.empty();
+                    $subCategorySelect.append('<option value="">-- Select Sub Category --</option>');
+
+                    if (!categoryId) {
+                        return;
+                    }
+
+                    // Show loading state
+                    $subCategorySelect.prop('disabled', true);
+
+                    // Fetch subcategories
+                    $.ajax({
+                        url: '{{ route('admin.products.subcategories') }}',
+                        method: 'GET',
+                        data: {
+                            category_id: categoryId
+                        },
+                        success: function(response) {
+                            if (response.success && response.data && response.data.length > 0) {
+                                $.each(response.data, function(index, subcategory) {
+                                    $subCategorySelect.append(
+                                        '<option value="' + subcategory.categoryid + '">' + subcategory.category + '</option>'
+                                    );
+                                });
+                            }
+                            $subCategorySelect.prop('disabled', false);
+                        },
+                        error: function(xhr) {
+                            console.error('Error fetching subcategories:', xhr);
+                            $subCategorySelect.prop('disabled', false);
+                            if (typeof toastr !== 'undefined') {
+                                toastr.error('Error loading subcategories');
+                            }
+                        }
+                    });
+                });
+            }
 
             initProductScript();
         })();

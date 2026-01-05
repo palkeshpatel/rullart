@@ -42,8 +42,11 @@ class ProductController extends Controller
         $perPage = $request->get('per_page', 25);
         $products = $query->orderBy('productid', 'desc')->paginate($perPage);
 
-        // Get categories for dropdown
-        $categories = Category::orderBy('category')->get();
+        // Get categories for dropdown with subcategory count
+        $categories = Category::select('category.*')
+            ->selectRaw('(SELECT COUNT(*) FROM category as sub WHERE sub.parentid = category.categoryid AND sub.ispublished = 1) as subcategory_count')
+            ->orderBy('category')
+            ->get();
 
         // Return JSON for AJAX requests
         if ($request->expectsJson() || $request->ajax()) {
@@ -59,8 +62,11 @@ class ProductController extends Controller
 
     public function create(Request $request)
     {
-        // Get categories for dropdown
-        $categories = Category::orderBy('category')->get();
+        // Get categories for dropdown with subcategory count
+        $categories = Category::select('category.*')
+            ->selectRaw('(SELECT COUNT(*) FROM category as sub WHERE sub.parentid = category.categoryid AND sub.ispublished = 1) as subcategory_count')
+            ->orderBy('category')
+            ->get();
 
         // Get colors (filtervalues where fkfilterid = 2)
         $colors = DB::table('filtervalues')
@@ -323,7 +329,11 @@ class ProductController extends Controller
     public function edit(Request $request, $id)
     {
         $product = Product::findOrFail($id);
-        $categories = Category::orderBy('category')->get();
+        // Get categories for dropdown with subcategory count
+        $categories = Category::select('category.*')
+            ->selectRaw('(SELECT COUNT(*) FROM category as sub WHERE sub.parentid = category.categoryid AND sub.ispublished = 1) as subcategory_count')
+            ->orderBy('category')
+            ->get();
 
         // Get colors (filtervalues where fkfilterid = 2)
         $colors = DB::table('filtervalues')
@@ -654,6 +664,37 @@ class ProductController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Image removed successfully'
+        ]);
+    }
+
+    /**
+     * Get subcategories based on category ID
+     *
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function getSubcategories(Request $request)
+    {
+        $categoryId = $request->input('category_id');
+
+        if (!$categoryId) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Category ID is required'
+            ], 400);
+        }
+
+        // Get subcategories where parentid matches the selected category
+        // Following CI project pattern: get categories where parentid = selected category ID
+        $subcategories = Category::where('parentid', $categoryId)
+            ->where('ispublished', 1)  // Filter published categories only (matching CI project pattern)
+            ->orderBy('displayorder')
+            ->orderBy('category')
+            ->get(['categoryid', 'category', 'categoryAR', 'categorycode']);
+
+        return response()->json([
+            'success' => true,
+            'data' => $subcategories
         ]);
     }
 }

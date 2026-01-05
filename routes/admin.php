@@ -74,6 +74,7 @@ Route::middleware(['admin'])->prefix('admin')->name('admin.')->group(function ()
     Route::get('products', [\App\Http\Controllers\Admin\ProductController::class, 'index'])->name('products');
     Route::get('products/create', [\App\Http\Controllers\Admin\ProductController::class, 'create'])->name('products.create');
     Route::post('products', [\App\Http\Controllers\Admin\ProductController::class, 'store'])->name('products.store');
+    Route::get('products/subcategories', [\App\Http\Controllers\Admin\ProductController::class, 'getSubcategories'])->name('products.subcategories');
     Route::get('products/{id}', [\App\Http\Controllers\Admin\ProductController::class, 'show'])->name('products.show');
     Route::get('products/{id}/edit', [\App\Http\Controllers\Admin\ProductController::class, 'edit'])->name('products.edit');
     Route::put('products/{id}', [\App\Http\Controllers\Admin\ProductController::class, 'update'])->name('products.update');
