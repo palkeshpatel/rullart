@@ -43,8 +43,8 @@ return [
     |
     */
     'production' => [
-        'betakuwait.techiebrothers.in' => 'rullart_rullart_kuwaitbeta',
-        'betaqatar.techiebrothers.in'  => 'rullart_rullart_qatarbeta',
+        'betakuwait.techiebrothers.in' => 'techiebrothers_betakuwait',
+        'betaqatar.techiebrothers.in'  => 'techiebrothers_betaqatar',
     ],
 
     /*
