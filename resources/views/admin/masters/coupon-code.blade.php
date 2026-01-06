@@ -519,9 +519,16 @@
                                     showToast(res.message || 'Coupon code saved successfully', 'success');
                                     setTimeout(() => {
                                         modal.hide();
+                                        cleanupModals();
                                     }, 1500);
-                                    showLoader();
-                                    table.ajax.reload();
+                                    // Reload table after a short delay to ensure data is saved
+                                    setTimeout(() => {
+                                        showLoader();
+                                        table.ajax.reload(function(json) {
+                                            hideLoader();
+                                            console.log('Table reloaded, data:', json);
+                                        }, false);
+                                    }, 500);
                                 })
                                 .catch(err => {
                                     let errorMessage = 'Failed to save coupon code.';

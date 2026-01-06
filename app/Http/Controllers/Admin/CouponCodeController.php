@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\CouponCode;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Exception;
 
@@ -34,19 +35,27 @@ class CouponCodeController extends Controller
             $query = CouponCode::query();
             $filteredCountQuery = CouponCode::query();
 
-        // Filter by active status
-        if ($request->has('active') && $request->active !== '') {
-            $query->where('isactive', $request->active);
-                $filteredCountQuery->where('isactive', $request->active);
-        }
+            // Filter by active status
+            $activeFilter = $request->input('active');
+            Log::info('CouponCode Active Filter', ['active' => $activeFilter, 'hasActive' => $request->has('active')]);
 
-            // DataTables search
+            if ($activeFilter !== null && $activeFilter !== '' && $activeFilter !== '--All--') {
+                $query->where('isactive', $activeFilter);
+                $filteredCountQuery->where('isactive', $activeFilter);
+            }
+
+            // Get filtered count (after filters but before search)
+            $filteredCount = $filteredCountQuery->count();
+            Log::info('CouponCode After Filter', ['filteredCount' => $filteredCount, 'totalRecords' => $totalRecords]);
+
+            // DataTables search (global search)
             $searchValue = $request->input('search.value', '');
             if (!empty($searchValue)) {
                 $query->where('couponcode', 'like', "%{$searchValue}%");
                 $filteredCountQuery->where('couponcode', 'like', "%{$searchValue}%");
             }
 
+            // Get filtered count after search
             $filteredAfterSearch = $filteredCountQuery->count();
 
             // Ordering
@@ -74,13 +83,6 @@ class CouponCodeController extends Controller
                     'action' => $coupon->couponcodeid ?? ''
                 ];
             }
-            
-            \Log::info('CouponCode DataTables Response', [
-                'totalRecords' => $totalRecords,
-                'filteredAfterSearch' => $filteredAfterSearch,
-                'dataCount' => count($data),
-                'data' => $data
-            ]);
 
             return response()->json([
                 'draw' => intval($request->input('draw')),
@@ -103,11 +105,11 @@ class CouponCodeController extends Controller
     public function create(Request $request)
     {
         // Get coupon types from coupontype table
-        $couponTypes = \DB::table('coupontype')->orderBy('coupontype')->get(['coupontypeid', 'coupontype']);
-        
+        $couponTypes = DB::table('coupontype')->orderBy('coupontype')->get(['coupontypeid', 'coupontype']);
+
         // Get categories for dropdown
         $categories = \App\Models\Category::where('ispublished', 1)->orderBy('category')->get(['categoryid', 'category']);
-        
+
         // Return JSON for AJAX modal requests
         if ($request->ajax() || $request->expectsJson() || $request->header('X-Requested-With') === 'XMLHttpRequest') {
             try {
@@ -116,7 +118,7 @@ class CouponCodeController extends Controller
                     'couponTypes' => $couponTypes ?? collect(),
                     'categories' => $categories ?? collect()
                 ])->render();
-                
+
                 return response()->json([
                     'success' => true,
                     'html' => $html
@@ -160,10 +162,10 @@ class CouponCodeController extends Controller
         $validated['isactive'] = $request->has('isactive') ? 1 : 0;
         $validated['ismultiuse'] = $request->has('ismultiuse') ? 1 : 0;
         $validated['isgeneral'] = $request->has('isgeneral') ? 1 : 0;
-        
+
         // Set coupontype text from selected coupon type if not provided
         if (empty($validated['coupontype']) && !empty($validated['fkcoupontypeid'])) {
-            $couponType = \DB::table('coupontype')->where('coupontypeid', $validated['fkcoupontypeid'])->first();
+            $couponType = DB::table('coupontype')->where('coupontypeid', $validated['fkcoupontypeid'])->first();
             if ($couponType) {
                 $validated['coupontype'] = $couponType->coupontype;
             }
@@ -220,10 +222,10 @@ class CouponCodeController extends Controller
     public function edit(Request $request, $id)
     {
         $couponCode = CouponCode::findOrFail($id);
-        
+
         // Get coupon types from coupontype table
-        $couponTypes = \DB::table('coupontype')->orderBy('coupontype')->get(['coupontypeid', 'coupontype']);
-        
+        $couponTypes = DB::table('coupontype')->orderBy('coupontype')->get(['coupontypeid', 'coupontype']);
+
         // Get categories for dropdown
         $categories = \App\Models\Category::where('ispublished', 1)->orderBy('category')->get(['categoryid', 'category']);
 
@@ -235,7 +237,7 @@ class CouponCodeController extends Controller
                     'couponTypes' => $couponTypes ?? collect(),
                     'categories' => $categories ?? collect()
                 ])->render();
-                
+
                 return response()->json([
                     'success' => true,
                     'html' => $html
@@ -315,10 +317,10 @@ class CouponCodeController extends Controller
         $validated['isactive'] = $request->has('isactive') ? 1 : 0;
         $validated['ismultiuse'] = $request->has('ismultiuse') ? 1 : 0;
         $validated['isgeneral'] = $request->has('isgeneral') ? 1 : 0;
-        
+
         // Set coupontype text from selected coupon type if not provided
         if (empty($validated['coupontype']) && !empty($validated['fkcoupontypeid'])) {
-            $couponType = \DB::table('coupontype')->where('coupontypeid', $validated['fkcoupontypeid'])->first();
+            $couponType = DB::table('coupontype')->where('coupontypeid', $validated['fkcoupontypeid'])->first();
             if ($couponType) {
                 $validated['coupontype'] = $couponType->coupontype;
             }
