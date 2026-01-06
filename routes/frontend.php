@@ -36,22 +36,46 @@ Route::get('/language/{locale}', function ($locale) {
         session(['locale' => $locale]);
         App::setLocale($locale);
 
-        // Get current URL and replace locale if present
-        $currentUrl = request()->header('referer') ?: url('/');
-        $currentUrl = str_replace('/en/', '/', $currentUrl);
-        $currentUrl = str_replace('/ar/', '/', $currentUrl);
-
-        // Extract path after domain
-        $parsedUrl = parse_url($currentUrl);
-        $path = $parsedUrl['path'] ?? '/';
-        $query = !empty($parsedUrl['query']) ? '?' . $parsedUrl['query'] : '';
-
-        // Build new URL with locale
-        if ($path == '/' || $path == '') {
-            return redirect('/' . $locale);
+        // Get current URL from referer (preferred) or construct from request
+        $referer = request()->header('referer');
+        
+        if ($referer) {
+            // Parse the referer URL
+            $parsedUrl = parse_url($referer);
+            $host = $parsedUrl['host'] ?? '';
+            $scheme = $parsedUrl['scheme'] ?? 'http';
+            $port = isset($parsedUrl['port']) ? ':' . $parsedUrl['port'] : '';
+            $path = $parsedUrl['path'] ?? '/';
+            $query = !empty($parsedUrl['query']) ? '?' . $parsedUrl['query'] : '';
+        } else {
+            // Fallback: use current request
+            $host = request()->getHost();
+            $scheme = request()->getScheme();
+            $port = request()->getPort() ? ':' . request()->getPort() : '';
+            $path = request()->path();
+            $query = request()->getQueryString() ? '?' . request()->getQueryString() : '';
         }
-
-        return redirect('/' . $locale . $path . $query);
+        
+        // Remove leading and trailing slashes from path, then split
+        $path = trim($path, '/');
+        $segments = $path ? explode('/', $path) : [];
+        
+        // Check if first segment is a language code (like CI's switch_uri)
+        if (!empty($segments) && in_array($segments[0], ['en', 'ar'])) {
+            // Replace the language segment
+            $segments[0] = $locale;
+        } else {
+            // Prepend the language segment if not present
+            array_unshift($segments, $locale);
+        }
+        
+        // Rebuild the path (ensure it starts with /)
+        $newPath = '/' . implode('/', $segments);
+        
+        // Build the full URL
+        $newUrl = $scheme . '://' . $host . $port . $newPath . $query;
+        
+        return redirect($newUrl);
     }
     return redirect()->back();
 })->name('language.switch');

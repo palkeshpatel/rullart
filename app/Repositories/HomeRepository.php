@@ -12,35 +12,23 @@ class HomeRepository
      */
     public function getHomeGallery($locale)
     {
-        if ($locale == 'ar') {
-            return HomeGallery::select(
-                DB::raw('titleAR as title'),
-                DB::raw('descrAR as descr'),
-                'link',
-                DB::raw('photo_ar as photo'),
-                DB::raw('photo_mobile_ar as photo_mobile'),
-                'displayorder',
-                DB::raw("IFNULL(videourl, '') as videourl")
-            )
-                ->where('ispublished', 1)
-                ->orderBy('displayorder', 'asc')
-                ->get();
-        } else {
-            return HomeGallery::select(
-                'title',
-                'titleAR',
-                'descr',
-                'descrAR',
-                'link',
-                'photo',
-                'photo_mobile',
-                'displayorder',
-                DB::raw("IFNULL(videourl, '') as videourl")
-            )
-                ->where('ispublished', 1)
-                ->orderBy('displayorder', 'asc')
-                ->get();
-        }
+        // Always select both English and Arabic fields, then use based on locale in view
+        return HomeGallery::select(
+            'title',
+            'titleAR',
+            'descr',
+            'descrAR',
+            'link',
+            'photo',
+            'photo_ar',
+            'photo_mobile',
+            'photo_mobile_ar',
+            'displayorder',
+            DB::raw("IFNULL(videourl, '') as videourl")
+        )
+            ->where('ispublished', 1)
+            ->orderBy('displayorder', 'asc')
+            ->get();
     }
 
     /**

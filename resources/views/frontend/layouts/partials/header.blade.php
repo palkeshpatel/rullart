@@ -1,3 +1,21 @@
+@php
+    // Debug logging for locale in header
+    $currentLocale = $locale ?? app()->getLocale();
+    $appLocale = app()->getLocale();
+    \Log::info('Header View - $locale variable: ' . ($locale ?? 'NOT SET'));
+    \Log::info('Header View - app()->getLocale(): ' . $appLocale);
+    \Log::info('Header View - session("locale"): ' . session('locale', 'NOT SET'));
+    // Ensure locale is set correctly for translations BEFORE testing
+    if (!isset($locale) || empty($locale)) {
+        $locale = app()->getLocale();
+    }
+    app()->setLocale($locale);
+
+    \Log::info('Header View - Translation test with trans() - "whats new": ' . trans('common.whats new'));
+    \Log::info('Header View - Translation test with trans() - "sale": ' . trans('common.sale'));
+    \Log::info('Header View - Translation test with trans() - "about us": ' . trans('common.about us'));
+    \Log::info('Header View - Translation test with trans() - "contact": ' . trans('common.contact'));
+@endphp
 <header class="ra-header">
     <div class="container-fluid">
         <div class="row">
@@ -34,7 +52,7 @@
                     {{-- By Category --}}
                     <li class="has-sub {{ request()->is('*/category/*') ? 'active' : '' }}">
                         <a href="javascript:;">
-                            {{ __('by category') }}
+                            {{ trans('common.by category') }}
                             <svg class="icon icon-arrow-down">
                                 <use xlink:href="/static/images/symbol-defs.svg#icon-arrow-down"></use>
                             </svg>
@@ -52,7 +70,7 @@
                                     @endforeach
                                     <li class="col-md-6">
                                         <a
-                                            href="{{ route('category.all', ['locale' => $locale]) }}">{{ __('All') }}</a>
+                                            href="{{ route('category.all', ['locale' => $locale]) }}">{{ trans('common.All') }}</a>
                                     </li>
                                 </ul>
                             </div>
@@ -62,7 +80,7 @@
                     {{-- By Occasion (Hidden) --}}
                     <li class="has-sub hidden {{ request()->is('*/occassion/*') ? 'active' : '' }}">
                         <a href="javascript:;">
-                            {{ __('by occassion') }}
+                            {{ trans('common.by occassion') }}
                             <svg class="icon icon-arrow-down">
                                 <use xlink:href="/static/images/symbol-defs.svg#icon-arrow-down"></use>
                             </svg>
@@ -87,7 +105,7 @@
                     @if (isset($giftPackageMenu) && $giftPackageMenu->count() > 0)
                         <li class="has-sub {{ request()->is('*/gift-package*') ? 'active' : '' }}">
                             <a href="javascript:;">
-                                {{ strtolower(__('gifting')) }}
+                                {{ strtolower(trans('common.gifting')) }}
                                 <svg class="icon icon-arrow-down">
                                     <use xlink:href="/static/images/symbol-defs.svg#icon-arrow-down"></use>
                                 </svg>
@@ -111,22 +129,23 @@
 
                     {{-- What's New --}}
                     <li class="{{ request()->is('*/whatsnew*') ? 'active' : '' }}">
-                        <a href="{{ route('whatsnew', ['locale' => $locale]) }}">{{ __('whats new') }}</a>
+                        <a href="{{ route('whatsnew', ['locale' => $locale]) }}">{{ trans('common.whats new') }}</a>
                     </li>
 
                     {{-- Sale --}}
                     <li class="{{ request()->is('*/sale*') ? 'active' : '' }}">
-                        <a href="{{ route('sale', ['locale' => $locale]) }}" class="sale">{{ __('sale') }}</a>
+                        <a href="{{ route('sale', ['locale' => $locale]) }}"
+                            class="sale">{{ trans('common.sale') }}</a>
                     </li>
 
                     {{-- About Us --}}
                     <li class="{{ request()->is('*/about-us*') ? 'active' : '' }}">
-                        <a href="{{ route('about', ['locale' => $locale]) }}">{{ __('about us') }}</a>
+                        <a href="{{ route('about', ['locale' => $locale]) }}">{{ trans('common.about us') }}</a>
                     </li>
 
                     {{-- Contact --}}
                     <li class="{{ request()->is('*/contact*') ? 'active' : '' }}">
-                        <a href="{{ route('contact', ['locale' => $locale]) }}">{{ __('contact') }}</a>
+                        <a href="{{ route('contact', ['locale' => $locale]) }}">{{ trans('common.contact') }}</a>
                     </li>
 
                     {{-- User Menu --}}

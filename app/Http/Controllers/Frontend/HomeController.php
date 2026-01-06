@@ -18,7 +18,15 @@ class HomeController extends FrontendController
 
     public function index()
     {
-        $locale = app()->getLocale();
+        // Get locale from URL segment (most reliable) or session
+        $locale = request()->segment(1);
+        if (!in_array($locale, ['en', 'ar'])) {
+            $locale = session('locale', app()->getLocale() ?: 'en');
+        }
+        
+        // Ensure locale is set in application
+        app()->setLocale($locale);
+        session(['locale' => $locale]);
 
         // Get home gallery images
         $homegallery = $this->homeRepository->getHomeGallery($locale);
@@ -34,9 +42,16 @@ class HomeController extends FrontendController
         // Get page meta data
         $pages = Page::where('pagename', 'home')->first();
 
-        $metaTitle = $pages->metatitle ?? 'Rullart - Premium Gifts & Accessories';
-        $metaDescription = $pages->metadescription ?? 'We pride ourselves with gifts that are defined by their artistic craftsmanship and elegance.';
-        $metaKeywords = $pages->metakeyword ?? '';
+        // Use Arabic fields when locale is Arabic
+        if ($locale == 'ar') {
+            $metaTitle = $pages->metatitle ?? $pages->pagetitleAR ?? 'Rullart - Premium Gifts & Accessories';
+            $metaDescription = $pages->metadescription ?? $pages->detailsAR ?? 'نحن نمتاز بهدايا مصنوعة بجودة عالية وفخامة لا تضاهى';
+            $metaKeywords = $pages->metakeyword ?? '';
+        } else {
+            $metaTitle = $pages->metatitle ?? $pages->pagetitle ?? 'Rullart - Premium Gifts & Accessories';
+            $metaDescription = $pages->metadescription ?? $pages->details ?? 'We pride ourselves with gifts that are defined by their artistic craftsmanship and elegance.';
+            $metaKeywords = $pages->metakeyword ?? '';
+        }
 
         $data = [
             'locale' => $locale,

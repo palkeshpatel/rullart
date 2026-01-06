@@ -9,7 +9,15 @@ class PageController extends FrontendController
 {
     public function show($slug)
     {
-        $locale = app()->getLocale();
+        // Get locale from URL segment (most reliable) or session
+        $locale = request()->segment(1);
+        if (!in_array($locale, ['en', 'ar'])) {
+            $locale = session('locale', app()->getLocale() ?: 'en');
+        }
+        
+        // Ensure locale is set in application
+        app()->setLocale($locale);
+        session(['locale' => $locale]);
 
         // Match CI which uses 'pagename' not 'pagecode'
         // Note: pages table uses 'published' column (not 'ispublished')
@@ -26,17 +34,35 @@ class PageController extends FrontendController
         $metaDescription = $page->metadescription ?? '';
         $metaKeywords = $page->metakeyword ?? '';
 
-        return view('frontend.page.show', compact('page', 'metaTitle', 'metaDescription', 'metaKeywords'));
+        return view('frontend.page.show', compact('page', 'metaTitle', 'metaDescription', 'metaKeywords', 'locale'));
     }
 
     public function about()
     {
+        // Get locale from URL segment (most reliable) or session
+        $locale = request()->segment(1);
+        if (!in_array($locale, ['en', 'ar'])) {
+            $locale = session('locale', app()->getLocale() ?: 'en');
+        }
+        
+        // Ensure locale is set in application
+        app()->setLocale($locale);
+        session(['locale' => $locale]);
+        
         return $this->show('aboutus');
     }
 
     public function contact()
     {
-        $locale = app()->getLocale();
+        // Get locale from URL segment (most reliable) or session
+        $locale = request()->segment(1);
+        if (!in_array($locale, ['en', 'ar'])) {
+            $locale = session('locale', app()->getLocale() ?: 'en');
+        }
+        
+        // Ensure locale is set in application
+        app()->setLocale($locale);
+        session(['locale' => $locale]);
 
         // Match CI which uses 'pagename' not 'pagecode'
         // Note: pages table uses 'published' column (not 'ispublished')
@@ -80,7 +106,7 @@ class PageController extends FrontendController
         $metaDescription = $page->metadescription ?? '';
         $metaKeywords = $page->metakeyword ?? '';
 
-        return view('frontend.page.show', compact('page', 'metaTitle', 'metaDescription', 'metaKeywords'));
+        return view('frontend.page.show', compact('page', 'metaTitle', 'metaDescription', 'metaKeywords', 'locale'));
     }
 
     public function shipping()

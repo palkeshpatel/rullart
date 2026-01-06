@@ -5,14 +5,14 @@
     <div class="inside-header">
         <ol class="breadcrumb">
             <li class="breadcrumb-item">
-                <a href="{{ route('home', ['locale' => $locale]) }}">{{ __('Home') }}</a>
+                <a href="{{ route('home', ['locale' => $locale]) }}">{{ trans('common.Home') }}</a>
             </li>
-            <li class="breadcrumb-item active">{{ $locale == 'ar' ? $page->titleAR : $page->title }}</li>
+            <li class="breadcrumb-item active">{{ $locale == 'ar' ? ($page->pagetitleAR ?? $page->pagetitle) : ($page->pagetitle ?? '') }}</li>
         </ol>
         <h1>
             <span>
                 <span class="before-icon"></span>
-                {{ $locale == 'ar' ? $page->titleAR : $page->title }}
+                {{ $locale == 'ar' ? ($page->pagetitleAR ?? $page->pagetitle) : ($page->pagetitle ?? '') }}
                 <span class="after-icon"></span>
             </span>
         </h1>

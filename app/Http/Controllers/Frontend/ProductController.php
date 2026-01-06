@@ -28,6 +28,13 @@ class ProductController extends FrontendController
 
     public function show($locale, $category, $product)
     {
+        // Ensure locale is set correctly from URL segment
+        if (!in_array($locale, ['en', 'ar'])) {
+            $locale = $this->locale ?? 'en';
+        }
+        app()->setLocale($locale);
+        session(['locale' => $locale]);
+        
         $customerId = session('customerid', 0);
 
         // Match CI Product->index() structure

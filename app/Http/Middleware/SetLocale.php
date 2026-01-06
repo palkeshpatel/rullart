@@ -17,15 +17,15 @@ class SetLocale
      */
     public function handle(Request $request, Closure $next): Response
     {
-        // Get locale from URL segment or session
+        // Get locale from URL segment (first segment after domain)
         $locale = $request->segment(1);
         
-        // Validate locale
+        // Validate locale - if not valid, get from session or default to 'en'
         if (!in_array($locale, ['en', 'ar'])) {
-            $locale = Session::get('locale', App::getLocale() ?: 'en');
+            $locale = Session::get('locale', 'en');
         }
         
-        // Set locale
+        // Set locale in application and session
         App::setLocale($locale);
         
         // Only set session if it's a web request (not during route caching)

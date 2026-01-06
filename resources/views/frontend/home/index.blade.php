@@ -2,6 +2,13 @@
 
 @section('content')
     @php
+        // Debug logging for locale in home page
+        $currentLocale = $locale ?? app()->getLocale();
+        \Log::info('Home View - $locale variable: ' . ($locale ?? 'NOT SET'));
+        \Log::info('Home View - app()->getLocale(): ' . app()->getLocale());
+        \Log::info('Home View - session("locale"): ' . session('locale', 'NOT SET'));
+        \Log::info('Home View - Translation test - "Popular Items": ' . __('Popular Items'));
+
         // Mobile detection for responsive images (presentation logic - acceptable in view)
         $is_mobile = preg_match(
             '/(android|iphone|ipod|ipad|windows phone|blackberry|mobile)/i',
@@ -28,15 +35,18 @@
                     @foreach ($homegallery as $index => $item)
                         @php
                             $active = $index == 0 ? 'active' : '';
-                            $photo = $is_mobile && !empty($item->photo_mobile) ? $item->photo_mobile : $item->photo;
+                            // Select photo based on locale and device
                             if ($locale == 'ar') {
                                 $photo =
                                     $is_mobile && !empty($item->photo_mobile_ar)
                                         ? $item->photo_mobile_ar
-                                        : $item->photo_ar ?? $photo;
+                                        : $item->photo_ar ?? $item->photo;
+                            } else {
+                                $photo = $is_mobile && !empty($item->photo_mobile) ? $item->photo_mobile : $item->photo;
                             }
-                            $title = $locale == 'ar' ? $item->titleAR ?? $item->title : $item->title;
-                            $descr = $locale == 'ar' ? $item->descrAR ?? $item->descr : $item->descr;
+                            // Select title and description based on locale
+                            $title = $locale == 'ar' ? $item->titleAR ?? $item->title : $item->title ?? '';
+                            $descr = $locale == 'ar' ? $item->descrAR ?? $item->descr : $item->descr ?? '';
                         @endphp
 
                         @if (!empty($item->videourl))
@@ -68,14 +78,26 @@
         </div>
     </section>
 
-    @if (!empty($metaDescription) || !empty($metaTitle))
+    @php
+        // Get page content based on locale
+        $pages = \App\Models\Page::where('pagename', 'home')->first();
+        if ($pages) {
+            $pageTitle = $locale == 'ar' ? $pages->pagetitleAR ?? $pages->pagetitle : $pages->pagetitle ?? '';
+            $pageDescription = $locale == 'ar' ? $pages->detailsAR ?? $pages->details : $pages->details ?? '';
+        } else {
+            $pageTitle = '';
+            $pageDescription = '';
+        }
+    @endphp
+
+    @if (!empty($pageDescription) || !empty($pageTitle))
         <section class="welcome-content">
             <div class="container">
-                @if (!empty($metaTitle))
-                    <h1>{{ $metaTitle }}</h1>
+                @if (!empty($pageTitle))
+                    <h1>{!! $pageTitle !!}</h1>
                 @endif
-                @if (!empty($metaDescription))
-                    <p>{{ $metaDescription }}</p>
+                @if (!empty($pageDescription))
+                    <p>{!! $pageDescription !!}</p>
                 @endif
             </div>
         </section>
@@ -84,14 +106,15 @@
     @if (isset($popular) && $popular->count() > 0)
         <section class="popular-items">
             <div class="container">
-                <h2 class="section-title">{{ __('Popular Items') }}</h2>
+                <h2 class="section-title">{{ trans('common.Popular Items') }}</h2>
                 <div class="row">
                     @foreach ($popular as $product)
                         @php
+                            // Repository maps: title = shortdescr/shortdescrAR, shortdescr = title/titleAR
                             $productTitle =
                                 $locale == 'ar'
-                                    ? $product->title ?? $product->shortdescr
-                                    : $product->shortdescr ?? $product->title;
+                                    ? $product->title ?? ($product->shortdescr ?? '')
+                                    : $product->shortdescr ?? ($product->title ?? '');
                             $price = isset($product->sellingprice) ? $product->sellingprice : $product->price;
                             $finalPrice = $price * $currencyRate;
                             $discount = isset($product->discount) ? $product->discount : 0;
@@ -115,14 +138,27 @@
                                     <div class="product-info">
                                         <h3 class="product-title">{{ $productTitle }}</h3>
                                         <div class="product-price">
+                                            @php
+                                                // Translate currency code to Arabic if locale is Arabic
+                                                $displayCurrency = $currencyCode;
+                                                if ($locale == 'ar') {
+                                                    $currencyTranslation = trans('common.' . $currencyCode, [], 'ar');
+                                                    // If translation exists and is not the key itself, use it
+                                                    if ($currencyTranslation != 'common.' . $currencyCode) {
+                                                        $displayCurrency = $currencyTranslation;
+                                                    } elseif ($currencyCode == 'KWD' || $currencyCode == 'KD') {
+                                                        $displayCurrency = 'دك';
+                                                    }
+                                                }
+                                            @endphp
                                             @if ($discount > 0)
                                                 <span class="old-price">{{ number_format($price * $currencyRate, 0) }}
-                                                    {{ $currencyCode }}</span>
+                                                    {{ $displayCurrency }}</span>
                                                 <span class="new-price">{{ number_format($finalPrice, 0) }}
-                                                    {{ $currencyCode }}</span>
+                                                    {{ $displayCurrency }}</span>
                                             @else
                                                 <span class="price">{{ number_format($finalPrice, 0) }}
-                                                    {{ $currencyCode }}</span>
+                                                    {{ $displayCurrency }}</span>
                                             @endif
                                         </div>
                                     </div>
