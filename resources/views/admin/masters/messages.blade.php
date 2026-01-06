@@ -159,12 +159,16 @@
                             if (!loadingModal) {
                                 $('body').append(loaderHtml());
                                 const modalEl = document.getElementById('messageDataTableLoader');
-                                loadingModal = new bootstrap.Modal(modalEl, {
-                                    backdrop: 'static',
-                                    keyboard: false
-                                });
+                                if (modalEl) {
+                                    loadingModal = new bootstrap.Modal(modalEl, {
+                                        backdrop: 'static',
+                                        keyboard: false
+                                    });
+                                }
                             }
-                            loadingModal.show();
+                            if (loadingModal) {
+                                loadingModal.show();
+                            }
                         }
                         
                         function hideLoader() {
@@ -356,27 +360,47 @@
                             cleanupModals();
                             const url = messageBaseUrl + '/' + messageId;
                             $('#messageViewModalContainer').html(loaderHtml());
-                            const loadingModal = new bootstrap.Modal($('#messageModal')[0], {
-                                backdrop: 'static',
-                                keyboard: false
-                            });
-                            loadingModal.show();
+                            
+                            const loadingModalEl = document.getElementById('messageModal');
+                            let loadingModal = null;
+                            if (loadingModalEl) {
+                                loadingModal = new bootstrap.Modal(loadingModalEl, {
+                                    backdrop: 'static',
+                                    keyboard: false
+                                });
+                                loadingModal.show();
+                            }
 
                             AdminAjax.get(url).then(response => {
-                                loadingModal.hide();
+                                if (loadingModal) {
+                                    loadingModal.hide();
+                                }
                                 cleanupModals();
-                                $('#messageViewModalContainer').html(response.html);
-                                const modalEl = document.getElementById('messageViewModal');
-                                const modal = new bootstrap.Modal(modalEl);
-                                modal.show();
+                                if (response && response.html) {
+                                    $('#messageViewModalContainer').html(response.html);
+                                    const modalEl = document.getElementById('messageViewModal');
+                                    if (modalEl) {
+                                        const modal = new bootstrap.Modal(modalEl);
+                                        modal.show();
 
-                                modalEl.addEventListener('hidden.bs.modal', function() {
-                                    cleanupModals();
-                                }, { once: true });
+                                        modalEl.addEventListener('hidden.bs.modal', function() {
+                                            cleanupModals();
+                                        }, { once: true });
+                                    } else {
+                                        console.error('Message view modal element not found');
+                                        showToast('Failed to load message details', 'error');
+                                    }
+                                } else {
+                                    console.error('Invalid response:', response);
+                                    showToast('Failed to load message details', 'error');
+                                }
                             }).catch(err => {
-                                loadingModal.hide();
+                                if (loadingModal) {
+                                    loadingModal.hide();
+                                }
                                 cleanupModals();
-                                AdminAjax.showError('Failed to load message details.');
+                                console.error('Error loading message view:', err);
+                                showToast('Failed to load message details: ' + (err.message || 'Unknown error'), 'error');
                             });
                         }
 
@@ -384,24 +408,51 @@
                             cleanupModals();
                             const url = messageId ? messageBaseUrl + '/' + messageId + '/edit' : messageBaseUrl + '/create';
                             $('#messageModalContainer').html(loaderHtml());
-                            const loadingModal = new bootstrap.Modal($('#messageModal')[0], {
-                                backdrop: 'static',
-                                keyboard: false
-                            });
-                            loadingModal.show();
+                            
+                            // Wait a bit for DOM to update before creating modal
+                            setTimeout(function() {
+                                const loadingModalEl = document.getElementById('messageModal');
+                                let loadingModal = null;
+                                if (loadingModalEl) {
+                                    loadingModal = new bootstrap.Modal(loadingModalEl, {
+                                        backdrop: 'static',
+                                        keyboard: false
+                                    });
+                                    loadingModal.show();
+                                }
 
-                            AdminAjax.get(url).then(response => {
-                                loadingModal.hide();
-                                cleanupModals();
-                                $('#messageModalContainer').html(response.html);
-                                const modalEl = document.getElementById('messageModal');
-                                const modal = new bootstrap.Modal(modalEl);
-                                modal.show();
-                                setupMessageValidation(messageId, modal);
-                            }).catch(err => {
-                                loadingModal.hide();
-                                cleanupModals();
-                            });
+                                AdminAjax.get(url).then(response => {
+                                    if (loadingModal) {
+                                        loadingModal.hide();
+                                    }
+                                    cleanupModals();
+                                    if (response && response.html) {
+                                        $('#messageModalContainer').html(response.html);
+                                        // Wait for DOM to update
+                                        setTimeout(function() {
+                                            const modalEl = document.getElementById('messageModal');
+                                            if (modalEl) {
+                                                const modal = new bootstrap.Modal(modalEl);
+                                                modal.show();
+                                                setupMessageValidation(messageId, modal);
+                                            } else {
+                                                console.error('Message modal element not found');
+                                                showToast('Failed to load message form', 'error');
+                                            }
+                                        }, 100);
+                                    } else {
+                                        console.error('Invalid response:', response);
+                                        showToast('Failed to load message form', 'error');
+                                    }
+                                }).catch(err => {
+                                    if (loadingModal) {
+                                        loadingModal.hide();
+                                    }
+                                    cleanupModals();
+                                    console.error('Error loading message form:', err);
+                                    showToast('Failed to load message form: ' + (err.message || 'Unknown error'), 'error');
+                                });
+                            }, 100);
                         }
 
                         function setupMessageValidation(messageId, modal) {
@@ -412,10 +463,16 @@
 
                             $form.validate({
                                 rules: {
-                                    message: { required: true }
+                                    message: { 
+                                        required: true 
+                                    },
+                                    messageAR: { 
+                                        required: true 
+                                    }
                                 },
                                 messages: {
-                                    message: 'Message(EN) is required.'
+                                    message: 'Message is required.',
+                                    messageAR: 'Message {AR} is required.'
                                 },
                                 errorElement: 'div',
                                 errorClass: 'invalid-feedback',

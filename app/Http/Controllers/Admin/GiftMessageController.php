@@ -35,9 +35,10 @@ class GiftMessageController extends Controller
             $filteredCountQuery = GiftMessage::query();
 
             // Filter by active status
-            if ($request->has('active') && $request->active !== '') {
-                $query->where('isactive', $request->active);
-                $filteredCountQuery->where('isactive', $request->active);
+            $activeFilter = $request->input('active');
+            if ($activeFilter !== null && $activeFilter !== '' && $activeFilter !== '--All--') {
+                $query->where('isactive', $activeFilter);
+                $filteredCountQuery->where('isactive', $activeFilter);
             }
 
             // DataTables search
@@ -227,13 +228,15 @@ class GiftMessageController extends Controller
 
         $validated = $request->validate([
             'message' => 'required|string|max:500',
-            'messageAR' => 'nullable|string|max:500',
+            'messageAR' => 'required|string|max:500',
             'displayorder' => 'nullable|integer|min:0',
             'displayorderAR' => 'nullable|integer|min:0',
             'isactive' => 'nullable',
         ], [
-            'message.required' => 'Message(EN) is required.',
+            'message.required' => 'Message is required.',
             'message.max' => 'Message cannot exceed 500 characters.',
+            'messageAR.required' => 'Message {AR} is required.',
+            'messageAR.max' => 'Message {AR} cannot exceed 500 characters.',
         ]);
 
         $validated['isactive'] = $request->has('isactive') ? 1 : 0;
