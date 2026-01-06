@@ -16,12 +16,12 @@
                 @endif
                 <div class="modal-body" style="max-height: 70vh; overflow-y: auto;">
                     <!-- Basic Information -->
-                    <h6 class="mb-3 border-bottom pb-2">Basic Information</h6>
+                    <h6 class="mb-3 border-bottom pb-2 bg-primary text-white p-2 rounded">Basic Information</h6>
                     <div class="row">
                         <div class="col-md-6">
                             <div class="mb-3">
-                                <label class="form-label">Category <span class="text-danger">*</span></label>
-                                <select name="fkcategoryid" class="form-select" required>
+                                <label class="form-label">Category</label>
+                                <select name="fkcategoryid" class="form-select">
                                     <option value="">-- Select Category --</option>
                                     @foreach ($categories ?? [] as $cat)
                                         <option value="{{ $cat->categoryid }}"
@@ -35,9 +35,9 @@
                         </div>
                         <div class="col-md-6">
                             <div class="mb-3">
-                                <label class="form-label">Product Code <span class="text-danger">*</span></label>
+                                <label class="form-label">Product Code</label>
                                 <input type="text" name="productcode" class="form-control"
-                                    value="{{ old('productcode', $product ? $product->productcode : '') }}" required>
+                                    value="{{ old('productcode', $product ? $product->productcode : '') }}">
                                 <div class="invalid-feedback"></div>
                             </div>
                         </div>
@@ -45,7 +45,7 @@
                     <div class="row">
                         <div class="col-md-6">
                             <div class="mb-3">
-                                <label class="form-label">Product Title (EN) <span class="text-danger">*</span></label>
+                                <label class="form-label">Title [EN] <span class="text-danger">*</span></label>
                                 <input type="text" name="title" class="form-control"
                                     value="{{ old('title', $product ? $product->title : '') }}" required>
                                 <div class="invalid-feedback"></div>
@@ -53,7 +53,7 @@
                         </div>
                         <div class="col-md-6">
                             <div class="mb-3">
-                                <label class="form-label">Product Title (AR) <span class="text-danger">*</span></label>
+                                <label class="form-label">Title [AR] <span class="text-danger">*</span></label>
                                 <input type="text" name="titleAR" class="form-control"
                                     value="{{ old('titleAR', $product ? $product->titleAR : '') }}" required>
                                 <div class="invalid-feedback"></div>
@@ -62,23 +62,7 @@
                     </div>
 
                     <!-- Descriptions -->
-                    <h6 class="mb-3 mt-4 border-bottom pb-2">Descriptions</h6>
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label class="form-label">Short Description (EN) <span class="text-danger">*</span></label>
-                                <textarea name="shortdescr" class="form-control" rows="3" required>{{ old('shortdescr', $product ? $product->shortdescr : '') }}</textarea>
-                                <div class="invalid-feedback"></div>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label class="form-label">Short Description (AR) <span class="text-danger">*</span></label>
-                                <textarea name="shortdescrAR" class="form-control" rows="3" required>{{ old('shortdescrAR', $product ? $product->shortdescrAR : '') }}</textarea>
-                                <div class="invalid-feedback"></div>
-                            </div>
-                        </div>
-                    </div>
+                    <h6 class="mb-3 mt-4 border-bottom pb-2 bg-primary text-white p-2 rounded">Product Details</h6>
                     <div class="row">
                         <div class="col-md-6">
                             <div class="mb-3">
@@ -97,13 +81,13 @@
                     </div>
 
                     <!-- Pricing -->
-                    <h6 class="mb-3 mt-4 border-bottom pb-2">Pricing</h6>
+                    <h6 class="mb-3 mt-4 border-bottom pb-2 bg-primary text-white p-2 rounded">Pricing</h6>
                     <div class="row">
                         <div class="col-md-4">
                             <div class="mb-3">
-                                <label class="form-label">Price <span class="text-danger">*</span></label>
+                                <label class="form-label">Price</label>
                                 <input type="number" step="0.001" name="price" class="form-control"
-                                    value="{{ old('price', $product ? $product->price : '') }}" required>
+                                    value="{{ old('price', $product ? $product->price : '') }}">
                                 <div class="invalid-feedback"></div>
                             </div>
                         </div>
@@ -117,16 +101,17 @@
                         </div>
                         <div class="col-md-4">
                             <div class="mb-3">
-                                <label class="form-label">Selling Price <span class="text-danger">*</span></label>
+                                <label class="form-label">Selling Price</label>
                                 <input type="number" step="0.001" name="sellingprice" class="form-control"
-                                    value="{{ old('sellingprice', $product ? $product->sellingprice : '') }}" required>
+                                    value="{{ old('sellingprice', $product ? $product->sellingprice : '') }}">
                                 <div class="invalid-feedback"></div>
                             </div>
                         </div>
                     </div>
 
                     <!-- Meta Information -->
-                    <h6 class="mb-3 mt-4 border-bottom pb-2">SEO Meta Information</h6>
+                    <h6 class="mb-3 mt-4 border-bottom pb-2 bg-primary text-white p-2 rounded">SEO Meta Information
+                    </h6>
                     <div class="row">
                         <div class="col-md-6">
                             <div class="mb-3">
@@ -181,49 +166,56 @@
                     </div>
 
                     <!-- Photos -->
-                    <h6 class="mb-3 mt-4 border-bottom pb-2">Product Photos</h6>
+                    <h6 class="mb-3 mt-4 border-bottom pb-2 bg-primary text-white p-2 rounded">Product Photos</h6>
                     <div class="row">
-                        @for($i = 1; $i <= 5; $i++)
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label class="form-label">Photo {{ $i }}</label>
-                                <input type="file" name="photo{{ $i }}" id="photo{{ $i }}Input" class="form-control"
-                                    accept="image/*" onchange="previewImage(this, 'photo{{ $i }}Preview')">
+                        @for ($i = 1; $i <= 5; $i++)
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Photo {{ $i }}</label>
+                                    <input type="file" name="photo{{ $i }}"
+                                        id="photo{{ $i }}Input" class="form-control" accept="image/*"
+                                        onchange="previewImage(this, 'photo{{ $i }}Preview')">
 
-                                @if ($product && $product->{"photo{$i}"})
-                                    <div class="mt-3 position-relative d-inline-block" id="photo{{ $i }}PreviewContainer">
-                                        <div class="position-relative" style="width: 100px; height: 100px;">
-                                            <img src="{{ asset('storage/upload/product/' . $product->{"photo{$i}"}) }}"
-                                                alt="Photo {{ $i }}" id="photo{{ $i }}Preview"
-                                                style="width: 100px; height: 100px; object-fit: cover; border-radius: 4px;">
-                                            <button type="button"
-                                                class="btn btn-danger btn-sm position-absolute top-0 end-0 remove-image-btn"
-                                                data-product-id="{{ $product->productid }}" data-column="photo{{ $i }}"
-                                                data-image-name="{{ $product->{"photo{$i}"} }}" title="Remove Image"
-                                                style="z-index: 10; padding: 2px 6px; font-size: 12px;">
-                                                <i class="ti ti-trash"></i>
-                                            </button>
+                                    @if ($product && $product->{"photo{$i}"})
+                                        <div class="mt-3 position-relative d-inline-block"
+                                            id="photo{{ $i }}PreviewContainer">
+                                            <div class="position-relative" style="width: 100px; height: 100px;">
+                                                <img src="{{ asset('storage/upload/product/' . $product->{"photo{$i}"}) }}"
+                                                    alt="Photo {{ $i }}"
+                                                    id="photo{{ $i }}Preview"
+                                                    style="width: 100px; height: 100px; object-fit: cover; border-radius: 4px;">
+                                                <button type="button"
+                                                    class="btn btn-danger btn-sm position-absolute top-0 end-0 remove-image-btn"
+                                                    data-product-id="{{ $product->productid }}"
+                                                    data-column="photo{{ $i }}"
+                                                    data-image-name="{{ $product->{"photo{$i}"} }}"
+                                                    title="Remove Image"
+                                                    style="z-index: 10; padding: 2px 6px; font-size: 12px;">
+                                                    <i class="ti ti-trash"></i>
+                                                </button>
+                                            </div>
+                                            <small class="text-muted d-block mt-2">Current:
+                                                {{ $product->{"photo{$i}"} }}</small>
                                         </div>
-                                        <small class="text-muted d-block mt-2">Current: {{ $product->{"photo{$i}"} }}</small>
-                                    </div>
-                                @else
-                                    <div class="mt-3" id="photo{{ $i }}PreviewContainer" style="display: none;">
-                                        <div class="position-relative d-inline-block"
-                                            style="width: 100px; height: 100px;">
-                                            <img id="photo{{ $i }}Preview"
-                                                style="width: 100px; height: 100px; object-fit: cover; border-radius: 4px; display: none;">
+                                    @else
+                                        <div class="mt-3" id="photo{{ $i }}PreviewContainer"
+                                            style="display: none;">
+                                            <div class="position-relative d-inline-block"
+                                                style="width: 100px; height: 100px;">
+                                                <img id="photo{{ $i }}Preview"
+                                                    style="width: 100px; height: 100px; object-fit: cover; border-radius: 4px; display: none;">
+                                            </div>
                                         </div>
-                                    </div>
-                                @endif
+                                    @endif
 
-                                <div class="invalid-feedback"></div>
+                                    <div class="invalid-feedback"></div>
+                                </div>
                             </div>
-                        </div>
                         @endfor
                     </div>
 
                     <!-- Video -->
-                    <h6 class="mb-3 mt-4 border-bottom pb-2">Video</h6>
+                    <h6 class="mb-3 mt-4 border-bottom pb-2 bg-primary text-white p-2 rounded">Video</h6>
                     <div class="row">
                         <div class="col-md-6">
                             <div class="mb-3">
@@ -244,27 +236,30 @@
                     </div>
 
                     <!-- Status Flags -->
-                    <h6 class="mb-3 mt-4 border-bottom pb-2">Status & Flags</h6>
+                    <h6 class="mb-3 mt-4 border-bottom pb-2 bg-primary text-white p-2 rounded">Status & Flags</h6>
                     <div class="row">
                         <div class="col-md-6">
                             <div class="mb-3">
                                 <div class="form-check form-switch">
-                                    <input class="form-check-input" type="checkbox" name="ispublished" value="1"
-                                        id="ispublished" {{ old('ispublished', $product ? $product->ispublished : 1) ? 'checked' : '' }}>
+                                    <input class="form-check-input" type="checkbox" name="ispublished"
+                                        value="1" id="ispublished"
+                                        {{ old('ispublished', $product ? $product->ispublished : 1) ? 'checked' : '' }}>
                                     <label class="form-check-label" for="ispublished">Published</label>
                                 </div>
                             </div>
                             <div class="mb-3">
                                 <div class="form-check form-switch">
                                     <input class="form-check-input" type="checkbox" name="isnew" value="1"
-                                        id="isnew" {{ old('isnew', $product ? $product->isnew : 0) ? 'checked' : '' }}>
+                                        id="isnew"
+                                        {{ old('isnew', $product ? $product->isnew : 0) ? 'checked' : '' }}>
                                     <label class="form-check-label" for="isnew">New Product</label>
                                 </div>
                             </div>
                             <div class="mb-3">
                                 <div class="form-check form-switch">
                                     <input class="form-check-input" type="checkbox" name="ispopular" value="1"
-                                        id="ispopular" {{ old('ispopular', $product ? $product->ispopular : 0) ? 'checked' : '' }}>
+                                        id="ispopular"
+                                        {{ old('ispopular', $product ? $product->ispopular : 0) ? 'checked' : '' }}>
                                     <label class="form-check-label" for="ispopular">Popular</label>
                                 </div>
                             </div>
@@ -273,15 +268,18 @@
                             <div class="mb-3">
                                 <div class="form-check form-switch">
                                     <input class="form-check-input" type="checkbox" name="isgift" value="1"
-                                        id="isgift" {{ old('isgift', $product ? $product->isgift : 0) ? 'checked' : '' }}>
+                                        id="isgift"
+                                        {{ old('isgift', $product ? $product->isgift : 0) ? 'checked' : '' }}>
                                     <label class="form-check-label" for="isgift">Is Gift</label>
                                 </div>
                             </div>
                             <div class="mb-3">
                                 <div class="form-check form-switch">
-                                    <input class="form-check-input" type="checkbox" name="internation_ship" value="1"
-                                        id="internation_ship" {{ old('internation_ship', $product ? $product->internation_ship : 0) ? 'checked' : '' }}>
-                                    <label class="form-check-label" for="internation_ship">International Shipping</label>
+                                    <input class="form-check-input" type="checkbox" name="internation_ship"
+                                        value="1" id="internation_ship"
+                                        {{ old('internation_ship', $product ? $product->internation_ship : 0) ? 'checked' : '' }}>
+                                    <label class="form-check-label" for="internation_ship">International
+                                        Shipping</label>
                                 </div>
                             </div>
                         </div>
@@ -456,4 +454,3 @@
         });
     })();
 </script>
-

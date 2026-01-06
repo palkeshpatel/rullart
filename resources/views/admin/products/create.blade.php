@@ -80,12 +80,6 @@
                         titleAR: {
                             required: true
                         },
-                        shortdescr: {
-                            required: true
-                        },
-                        shortdescrAR: {
-                            required: true
-                        },
                         price: {
                             required: true,
                             number: true,
@@ -95,21 +89,15 @@
                             required: true,
                             number: true,
                             min: 0
-                        },
-                        photo1: {
-                            required: true
                         }
                     },
                     messages: {
-                        productcode: 'Product code is required.',
+                        productcode: 'Product Code is required.',
                         fkcategoryid: 'Category is required.',
-                        title: 'Product title (EN) is required.',
-                        titleAR: 'Product title (AR) is required.',
-                        shortdescr: 'Short description (EN) is required.',
-                        shortdescrAR: 'Short description (AR) is required.',
-                        price: 'Price is required and must be a valid number.',
-                        sellingprice: 'Selling price is required and must be a valid number.',
-                        photo1: 'Photo 1 is required.'
+                        title: 'Title [EN] is required.',
+                        titleAR: 'Title [AR] is required.',
+                        price: 'Product Price [KWD] is required and must be a valid number.',
+                        sellingprice: 'Selling Price [KWD] is required and must be a valid number.'
                     },
                     errorElement: 'div',
                     errorClass: 'invalid-feedback',
@@ -134,7 +122,95 @@
                             document.getElementById('longdescrAR').value = longdescrARContent;
                         }
 
-                        form.submit();
+                        // Submit via AJAX to handle redirect properly
+                        const formData = new FormData(form);
+                        const submitBtn = form.querySelector('button[type="submit"]');
+                        const originalText = submitBtn.innerHTML;
+                        submitBtn.disabled = true;
+                        submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Saving...';
+
+                        // Ensure CSRF token is included
+                        const csrfToken = $('meta[name="csrf-token"]').attr('content') || $('input[name="_token"]').val();
+                        if (csrfToken) {
+                            formData.append('_token', csrfToken);
+                        }
+
+                        $.ajax({
+                            url: form.action,
+                            method: 'POST',
+                            data: formData,
+                            processData: false,
+                            contentType: false,
+                            headers: {
+                                'X-Requested-With': 'XMLHttpRequest',
+                                'X-CSRF-TOKEN': csrfToken || ''
+                            },
+                            success: function(response) {
+                                if (response.success) {
+                                    // Show success message
+                                    if (typeof toastr !== 'undefined') {
+                                        toastr.success(response.message || 'Product created successfully');
+                                    } else if (typeof showToast === 'function') {
+                                        showToast(response.message || 'Product created successfully', 'success');
+                                    }
+                                    // Redirect after short delay
+                                    setTimeout(function() {
+                                        window.location.href = response.redirect || '{{ route("admin.products") }}';
+                                    }, 1000);
+                                } else {
+                                    if (typeof toastr !== 'undefined') {
+                                        toastr.error(response.message || 'Failed to create product');
+                                    } else if (typeof showToast === 'function') {
+                                        showToast(response.message || 'Failed to create product', 'error');
+                                    }
+                                    submitBtn.disabled = false;
+                                    submitBtn.innerHTML = originalText;
+                                }
+                            },
+                            error: function(xhr) {
+                                submitBtn.disabled = false;
+                                submitBtn.innerHTML = originalText;
+                                
+                                if (xhr.status === 422) {
+                                    // Validation errors
+                                    const errors = xhr.responseJSON?.errors || {};
+                                    $.each(errors, function(field, messages) {
+                                        const input = form.querySelector('[name="' + field + '"]');
+                                        if (input) {
+                                            $(input).addClass('is-invalid');
+                                            const errorDiv = input.nextElementSibling;
+                                            if (errorDiv && errorDiv.classList.contains('invalid-feedback')) {
+                                                $(errorDiv).text(Array.isArray(messages) ? messages[0] : messages);
+                                            }
+                                        }
+                                    });
+                                    if (typeof toastr !== 'undefined') {
+                                        toastr.error('Please fix the validation errors');
+                                    }
+                                } else if (xhr.status === 419) {
+                                    // CSRF token mismatch
+                                    const message = 'Session expired. Please refresh the page and try again.';
+                                    if (typeof toastr !== 'undefined') {
+                                        toastr.error(message);
+                                    } else {
+                                        alert('Error: ' + message);
+                                    }
+                                    // Optionally reload the page after a delay
+                                    setTimeout(function() {
+                                        window.location.reload();
+                                    }, 2000);
+                                } else {
+                                    const message = xhr.responseJSON?.message || 'An error occurred while saving the product';
+                                    if (typeof toastr !== 'undefined') {
+                                        toastr.error(message);
+                                    } else {
+                                        alert('Error: ' + message);
+                                    }
+                                }
+                            }
+                        });
+
+                        return false; // Prevent default form submission
                     }
                 });
             }

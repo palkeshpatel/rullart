@@ -9,6 +9,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use App\Traits\ImageUploadTrait;
 use Illuminate\Http\UploadedFile;
 use Exception;
@@ -284,6 +285,44 @@ class ProductController extends Controller
 
     public function store(Request $request)
     {
+        // Normalize inputs (trim whitespace from productcode)
+        $productcode = trim($request->productcode ?? '');
+        $title = trim($request->title ?? '');
+        $titleAR = trim(preg_replace('/\s+/u', ' ', $request->titleAR ?? ''));
+
+        $request->merge([
+            'productcode' => $productcode,
+            'title' => $title,
+            'titleAR' => $titleAR,
+        ]);
+
+        // Custom validation: Check if productcode already exists (with detailed logging)
+        if (!empty($productcode)) {
+            // Check exact match
+            $exactMatch = Product::where('productcode', $productcode)->first();
+            // Check case-insensitive match
+            $caseInsensitiveMatch = Product::whereRaw('LOWER(productcode) = ?', [strtolower($productcode)])->first();
+
+            if ($exactMatch) {
+                Log::warning('Product code validation failed: Exact match found', [
+                    'input_productcode' => $productcode,
+                    'input_length' => strlen($productcode),
+                    'existing_productid' => $exactMatch->productid,
+                    'existing_productcode' => $exactMatch->productcode,
+                    'existing_length' => strlen($exactMatch->productcode),
+                    'existing_title' => $exactMatch->title,
+                    'codes_identical' => $productcode === $exactMatch->productcode,
+                    'codes_equal' => $productcode == $exactMatch->productcode
+                ]);
+            } elseif ($caseInsensitiveMatch && $caseInsensitiveMatch->productcode !== $productcode) {
+                Log::warning('Product code validation: Case-insensitive match found', [
+                    'input_productcode' => $productcode,
+                    'existing_productcode' => $caseInsensitiveMatch->productcode,
+                    'existing_productid' => $caseInsensitiveMatch->productid
+                ]);
+            }
+        }
+
         $validated = $request->validate([
             'fkcategoryid' => 'required|integer|exists:category,categoryid',
             'title' => [
@@ -304,8 +343,8 @@ class ProductController extends Controller
                 'max:255',
                 Rule::unique('products', 'productcode')
             ],
-            'shortdescr' => 'required|string|max:1800',
-            'shortdescrAR' => 'required|string|max:1800',
+            'shortdescr' => 'nullable|string|max:1800',
+            'shortdescrAR' => 'nullable|string|max:1800',
             'longdescr' => 'nullable|string',
             'longdescrAR' => 'nullable|string',
             'price' => 'required|numeric|min:0',
@@ -337,16 +376,14 @@ class ProductController extends Controller
         ], [
             'fkcategoryid.required' => 'Category is required.',
             'fkcategoryid.exists' => 'Selected category does not exist.',
-            'title.required' => 'Product title (EN) is required.',
+            'title.required' => 'Title [EN] is required.',
             'title.unique' => 'This product title (EN) already exists.',
-            'titleAR.required' => 'Product title (AR) is required.',
+            'titleAR.required' => 'Title [AR] is required.',
             'titleAR.unique' => 'This product title (AR) already exists.',
-            'productcode.required' => 'Product code is required.',
+            'productcode.required' => 'Product Code is required.',
             'productcode.unique' => 'This product code already exists.',
-            'shortdescr.required' => 'Short description (EN) is required.',
-            'shortdescrAR.required' => 'Short description (AR) is required.',
-            'price.required' => 'Price is required.',
-            'sellingprice.required' => 'Selling price is required.',
+            'price.required' => 'Product Price [KWD] is required.',
+            'sellingprice.required' => 'Selling Price [KWD] is required.',
         ]);
 
         // Handle boolean fields
@@ -356,6 +393,15 @@ class ProductController extends Controller
         $validated['isgift'] = $request->has('isgift') ? 1 : 0;
         $validated['internation_ship'] = $request->has('internation_ship') ? 1 : 0;
         $validated['discount'] = $validated['discount'] ?? 0;
+
+        // shortdescr and shortdescrAR are NOT NULL in database, so always set them (empty string if not provided)
+        $validated['shortdescr'] = $validated['shortdescr'] ?? '';
+        $validated['shortdescrAR'] = $validated['shortdescrAR'] ?? '';
+        
+        // metatitle is NOT NULL in database, so always set it (empty string if not provided)
+        $validated['metatitle'] = $validated['metatitle'] ?? '';
+        $validated['metatitleAR'] = $validated['metatitleAR'] ?? '';
+        
         $validated['updatedby'] = auth()->id() ?? 1;
         $validated['updateddate'] = now();
 
@@ -382,7 +428,23 @@ class ProductController extends Controller
         }
 
         try {
+            DB::beginTransaction();
+            
             $product = Product::create($validated);
+            
+            // Refresh to ensure we have the auto-generated ID
+            $product->refresh();
+            
+            // Ensure product was created and has an ID
+            if (!$product || !$product->productid) {
+                DB::rollBack();
+                throw new \Exception('Failed to create product. Product ID is missing.');
+            }
+            
+            Log::info('Product created successfully', [
+                'productid' => $product->productid,
+                'productcode' => $product->productcode
+            ]);
 
             // Handle productsfilter (sizes, colors, occasions)
             $storeId = 1; // Default store ID
@@ -430,23 +492,65 @@ class ProductController extends Controller
                 }
             }
 
-            if ($request->ajax() || $request->expectsJson()) {
+            DB::commit();
+            
+            // Always return JSON for AJAX requests, otherwise redirect
+            if ($request->ajax() || $request->expectsJson() || $request->wantsJson()) {
                 return response()->json([
                     'success' => true,
                     'message' => 'Product created successfully',
-                    'data' => $product
+                    'data' => $product,
+                    'redirect' => route('admin.products')
                 ]);
             }
 
             return redirect()->route('admin.products')
                 ->with('success', 'Product created successfully');
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            // Handle validation errors (including unique constraint)
+            Log::warning('Product validation failed', [
+                'errors' => $e->errors(),
+                'productcode' => $request->productcode ?? 'N/A',
+                'title' => $request->title ?? 'N/A'
+            ]);
+
+            if ($request->ajax() || $request->expectsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Validation failed. Please check your input.',
+                    'errors' => $e->errors()
+                ], 422);
+            }
+
+            return back()->withErrors($e->errors())->withInput();
         } catch (\Illuminate\Database\QueryException $e) {
+            DB::rollBack();
+            
             // Handle database constraint violations
             $errorMessage = 'An error occurred while saving the product.';
             $errorField = 'productcode';
 
+            Log::error('Product creation database error', [
+                'code' => $e->getCode(),
+                'message' => $e->getMessage(),
+                'productcode' => $request->productcode ?? 'N/A',
+                'sql' => $e->getSql() ?? 'N/A'
+            ]);
+
             if ($e->getCode() == 23000) {
-                if (strpos($e->getMessage(), 'productcode') !== false) {
+                // Check for NOT NULL constraint violations first
+                if (strpos($e->getMessage(), 'cannot be null') !== false) {
+                    if (strpos($e->getMessage(), 'metatitle') !== false) {
+                        $errorMessage = 'Meta Title is required. Please fill in the Meta Title field.';
+                        $errorField = 'metatitle';
+                    } elseif (strpos($e->getMessage(), 'shortdescr') !== false) {
+                        $errorMessage = 'Short Description is required.';
+                        $errorField = 'shortdescr';
+                    } else {
+                        $errorMessage = 'A required field is missing. Please check all required fields.';
+                        $errorField = 'general';
+                    }
+                } elseif (strpos($e->getMessage(), 'productcode') !== false || strpos($e->getMessage(), 'uniqueProductCode') !== false) {
                     $errorMessage = 'This product code already exists. Please choose a different code.';
                     $errorField = 'productcode';
                 } elseif (strpos($e->getMessage(), 'title') !== false && strpos($e->getMessage(), 'titleAR') === false) {
@@ -473,6 +577,8 @@ class ProductController extends Controller
 
             return back()->withErrors([$errorField => $errorMessage])->withInput();
         } catch (\Exception $e) {
+            DB::rollBack();
+            
             Log::error('Product creation error: ' . $e->getMessage());
 
             if ($request->ajax() || $request->expectsJson()) {
@@ -610,8 +716,8 @@ class ProductController extends Controller
                     ->ignore($product->productid, 'productid'),
             ],
 
-            'shortdescr'     => 'required|string|max:1800',
-            'shortdescrAR'   => 'required|string|max:1800',
+            'shortdescr'     => 'nullable|string|max:1800',
+            'shortdescrAR'   => 'nullable|string|max:1800',
             'longdescr'      => 'nullable|string',
             'longdescrAR'    => 'nullable|string',
 
@@ -643,6 +749,15 @@ class ProductController extends Controller
         $validated['internation_ship'] = $request->boolean('internation_ship');
 
         $validated['discount']    = $validated['discount'] ?? 0;
+        
+        // shortdescr and shortdescrAR are NOT NULL in database, so always set them (empty string if not provided)
+        $validated['shortdescr'] = $validated['shortdescr'] ?? '';
+        $validated['shortdescrAR'] = $validated['shortdescrAR'] ?? '';
+        
+        // metatitle is NOT NULL in database, so always set it (empty string if not provided)
+        $validated['metatitle'] = $validated['metatitle'] ?? '';
+        $validated['metatitleAR'] = $validated['metatitleAR'] ?? '';
+        
         $validated['updatedby']   = auth()->id() ?? 1;
         $validated['updateddate'] = now();
 
@@ -738,11 +853,12 @@ class ProductController extends Controller
             DB::commit();
 
             // Handle both AJAX and regular form submissions
-            if ($request->ajax() || $request->wantsJson()) {
+            if ($request->ajax() || $request->wantsJson() || $request->expectsJson()) {
                 return response()->json([
                     'success' => true,
                     'message' => 'Product updated successfully',
                     'data'    => $product->fresh(),
+                    'redirect' => route('admin.products')
                 ]);
             }
 
