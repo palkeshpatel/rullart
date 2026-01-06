@@ -20,8 +20,34 @@
                     <div class="row">
                         <div class="col-md-6">
                             <div class="mb-3">
+                                <label class="form-label">Product Code <span class="text-danger">*</span></label>
+                                <input type="text" name="productcode" class="form-control"
+                                    value="{{ old('productcode', $product ? $product->productcode : '') }}" required>
+                                <div class="invalid-feedback"></div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Title [EN] <span class="text-danger">*</span></label>
+                                <input type="text" name="title" class="form-control"
+                                    value="{{ old('title', $product ? $product->title : '') }}" required>
+                                <div class="invalid-feedback"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Title (AR) <span class="text-danger">*</span></label>
+                                <input type="text" name="titleAR" class="form-control"
+                                    value="{{ old('titleAR', $product ? $product->titleAR : '') }}" required>
+                                <div class="invalid-feedback"></div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
                                 <label class="form-label">Category <span class="text-danger">*</span></label>
-                                <select name="fkcategoryid" class="form-select" required>
+                                <select name="fkcategoryid" id="categorySelect" class="form-select" required>
                                     <option value="">-- Select Category --</option>
                                     @foreach ($categories ?? [] as $cat)
                                         <option value="{{ $cat->categoryid }}"
@@ -33,6 +59,8 @@
                                 <div class="invalid-feedback"></div>
                             </div>
                         </div>
+                    </div>
+                    <div class="row">
                         <div class="col-md-6">
                             <div class="mb-3">
                                 <label class="form-label">Gift Product Category 4 <span class="text-danger">*</span></label>
@@ -49,20 +77,97 @@
                             </div>
                         </div>
                     </div>
+                    
+                    <!-- Product Categories with Sub Categories -->
+                    <div class="row mb-3" style="border: 2px solid #dc3545; padding: 15px; border-radius: 5px;">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Product Category 1</label>
+                            <select name="productcategoryid" id="productCategory1" class="form-select">
+                                <option value="">-- Select Product Category --</option>
+                                @foreach ($categories ?? [] as $cat)
+                                    <option value="{{ $cat->categoryid }}"
+                                        {{ old('productcategoryid', $product && $product->productcategoryid == $cat->categoryid ? $product->productcategoryid : '') == $cat->categoryid ? 'selected' : '' }}>
+                                        {{ $cat->category }}
+                                    </option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Sub Category 1</label>
+                            <select name="subcategory1" id="subCategory1" class="form-select">
+                                <option value="">-- Select Sub Category --</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Product Category 2</label>
+                            <select name="productcategoryid2" id="productCategory2" class="form-select">
+                                <option value="">-- Select Product Category --</option>
+                                @foreach ($categories ?? [] as $cat)
+                                    <option value="{{ $cat->categoryid }}"
+                                        {{ old('productcategoryid2', $product && $product->productcategoryid2 == $cat->categoryid ? $product->productcategoryid2 : '') == $cat->categoryid ? 'selected' : '' }}>
+                                        {{ $cat->category }}
+                                    </option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Sub Category 2</label>
+                            <select name="subcategory2" id="subCategory2" class="form-select">
+                                <option value="">-- Select Sub Category --</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Product Category 3</label>
+                            <select name="productcategoryid3" id="productCategory3" class="form-select">
+                                <option value="">-- Select Product Category --</option>
+                                @foreach ($categories ?? [] as $cat)
+                                    <option value="{{ $cat->categoryid }}"
+                                        {{ old('productcategoryid3', $product && $product->productcategoryid3 == $cat->categoryid ? $product->productcategoryid3 : '') == $cat->categoryid ? 'selected' : '' }}>
+                                        {{ $cat->category }}
+                                    </option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Sub Category 3</label>
+                            <select name="subcategory3" id="subCategory3" class="form-select">
+                                <option value="">-- Select Sub Category --</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Product Category 4</label>
+                            <select name="productcategoryid4_extra" id="productCategory4_extra" class="form-select">
+                                <option value="">-- Select Product Category --</option>
+                                @foreach ($categories ?? [] as $cat)
+                                    <option value="{{ $cat->categoryid }}"
+                                        {{ old('productcategoryid4_extra', '') == $cat->categoryid ? 'selected' : '' }}>
+                                        {{ $cat->category }}
+                                    </option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Sub Category 4</label>
+                            <select name="subcategory4" id="subCategory4" class="form-select">
+                                <option value="">-- Select Sub Category --</option>
+                            </select>
+                        </div>
+                    </div>
+                    
                     <div class="row">
                         <div class="col-md-6">
                             <div class="mb-3">
-                                <label class="form-label">Product Code <span class="text-danger">*</span></label>
-                                <input type="text" name="productcode" class="form-control"
-                                    value="{{ old('productcode', $product ? $product->productcode : '') }}" required>
+                                <label class="form-label">Barcode</label>
+                                <input type="text" name="barcode" class="form-control" placeholder="barcode"
+                                    value="{{ old('barcode', '') }}">
                                 <div class="invalid-feedback"></div>
                             </div>
                         </div>
                         <div class="col-md-6">
                             <div class="mb-3">
-                                <label class="form-label">Product Title (EN) <span class="text-danger">*</span></label>
-                                <input type="text" name="title" class="form-control"
-                                    value="{{ old('title', $product ? $product->title : '') }}" required>
+                                <label class="form-label">Quantity</label>
+                                <input type="number" name="quantity" class="form-control"
+                                    value="{{ old('quantity', '') }}">
                                 <div class="invalid-feedback"></div>
                             </div>
                         </div>
@@ -70,73 +175,77 @@
                     <div class="row">
                         <div class="col-md-6">
                             <div class="mb-3">
-                                <label class="form-label">Product Title (AR) <span class="text-danger">*</span></label>
-                                <input type="text" name="titleAR" class="form-control"
-                                    value="{{ old('titleAR', $product ? $product->titleAR : '') }}" required>
+                                <label class="form-label">Occasion</label>
+                                <select name="occasion" class="form-select">
+                                    <option value="">-- Select Occasion --</option>
+                                    @foreach ($occasions ?? [] as $occasion)
+                                        <option value="{{ $occasion->occassionid }}"
+                                            {{ old('occasion', isset($productFilters) && isset($productFilters['occassion']) && $productFilters['occassion']->count() > 0 && $productFilters['occassion']->first()->fkfiltervalueid == $occasion->occassionid ? $productFilters['occassion']->first()->fkfiltervalueid : '') == $occasion->occassionid ? 'selected' : '' }}>
+                                            {{ $occasion->occassion }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                                <div class="invalid-feedback"></div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Color</label>
+                                <select name="color" class="form-select">
+                                    <option value="">-- Select Color --</option>
+                                    @foreach ($colors ?? [] as $color)
+                                        <option value="{{ $color->filtervalueid }}"
+                                            {{ old('color', isset($productFilters) && isset($productFilters['color']) && $productFilters['color']->count() > 0 && $productFilters['color']->first()->fkfiltervalueid == $color->filtervalueid ? $productFilters['color']->first()->fkfiltervalueid : '') == $color->filtervalueid ? 'selected' : '' }}>
+                                            {{ $color->filtervalue }}
+                                        </option>
+                                    @endforeach
+                                </select>
                                 <div class="invalid-feedback"></div>
                             </div>
                         </div>
                     </div>
 
                     <!-- Descriptions -->
-                    <h6 class="mb-3 mt-4 border-bottom pb-2">Descriptions</h6>
                     <div class="row">
                         <div class="col-md-6">
                             <div class="mb-3">
-                                <label class="form-label">Short Description (EN) <span class="text-danger">*</span></label>
-                                <textarea name="shortdescr" class="form-control" rows="3" required>{{ old('shortdescr', $product ? $product->shortdescr : '') }}</textarea>
+                                <label class="form-label">Description</label>
+                                <textarea name="shortdescr" class="form-control" rows="3">{{ old('shortdescr', $product ? $product->shortdescr : '') }}</textarea>
                                 <div class="invalid-feedback"></div>
                             </div>
                         </div>
                         <div class="col-md-6">
                             <div class="mb-3">
-                                <label class="form-label">Short Description (AR) <span class="text-danger">*</span></label>
-                                <textarea name="shortdescrAR" class="form-control" rows="3" required>{{ old('shortdescrAR', $product ? $product->shortdescrAR : '') }}</textarea>
-                                <div class="invalid-feedback"></div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label class="form-label">Long Description (EN)</label>
-                                <textarea name="longdescr" class="form-control" rows="5">{{ old('longdescr', $product ? $product->longdescr : '') }}</textarea>
-                                <div class="invalid-feedback"></div>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label class="form-label">Long Description (AR)</label>
-                                <textarea name="longdescrAR" class="form-control" rows="5">{{ old('longdescrAR', $product ? $product->longdescrAR : '') }}</textarea>
+                                <label class="form-label">Description (AR)</label>
+                                <textarea name="shortdescrAR" class="form-control" rows="3" placeholder="Long Description (AR)">{{ old('shortdescrAR', $product ? $product->shortdescrAR : '') }}</textarea>
                                 <div class="invalid-feedback"></div>
                             </div>
                         </div>
                     </div>
 
                     <!-- Pricing -->
-                    <h6 class="mb-3 mt-4 border-bottom pb-2">Pricing</h6>
                     <div class="row">
                         <div class="col-md-4">
                             <div class="mb-3">
-                                <label class="form-label">Price <span class="text-danger">*</span></label>
-                                <input type="number" step="0.001" name="price" class="form-control"
+                                <label class="form-label">Product Price [KWD] <span class="text-danger">*</span></label>
+                                <input type="number" step="0.001" name="price" class="form-control" placeholder="Price"
                                     value="{{ old('price', $product ? $product->price : '') }}" required>
                                 <div class="invalid-feedback"></div>
                             </div>
                         </div>
                         <div class="col-md-4">
                             <div class="mb-3">
-                                <label class="form-label">Discount</label>
-                                <input type="number" step="0.01" name="discount" class="form-control"
+                                <label class="form-label">Discount (%)</label>
+                                <input type="number" step="0.01" name="discount" class="form-control" placeholder="Discount"
                                     value="{{ old('discount', $product ? $product->discount : 0) }}">
                                 <div class="invalid-feedback"></div>
                             </div>
                         </div>
                         <div class="col-md-4">
                             <div class="mb-3">
-                                <label class="form-label">Selling Price <span class="text-danger">*</span></label>
-                                <input type="number" step="0.001" name="sellingprice" class="form-control"
-                                    value="{{ old('sellingprice', $product ? $product->sellingprice : '') }}" required>
+                                <label class="form-label">Selling Price [KWD]</label>
+                                <input type="number" step="0.001" name="sellingprice" class="form-control" placeholder="selling price"
+                                    value="{{ old('sellingprice', $product ? $product->sellingprice : '') }}">
                                 <div class="invalid-feedback"></div>
                             </div>
                         </div>

@@ -7,6 +7,8 @@ use App\Models\Product;
 use App\Models\Category;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
 use App\Traits\ImageUploadTrait;
 use Illuminate\Http\UploadedFile;
@@ -137,22 +139,39 @@ class GiftProductController extends Controller
         // Get categories for dropdown
         $categories = Category::orderBy('category')->get();
 
+        // Get colors (filtervalues where fkfilterid = 2)
+        $colors = DB::table('filtervalues')
+            ->where('fkfilterid', 2)
+            ->orderBy('displayorder')
+            ->orderBy('filtervalue')
+            ->get(['filtervalueid', 'filtervalue', 'filtervalueAR']);
+
+        // Get occasions
+        $occasions = \App\Models\Occassion::where('ispublished', 1)
+            ->orderBy('occassion')
+            ->get(['occassionid', 'occassion', 'occassionAR']);
+
         // Return JSON for AJAX modal requests
         if ($request->ajax() || $request->expectsJson()) {
             return response()->json([
                 'success' => true,
-                'html' => view('admin.gift-products.partials.gift-product-form', ['product' => null, 'categories' => $categories])->render(),
+                'html' => view('admin.gift-products.partials.gift-product-form', [
+                    'product' => null,
+                    'categories' => $categories,
+                    'colors' => $colors,
+                    'occasions' => $occasions,
+                    'productFilters' => collect()
+                ])->render(),
             ]);
         }
 
         // For now, return modal view (same as AJAX) since gift products should use modal
-        return view('admin.gift-products.create', compact('categories'));
+        return view('admin.gift-products.create', compact('categories', 'colors', 'occasions'));
     }
 
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'fkcategoryid' => 'required|integer|exists:category,categoryid',
             'title' => [
                 'required',
                 'string',
@@ -171,13 +190,13 @@ class GiftProductController extends Controller
                 'max:255',
                 Rule::unique('products', 'productcode')
             ],
-            'shortdescr' => 'required|string|max:1800',
-            'shortdescrAR' => 'required|string|max:1800',
+            'shortdescr' => 'nullable|string|max:1800',
+            'shortdescrAR' => 'nullable|string|max:1800',
             'longdescr' => 'nullable|string',
             'longdescrAR' => 'nullable|string',
             'price' => 'required|numeric|min:0',
             'discount' => 'nullable|numeric|min:0',
-            'sellingprice' => 'required|numeric|min:0',
+            'sellingprice' => 'nullable|numeric|min:0',
             'metatitle' => 'nullable|string|max:500',
             'metatitleAR' => 'nullable|string|max:500',
             'metakeyword' => 'nullable|string|max:1000',
@@ -189,38 +208,81 @@ class GiftProductController extends Controller
             'photo3' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:10240',
             'photo4' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:10240',
             'photo5' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:10240',
-            'video' => 'nullable|string|max:500',
-            'videoposter' => 'nullable|string|max:500',
-            'ispublished' => 'nullable',
-            'isnew' => 'nullable',
-            'ispopular' => 'nullable',
-            'internation_ship' => 'nullable',
             'productcategoryid' => 'nullable|integer',
             'productcategoryid2' => 'nullable|integer',
             'productcategoryid3' => 'nullable|integer',
+            'subcategory1' => 'nullable|integer',
+            'subcategory2' => 'nullable|integer',
+            'subcategory3' => 'nullable|integer',
+            'barcode' => 'nullable|string|max:255',
+            'quantity' => 'nullable|integer|min:0',
+            'occasion' => 'nullable|integer|exists:occassion,occassionid',
+            'color' => 'nullable|integer|exists:filtervalues,filtervalueid',
         ], [
-            'fkcategoryid.required' => 'Category is required.',
-            'fkcategoryid.exists' => 'Selected category does not exist.',
             'title.required' => 'Product title (EN) is required.',
             'title.unique' => 'This product title (EN) already exists.',
             'titleAR.required' => 'Product title (AR) is required.',
             'titleAR.unique' => 'This product title (AR) already exists.',
             'productcode.required' => 'Product code is required.',
             'productcode.unique' => 'This product code already exists.',
-            'shortdescr.required' => 'Short description (EN) is required.',
-            'shortdescrAR.required' => 'Short description (AR) is required.',
             'price.required' => 'Price is required.',
-            'sellingprice.required' => 'Selling price is required.',
         ]);
 
         // Handle boolean fields - Gift products always have isgift = 1
-        $validated['ispublished'] = $request->has('ispublished') ? 1 : 0;
-        $validated['isnew'] = $request->has('isnew') ? 1 : 0;
-        $validated['ispopular'] = $request->has('ispopular') ? 1 : 0;
+        $validated['ispublished'] = 1; // Default to published
+        $validated['isnew'] = 0;
+        $validated['ispopular'] = 0;
         $validated['isgift'] = 1; // Always set to 1 for gift products
-        $validated['internation_ship'] = $request->has('internation_ship') ? 1 : 0;
+        $validated['internation_ship'] = 0;
         $validated['discount'] = $validated['discount'] ?? 0;
-        $validated['updatedby'] = auth()->id() ?? 1;
+
+        // Use productcategoryid as main category (fkcategoryid) if provided
+        $validated['fkcategoryid'] = $request->input('productcategoryid') ?? 0;
+
+        // Handle subcategories - map subcategory1 to productcategoryid2, subcategory2 to productcategoryid3, subcategory3 to productcategoryid4
+        if ($request->has('subcategory1') && $request->subcategory1) {
+            $validated['productcategoryid2'] = $request->subcategory1;
+        } elseif ($request->has('productcategoryid2') && $request->productcategoryid2) {
+            $validated['productcategoryid2'] = $request->productcategoryid2;
+        } else {
+            $validated['productcategoryid2'] = 0;
+        }
+
+        if ($request->has('subcategory2') && $request->subcategory2) {
+            $validated['productcategoryid3'] = $request->subcategory2;
+        } elseif ($request->has('productcategoryid3') && $request->productcategoryid3) {
+            $validated['productcategoryid3'] = $request->productcategoryid3;
+        } else {
+            $validated['productcategoryid3'] = 0;
+        }
+
+        // productcategoryid4 is not in the form, so set to 0
+        $validated['productcategoryid4'] = 0;
+
+        // Handle shortdescr - set to empty string if not provided (NOT NULL constraint)
+        $validated['shortdescr'] = $validated['shortdescr'] ?? '';
+        $validated['shortdescrAR'] = $validated['shortdescrAR'] ?? '';
+
+        // Handle longdescr - set to empty string if not provided (NOT NULL constraint)
+        $validated['longdescr'] = $validated['longdescr'] ?? '';
+        $validated['longdescrAR'] = $validated['longdescrAR'] ?? '';
+
+        // Handle metatitle - set to empty string if not provided (NOT NULL constraint)
+        $validated['metatitle'] = $validated['metatitle'] ?? '';
+        $validated['metatitleAR'] = $validated['metatitleAR'] ?? '';
+        $validated['metakeyword'] = $validated['metakeyword'] ?? '';
+        $validated['metakeywordAR'] = $validated['metakeywordAR'] ?? '';
+        $validated['metadescr'] = $validated['metadescr'] ?? '';
+        $validated['metadescrAR'] = $validated['metadescrAR'] ?? '';
+
+        // Handle photo fields - set to empty string if not provided (NOT NULL constraint)
+        for ($i = 1; $i <= 5; $i++) {
+            if (!isset($validated["photo{$i}"])) {
+                $validated["photo{$i}"] = '';
+            }
+        }
+
+        $validated['updatedby'] = Auth::check() ? Auth::id() : 1;
         $validated['updateddate'] = now();
 
         // Handle file uploads (photo1-5) using trait
@@ -233,13 +295,54 @@ class GiftProductController extends Controller
         }
 
         try {
-            $product = Product::create($validated);
+            DB::beginTransaction();
+
+            // Remove fields that don't belong to products table
+            $productData = $validated;
+            unset($productData['barcode'], $productData['quantity'], $productData['occasion'], $productData['color']);
+
+            $product = Product::create($productData);
+            $product->refresh();
+
+            if (!$product || !$product->productid) {
+                DB::rollBack();
+                throw new \Exception('Failed to create product. Product ID is missing.');
+            }
+
+            $storeId = 1; // Default store ID
+
+            // Save color to productsfilter
+            if ($request->has('color') && $request->color) {
+                DB::table('productsfilter')->insert([
+                    'fkproductid' => $product->productid,
+                    'fkfiltervalueid' => $request->color,
+                    'filtercode' => 'color',
+                    'qty' => 0,
+                    'fkstoreid' => $storeId,
+                    'barcode' => $request->barcode ?? null,
+                ]);
+            }
+
+            // Save occasion to productsfilter
+            if ($request->has('occasion') && $request->occasion) {
+                DB::table('productsfilter')->insert([
+                    'fkproductid' => $product->productid,
+                    'fkfiltervalueid' => $request->occasion,
+                    'filtercode' => 'occassion',
+                    'qty' => $request->quantity ?? 0,
+                    'fkstoreid' => $storeId,
+                    'barcode' => $request->barcode ?? null,
+                ]);
+            }
+
+            DB::commit();
 
             if ($request->ajax() || $request->expectsJson()) {
                 return response()->json([
                     'success' => true,
                     'message' => 'Gift product created successfully',
-                    'data' => $product
+                    'data' => $product,
+                    'redirect' => route('admin.gift-products')
                 ]);
             }
 
@@ -278,6 +381,8 @@ class GiftProductController extends Controller
 
             return back()->withErrors([$errorField => $errorMessage])->withInput();
         } catch (\Exception $e) {
+            DB::rollBack();
+
             Log::error('Gift product creation error: ' . $e->getMessage());
 
             if ($request->ajax() || $request->expectsJson()) {
@@ -312,15 +417,39 @@ class GiftProductController extends Controller
         $product = Product::where('isgift', 1)->findOrFail($id);
         $categories = Category::orderBy('category')->get();
 
+        // Get colors (filtervalues where fkfilterid = 2)
+        $colors = DB::table('filtervalues')
+            ->where('fkfilterid', 2)
+            ->orderBy('displayorder')
+            ->orderBy('filtervalue')
+            ->get(['filtervalueid', 'filtervalue', 'filtervalueAR']);
+
+        // Get occasions
+        $occasions = \App\Models\Occassion::where('ispublished', 1)
+            ->orderBy('occassion')
+            ->get(['occassionid', 'occassion', 'occassionAR']);
+
+        // Get product filters (color, occasion)
+        $productFilters = DB::table('productsfilter')
+            ->where('fkproductid', $id)
+            ->get()
+            ->groupBy('filtercode');
+
         // Return JSON for AJAX modal requests
         if ($request->ajax() || $request->expectsJson()) {
             return response()->json([
                 'success' => true,
-                'html' => view('admin.gift-products.partials.gift-product-form', ['product' => $product, 'categories' => $categories])->render(),
+                'html' => view('admin.gift-products.partials.gift-product-form', [
+                    'product' => $product,
+                    'categories' => $categories,
+                    'colors' => $colors,
+                    'occasions' => $occasions,
+                    'productFilters' => $productFilters
+                ])->render(),
             ]);
         }
 
-        return view('admin.gift-products.edit', compact('product', 'categories'));
+        return view('admin.gift-products.edit', compact('product', 'categories', 'colors', 'occasions', 'productFilters'));
     }
 
     public function update(Request $request, $id)
@@ -410,7 +539,6 @@ class GiftProductController extends Controller
         }
 
         $validated = $request->validate([
-            'fkcategoryid' => 'required|integer|exists:category,categoryid',
             'title' => [
                 'required',
                 'string',
@@ -429,13 +557,13 @@ class GiftProductController extends Controller
                 'max:255',
                 Rule::unique('products', 'productcode')->ignore($product->productid, 'productid')
             ],
-            'shortdescr' => 'required|string|max:1800',
-            'shortdescrAR' => 'required|string|max:1800',
+            'shortdescr' => 'nullable|string|max:1800',
+            'shortdescrAR' => 'nullable|string|max:1800',
             'longdescr' => 'nullable|string',
             'longdescrAR' => 'nullable|string',
             'price' => 'required|numeric|min:0',
             'discount' => 'nullable|numeric|min:0',
-            'sellingprice' => 'required|numeric|min:0',
+            'sellingprice' => 'nullable|numeric|min:0',
             'metatitle' => 'nullable|string|max:500',
             'metatitleAR' => 'nullable|string|max:500',
             'metakeyword' => 'nullable|string|max:1000',
@@ -447,38 +575,83 @@ class GiftProductController extends Controller
             'photo3' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:10240',
             'photo4' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:10240',
             'photo5' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:10240',
-            'video' => 'nullable|string|max:500',
-            'videoposter' => 'nullable|string|max:500',
-            'ispublished' => 'nullable',
-            'isnew' => 'nullable',
-            'ispopular' => 'nullable',
-            'internation_ship' => 'nullable',
             'productcategoryid' => 'nullable|integer',
             'productcategoryid2' => 'nullable|integer',
             'productcategoryid3' => 'nullable|integer',
+            'subcategory1' => 'nullable|integer',
+            'subcategory2' => 'nullable|integer',
+            'subcategory3' => 'nullable|integer',
+            'barcode' => 'nullable|string|max:255',
+            'quantity' => 'nullable|integer|min:0',
+            'occasion' => 'nullable|integer|exists:occassion,occassionid',
+            'color' => 'nullable|integer|exists:filtervalues,filtervalueid',
         ], [
-            'fkcategoryid.required' => 'Category is required.',
-            'fkcategoryid.exists' => 'Selected category does not exist.',
             'title.required' => 'Product title (EN) is required.',
             'title.unique' => 'This product title (EN) already exists.',
             'titleAR.required' => 'Product title (AR) is required.',
             'titleAR.unique' => 'This product title (AR) already exists.',
             'productcode.required' => 'Product code is required.',
             'productcode.unique' => 'This product code already exists.',
-            'shortdescr.required' => 'Short description (EN) is required.',
-            'shortdescrAR.required' => 'Short description (AR) is required.',
             'price.required' => 'Price is required.',
-            'sellingprice.required' => 'Selling price is required.',
         ]);
 
         // Handle boolean fields - Gift products always have isgift = 1
-        $validated['ispublished'] = $request->has('ispublished') ? 1 : 0;
-        $validated['isnew'] = $request->has('isnew') ? 1 : 0;
-        $validated['ispopular'] = $request->has('ispopular') ? 1 : 0;
+        $validated['ispublished'] = 1; // Default to published
+        $validated['isnew'] = 0;
+        $validated['ispopular'] = 0;
         $validated['isgift'] = 1; // Always set to 1 for gift products
-        $validated['internation_ship'] = $request->has('internation_ship') ? 1 : 0;
+        $validated['internation_ship'] = 0;
         $validated['discount'] = $validated['discount'] ?? 0;
-        $validated['updatedby'] = auth()->id() ?? 1;
+
+        // Use productcategoryid as main category (fkcategoryid) if provided
+        $validated['fkcategoryid'] = $request->input('productcategoryid') ?? (isset($product) && $product ? $product->fkcategoryid : 0);
+
+        // Handle subcategories - map subcategory1 to productcategoryid2, subcategory2 to productcategoryid3, subcategory3 to productcategoryid4
+        if ($request->has('subcategory1') && $request->subcategory1) {
+            $validated['productcategoryid2'] = $request->subcategory1;
+        } elseif ($request->has('productcategoryid2') && $request->productcategoryid2) {
+            $validated['productcategoryid2'] = $request->productcategoryid2;
+        } else {
+            $validated['productcategoryid2'] = (isset($product) && $product) ? ($product->productcategoryid2 ?? 0) : 0;
+        }
+
+        if ($request->has('subcategory2') && $request->subcategory2) {
+            $validated['productcategoryid3'] = $request->subcategory2;
+        } elseif ($request->has('productcategoryid3') && $request->productcategoryid3) {
+            $validated['productcategoryid3'] = $request->productcategoryid3;
+        } else {
+            $validated['productcategoryid3'] = (isset($product) && $product) ? ($product->productcategoryid3 ?? 0) : 0;
+        }
+
+        // productcategoryid4 is not in the form, so keep existing or set to 0
+        $validated['productcategoryid4'] = (isset($product) && $product) ? ($product->productcategoryid4 ?? 0) : 0;
+
+        // Handle shortdescr - set to empty string if not provided (NOT NULL constraint)
+        $validated['shortdescr'] = $validated['shortdescr'] ?? '';
+        $validated['shortdescrAR'] = $validated['shortdescrAR'] ?? '';
+
+        // Handle longdescr - set to empty string if not provided (NOT NULL constraint)
+        $validated['longdescr'] = $validated['longdescr'] ?? '';
+        $validated['longdescrAR'] = $validated['longdescrAR'] ?? '';
+
+        // Handle metatitle - set to empty string if not provided (NOT NULL constraint)
+        $validated['metatitle'] = $validated['metatitle'] ?? '';
+        $validated['metatitleAR'] = $validated['metatitleAR'] ?? '';
+        $validated['metakeyword'] = $validated['metakeyword'] ?? '';
+        $validated['metakeywordAR'] = $validated['metakeywordAR'] ?? '';
+        $validated['metadescr'] = $validated['metadescr'] ?? '';
+        $validated['metadescrAR'] = $validated['metadescrAR'] ?? '';
+
+        // Handle photo fields - keep existing if not uploading new one
+        for ($i = 1; $i <= 5; $i++) {
+            if (!isset($validated["photo{$i}"]) && isset($product) && $product) {
+                $validated["photo{$i}"] = $product->{"photo{$i}"} ?? '';
+            } elseif (!isset($validated["photo{$i}"])) {
+                $validated["photo{$i}"] = '';
+            }
+        }
+
+        $validated['updatedby'] = Auth::check() ? Auth::id() : 1;
         $validated['updateddate'] = now();
 
         // Handle file uploads - check all possible ways files might be accessible
@@ -500,13 +673,54 @@ class GiftProductController extends Controller
         }
 
         try {
-            $product->update($validated);
+            DB::beginTransaction();
+
+            // Remove fields that don't belong to products table
+            $productData = $validated;
+            unset($productData['barcode'], $productData['quantity'], $productData['occasion'], $productData['color']);
+
+            $product->update($productData);
+
+            // Delete existing color and occasion filters
+            DB::table('productsfilter')
+                ->where('fkproductid', $product->productid)
+                ->whereIn('filtercode', ['color', 'occassion'])
+                ->delete();
+
+            $storeId = 1; // Default store ID
+
+            // Save color to productsfilter
+            if ($request->has('color') && $request->color) {
+                DB::table('productsfilter')->insert([
+                    'fkproductid' => $product->productid,
+                    'fkfiltervalueid' => $request->color,
+                    'filtercode' => 'color',
+                    'qty' => 0,
+                    'fkstoreid' => $storeId,
+                    'barcode' => $request->barcode ?? null,
+                ]);
+            }
+
+            // Save occasion to productsfilter
+            if ($request->has('occasion') && $request->occasion) {
+                DB::table('productsfilter')->insert([
+                    'fkproductid' => $product->productid,
+                    'fkfiltervalueid' => $request->occasion,
+                    'filtercode' => 'occassion',
+                    'qty' => $request->quantity ?? 0,
+                    'fkstoreid' => $storeId,
+                    'barcode' => $request->barcode ?? null,
+                ]);
+            }
+
+            DB::commit();
 
             if ($request->ajax() || $request->expectsJson()) {
                 return response()->json([
                     'success' => true,
                     'message' => 'Gift product updated successfully',
-                    'data' => $product
+                    'data' => $product,
+                    'redirect' => route('admin.gift-products')
                 ]);
             }
 

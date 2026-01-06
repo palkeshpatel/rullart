@@ -7,6 +7,8 @@ use App\Models\Product;
 use App\Models\Category;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
 use App\Traits\ImageUploadTrait;
 use Illuminate\Http\UploadedFile;
@@ -172,8 +174,8 @@ class GiftProduct4Controller extends Controller
                 'max:255',
                 Rule::unique('products', 'productcode')
             ],
-            'shortdescr' => 'required|string|max:1800',
-            'shortdescrAR' => 'required|string|max:1800',
+            'shortdescr' => 'nullable|string|max:1800',
+            'shortdescrAR' => 'nullable|string|max:1800',
             'longdescr' => 'nullable|string',
             'longdescrAR' => 'nullable|string',
             'price' => 'required|numeric|min:0',
@@ -209,8 +211,6 @@ class GiftProduct4Controller extends Controller
             'titleAR.unique' => 'This product title (AR) already exists.',
             'productcode.required' => 'Product code is required.',
             'productcode.unique' => 'This product code already exists.',
-            'shortdescr.required' => 'Short description (EN) is required.',
-            'shortdescrAR.required' => 'Short description (AR) is required.',
             'price.required' => 'Price is required.',
             'sellingprice.required' => 'Selling price is required.',
             'productcategoryid4.required' => 'Gift Product Category 4 is required.',
@@ -224,7 +224,7 @@ class GiftProduct4Controller extends Controller
         $validated['isgift'] = 0; // Gift Products 4 are identified by productcategoryid4, not isgift flag
         $validated['internation_ship'] = $request->has('internation_ship') ? 1 : 0;
         $validated['discount'] = $validated['discount'] ?? 0;
-        $validated['updatedby'] = auth()->id() ?? 1;
+        $validated['updatedby'] = Auth::check() ? Auth::id() : 1;
         $validated['updateddate'] = now();
 
         // Handle file uploads (photo1-5) using trait
@@ -237,13 +237,54 @@ class GiftProduct4Controller extends Controller
         }
 
         try {
-            $product = Product::create($validated);
+            DB::beginTransaction();
+            
+            // Remove fields that don't belong to products table
+            $productData = $validated;
+            unset($productData['barcode'], $productData['quantity'], $productData['occasion'], $productData['color']);
+            
+            $product = Product::create($productData);
+            $product->refresh();
+            
+            if (!$product || !$product->productid) {
+                DB::rollBack();
+                throw new \Exception('Failed to create product. Product ID is missing.');
+            }
+            
+            $storeId = 1; // Default store ID
+            
+            // Save color to productsfilter
+            if ($request->has('color') && $request->color) {
+                DB::table('productsfilter')->insert([
+                    'fkproductid' => $product->productid,
+                    'fkfiltervalueid' => $request->color,
+                    'filtercode' => 'color',
+                    'qty' => 0,
+                    'fkstoreid' => $storeId,
+                    'barcode' => $request->barcode ?? null,
+                ]);
+            }
+            
+            // Save occasion to productsfilter
+            if ($request->has('occasion') && $request->occasion) {
+                DB::table('productsfilter')->insert([
+                    'fkproductid' => $product->productid,
+                    'fkfiltervalueid' => $request->occasion,
+                    'filtercode' => 'occassion',
+                    'qty' => $request->quantity ?? 0,
+                    'fkstoreid' => $storeId,
+                    'barcode' => $request->barcode ?? null,
+                ]);
+            }
+            
+            DB::commit();
 
             if ($request->ajax() || $request->expectsJson()) {
                 return response()->json([
                     'success' => true,
                     'message' => 'Gift Product 4 created successfully',
-                    'data' => $product
+                    'data' => $product,
+                    'redirect' => route('admin.gift-products4')
                 ]);
             }
 
@@ -319,16 +360,41 @@ class GiftProduct4Controller extends Controller
             ->where('productcategoryid4', '>', 0)
             ->findOrFail($id);
         $categories = Category::orderBy('category')->get();
+        
+        // Get colors (filtervalues where fkfilterid = 2)
+        $colors = DB::table('filtervalues')
+            ->where('fkfilterid', 2)
+            ->where('ispublished', 1)
+            ->orderBy('displayorder')
+            ->orderBy('filtervalue')
+            ->get(['filtervalueid', 'filtervalue', 'filtervalueAR']);
+        
+        // Get occasions
+        $occasions = \App\Models\Occassion::where('ispublished', 1)
+            ->orderBy('occassion')
+            ->get(['occassionid', 'occassion', 'occassionAR']);
+        
+        // Get product filters (color, occasion)
+        $productFilters = DB::table('productsfilter')
+            ->where('fkproductid', $id)
+            ->get()
+            ->groupBy('filtercode');
 
         // Return JSON for AJAX modal requests
         if ($request->ajax() || $request->expectsJson()) {
             return response()->json([
                 'success' => true,
-                'html' => view('admin.gift-products4.partials.gift-product4-form', ['product' => $product, 'categories' => $categories])->render(),
+                'html' => view('admin.gift-products4.partials.gift-product4-form', [
+                    'product' => $product, 
+                    'categories' => $categories,
+                    'colors' => $colors,
+                    'occasions' => $occasions,
+                    'productFilters' => $productFilters
+                ])->render(),
             ]);
         }
 
-        return view('admin.gift-products4.edit', compact('product', 'categories'));
+        return view('admin.gift-products4.edit', compact('product', 'categories', 'colors', 'occasions', 'productFilters'));
     }
 
     public function update(Request $request, $id)
@@ -430,8 +496,8 @@ class GiftProduct4Controller extends Controller
                 'max:255',
                 Rule::unique('products', 'productcode')->ignore($product->productid, 'productid')
             ],
-            'shortdescr' => 'required|string|max:1800',
-            'shortdescrAR' => 'required|string|max:1800',
+            'shortdescr' => 'nullable|string|max:1800',
+            'shortdescrAR' => 'nullable|string|max:1800',
             'longdescr' => 'nullable|string',
             'longdescrAR' => 'nullable|string',
             'price' => 'required|numeric|min:0',
@@ -467,8 +533,6 @@ class GiftProduct4Controller extends Controller
             'titleAR.unique' => 'This product title (AR) already exists.',
             'productcode.required' => 'Product code is required.',
             'productcode.unique' => 'This product code already exists.',
-            'shortdescr.required' => 'Short description (EN) is required.',
-            'shortdescrAR.required' => 'Short description (AR) is required.',
             'price.required' => 'Price is required.',
             'sellingprice.required' => 'Selling price is required.',
             'productcategoryid4.required' => 'Gift Product Category 4 is required.',
@@ -482,7 +546,7 @@ class GiftProduct4Controller extends Controller
         $validated['isgift'] = 0; // Gift Products 4 are identified by productcategoryid4, not isgift flag
         $validated['internation_ship'] = $request->has('internation_ship') ? 1 : 0;
         $validated['discount'] = $validated['discount'] ?? 0;
-        $validated['updatedby'] = auth()->id() ?? 1;
+        $validated['updatedby'] = Auth::check() ? Auth::id() : 1;
         $validated['updateddate'] = now();
 
         // Handle file uploads
@@ -501,19 +565,62 @@ class GiftProduct4Controller extends Controller
         }
 
         try {
-            $product->update($validated);
+            DB::beginTransaction();
+            
+            // Remove fields that don't belong to products table
+            $productData = $validated;
+            unset($productData['barcode'], $productData['quantity'], $productData['occasion'], $productData['color']);
+            
+            $product->update($productData);
+            
+            // Delete existing color and occasion filters
+            DB::table('productsfilter')
+                ->where('fkproductid', $product->productid)
+                ->whereIn('filtercode', ['color', 'occassion'])
+                ->delete();
+            
+            $storeId = 1; // Default store ID
+            
+            // Save color to productsfilter
+            if ($request->has('color') && $request->color) {
+                DB::table('productsfilter')->insert([
+                    'fkproductid' => $product->productid,
+                    'fkfiltervalueid' => $request->color,
+                    'filtercode' => 'color',
+                    'qty' => 0,
+                    'fkstoreid' => $storeId,
+                    'barcode' => $request->barcode ?? null,
+                ]);
+            }
+            
+            // Save occasion to productsfilter
+            if ($request->has('occasion') && $request->occasion) {
+                DB::table('productsfilter')->insert([
+                    'fkproductid' => $product->productid,
+                    'fkfiltervalueid' => $request->occasion,
+                    'filtercode' => 'occassion',
+                    'qty' => $request->quantity ?? 0,
+                    'fkstoreid' => $storeId,
+                    'barcode' => $request->barcode ?? null,
+                ]);
+            }
+            
+            DB::commit();
 
             if ($request->ajax() || $request->expectsJson()) {
                 return response()->json([
                     'success' => true,
                     'message' => 'Gift Product 4 updated successfully',
-                    'data' => $product
+                    'data' => $product,
+                    'redirect' => route('admin.gift-products4')
                 ]);
             }
 
             return redirect()->route('admin.gift-products4')
                 ->with('success', 'Gift Product 4 updated successfully');
         } catch (\Illuminate\Database\QueryException $e) {
+            DB::rollBack();
+            
             $errorMessage = 'An error occurred while updating the gift product 4.';
             $errorField = 'productcode';
 
@@ -545,6 +652,8 @@ class GiftProduct4Controller extends Controller
 
             return back()->withErrors([$errorField => $errorMessage])->withInput();
         } catch (\Exception $e) {
+            DB::rollBack();
+            
             Log::error('Gift product 4 update error: ' . $e->getMessage());
 
             if ($request->ajax() || $request->expectsJson()) {
