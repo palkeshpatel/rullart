@@ -13,13 +13,11 @@ class DiscountController extends Controller
 {
     public function index(Request $request)
     {
-        // Check if this is a DataTables request
-        if ($request->has('draw')) {
-            return $this->getDataTablesData($request);
-        }
-
-        // Return view for initial page load
-        return view('admin.masters.discounts');
+        // Get the first (or only) discount record, or null if none exists
+        $discount = Discount::orderBy('id', 'desc')->first();
+        
+        // Return view with discount data (or null if no discount exists)
+        return view('admin.masters.discounts', compact('discount'));
     }
 
     /**
@@ -112,32 +110,42 @@ class DiscountController extends Controller
 
     public function store(Request $request)
     {
+        // Check if discount already exists - if so, update it instead of creating new
+        $existingDiscount = Discount::orderBy('id', 'desc')->first();
+        
         $validated = $request->validate([
             'rate' => 'required|numeric|min:0|max:100',
-            'startdate' => 'nullable|date',
-            'enddate' => 'nullable|date|after_or_equal:startdate',
-            'days' => 'nullable|integer|min:0',
+            'enddate' => 'nullable|date',
             'isactive' => 'nullable',
         ], [
-            'rate.required' => 'Discount Rate is required.',
-            'rate.max' => 'Discount Rate cannot exceed 100%.',
+            'rate.required' => 'Discount Percentage is required.',
+            'rate.max' => 'Discount Percentage cannot exceed 100%.',
         ]);
 
         $validated['isactive'] = $request->has('isactive') ? 1 : 0;
 
         try {
-            $discount = Discount::create($validated);
+            if ($existingDiscount) {
+                // Update existing discount
+                $existingDiscount->update($validated);
+                $discount = $existingDiscount;
+                $message = 'Discount updated successfully';
+            } else {
+                // Create new discount
+                $discount = Discount::create($validated);
+                $message = 'Discount created successfully';
+            }
 
             if ($request->ajax() || $request->expectsJson()) {
                 return response()->json([
                     'success' => true,
-                    'message' => 'Discount created successfully',
+                    'message' => $message,
                     'data' => $discount
                 ]);
             }
 
             return redirect()->route('admin.discounts')
-                ->with('success', 'Discount created successfully');
+                ->with('success', $message);
         } catch (\Illuminate\Database\QueryException $e) {
             $errorMessage = 'An error occurred while saving the discount.';
 

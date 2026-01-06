@@ -162,12 +162,16 @@
                             if (!loadingModal) {
                                 $('body').append(loaderHtml());
                                 const modalEl = document.getElementById('couponDataTableLoader');
-                                loadingModal = new bootstrap.Modal(modalEl, {
-                                    backdrop: 'static',
-                                    keyboard: false
-                                });
+                                if (modalEl) {
+                                    loadingModal = new bootstrap.Modal(modalEl, {
+                                        backdrop: 'static',
+                                        keyboard: false
+                                    });
+                                }
                             }
-                            loadingModal.show();
+                            if (loadingModal) {
+                                loadingModal.show();
+                            }
                         }
                         
                         function hideLoader() {
@@ -368,27 +372,47 @@
                             cleanupModals();
                             const url = couponBaseUrl + '/' + couponId;
                             $('#couponCodeViewModalContainer').html(loaderHtml());
-                            const loadingModal = new bootstrap.Modal($('#couponModal')[0], {
-                                backdrop: 'static',
-                                keyboard: false
-                            });
-                            loadingModal.show();
+                            
+                            const loadingModalEl = document.getElementById('couponModal');
+                            let loadingModal = null;
+                            if (loadingModalEl) {
+                                loadingModal = new bootstrap.Modal(loadingModalEl, {
+                                    backdrop: 'static',
+                                    keyboard: false
+                                });
+                                loadingModal.show();
+                            }
 
                             AdminAjax.get(url).then(response => {
-                                loadingModal.hide();
+                                if (loadingModal) {
+                                    loadingModal.hide();
+                                }
                                 cleanupModals();
-                                $('#couponCodeViewModalContainer').html(response.html);
-                                const modalEl = document.getElementById('couponCodeViewModal');
-                                const modal = new bootstrap.Modal(modalEl);
-                                modal.show();
+                                if (response && response.html) {
+                                    $('#couponCodeViewModalContainer').html(response.html);
+                                    const modalEl = document.getElementById('couponCodeViewModal');
+                                    if (modalEl) {
+                                        const modal = new bootstrap.Modal(modalEl);
+                                        modal.show();
 
-                                modalEl.addEventListener('hidden.bs.modal', function() {
-                                    cleanupModals();
-                                }, { once: true });
+                                        modalEl.addEventListener('hidden.bs.modal', function() {
+                                            cleanupModals();
+                                        }, { once: true });
+                                    } else {
+                                        console.error('Coupon view modal element not found');
+                                        showToast('Failed to load coupon code details', 'error');
+                                    }
+                                } else {
+                                    console.error('Invalid response:', response);
+                                    showToast('Failed to load coupon code details', 'error');
+                                }
                             }).catch(err => {
-                                loadingModal.hide();
+                                if (loadingModal) {
+                                    loadingModal.hide();
+                                }
                                 cleanupModals();
-                                AdminAjax.showError('Failed to load coupon code details.');
+                                console.error('Error loading coupon view:', err);
+                                showToast('Failed to load coupon code details: ' + (err.message || 'Unknown error'), 'error');
                             });
                         }
 
@@ -396,24 +420,51 @@
                             cleanupModals();
                             const url = couponId ? couponBaseUrl + '/' + couponId + '/edit' : couponBaseUrl + '/create';
                             $('#couponCodeModalContainer').html(loaderHtml());
-                            const loadingModal = new bootstrap.Modal($('#couponModal')[0], {
-                                backdrop: 'static',
-                                keyboard: false
-                            });
-                            loadingModal.show();
+                            
+                            // Wait a bit for DOM to update before creating modal
+                            setTimeout(function() {
+                                const loadingModalEl = document.getElementById('couponModal');
+                                let loadingModal = null;
+                                if (loadingModalEl) {
+                                    loadingModal = new bootstrap.Modal(loadingModalEl, {
+                                        backdrop: 'static',
+                                        keyboard: false
+                                    });
+                                    loadingModal.show();
+                                }
 
-                            AdminAjax.get(url).then(response => {
-                                loadingModal.hide();
-                                cleanupModals();
-                                $('#couponCodeModalContainer').html(response.html);
-                                const modalEl = document.getElementById('couponCodeModal');
-                                const modal = new bootstrap.Modal(modalEl);
-                                modal.show();
-                                setupCouponValidation(couponId, modal);
-                            }).catch(err => {
-                                loadingModal.hide();
-                                cleanupModals();
-                            });
+                                AdminAjax.get(url).then(response => {
+                                    if (loadingModal) {
+                                        loadingModal.hide();
+                                    }
+                                    cleanupModals();
+                                    if (response && response.html) {
+                                        $('#couponCodeModalContainer').html(response.html);
+                                        // Wait for DOM to update
+                                        setTimeout(function() {
+                                            const modalEl = document.getElementById('couponCodeModal');
+                                            if (modalEl) {
+                                                const modal = new bootstrap.Modal(modalEl);
+                                                modal.show();
+                                                setupCouponValidation(couponId, modal);
+                                            } else {
+                                                console.error('Coupon modal element not found');
+                                                showToast('Failed to load coupon form', 'error');
+                                            }
+                                        }, 100);
+                                    } else {
+                                        console.error('Invalid response:', response);
+                                        showToast('Failed to load coupon form', 'error');
+                                    }
+                                }).catch(err => {
+                                    if (loadingModal) {
+                                        loadingModal.hide();
+                                    }
+                                    cleanupModals();
+                                    console.error('Error loading coupon form:', err);
+                                    showToast('Failed to load coupon form: ' + (err.message || 'Unknown error'), 'error');
+                                });
+                            }, 100);
                         }
 
                         function setupCouponValidation(couponId, modal) {
@@ -424,12 +475,18 @@
 
                             $form.validate({
                                 rules: {
-                                    couponcode: { required: true },
-                                    couponvalue: { required: true }
+                                    couponcode: { 
+                                        required: true 
+                                    },
+                                    couponvalue: { 
+                                        required: true,
+                                        number: true,
+                                        min: 0
+                                    }
                                 },
                                 messages: {
                                     couponcode: 'Coupon Code is required.',
-                                    couponvalue: 'Coupon Value is required.'
+                                    couponvalue: 'Coupon value (%) is required and must be a valid number.'
                                 },
                                 errorElement: 'div',
                                 errorClass: 'invalid-feedback',

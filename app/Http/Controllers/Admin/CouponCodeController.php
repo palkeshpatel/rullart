@@ -67,13 +67,20 @@ class CouponCodeController extends Controller
                 $data[] = [
                     'couponcodeid' => $coupon->couponcodeid ?? '',
                     'couponcode' => $coupon->couponcode ?? '',
-                    'couponvalue' => $coupon->couponvalue ?? '',
+                    'couponvalue' => $coupon->couponvalue ?? '0',
                     'startdate' => $coupon->startdate ? \Carbon\Carbon::parse($coupon->startdate)->format('d-M-Y') : 'N/A',
                     'enddate' => $coupon->enddate ? \Carbon\Carbon::parse($coupon->enddate)->format('d-M-Y') : 'N/A',
                     'isactive' => $coupon->isactive ? 'Yes' : 'No',
-                    'action' => $coupon->couponcodeid
+                    'action' => $coupon->couponcodeid ?? ''
                 ];
             }
+            
+            \Log::info('CouponCode DataTables Response', [
+                'totalRecords' => $totalRecords,
+                'filteredAfterSearch' => $filteredAfterSearch,
+                'dataCount' => count($data),
+                'data' => $data
+            ]);
 
             return response()->json([
                 'draw' => intval($request->input('draw')),
@@ -95,15 +102,35 @@ class CouponCodeController extends Controller
 
     public function create(Request $request)
     {
+        // Get coupon types from coupontype table
+        $couponTypes = \DB::table('coupontype')->orderBy('coupontype')->get(['coupontypeid', 'coupontype']);
+        
+        // Get categories for dropdown
+        $categories = \App\Models\Category::where('ispublished', 1)->orderBy('category')->get(['categoryid', 'category']);
+        
         // Return JSON for AJAX modal requests
-        if ($request->ajax() || $request->expectsJson()) {
-            return response()->json([
-                'success' => true,
-                'html' => view('admin.masters.partials.coupon.coupon-code-form', ['couponCode' => null])->render(),
-            ]);
+        if ($request->ajax() || $request->expectsJson() || $request->header('X-Requested-With') === 'XMLHttpRequest') {
+            try {
+                $html = view('admin.masters.partials.coupon.coupon-code-form', [
+                    'couponCode' => null,
+                    'couponTypes' => $couponTypes ?? collect(),
+                    'categories' => $categories ?? collect()
+                ])->render();
+                
+                return response()->json([
+                    'success' => true,
+                    'html' => $html
+                ]);
+            } catch (\Exception $e) {
+                \Log::error('Error rendering coupon form: ' . $e->getMessage());
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Error loading form: ' . $e->getMessage()
+                ], 500);
+            }
         }
 
-        return view('admin.masters.coupon-code-create');
+        return view('admin.masters.coupon-code-create', compact('couponTypes', 'categories'));
     }
 
     public function store(Request $request)
@@ -133,6 +160,14 @@ class CouponCodeController extends Controller
         $validated['isactive'] = $request->has('isactive') ? 1 : 0;
         $validated['ismultiuse'] = $request->has('ismultiuse') ? 1 : 0;
         $validated['isgeneral'] = $request->has('isgeneral') ? 1 : 0;
+        
+        // Set coupontype text from selected coupon type if not provided
+        if (empty($validated['coupontype']) && !empty($validated['fkcoupontypeid'])) {
+            $couponType = \DB::table('coupontype')->where('coupontypeid', $validated['fkcoupontypeid'])->first();
+            if ($couponType) {
+                $validated['coupontype'] = $couponType->coupontype;
+            }
+        }
 
         try {
             $couponCode = CouponCode::create($validated);
@@ -185,16 +220,36 @@ class CouponCodeController extends Controller
     public function edit(Request $request, $id)
     {
         $couponCode = CouponCode::findOrFail($id);
+        
+        // Get coupon types from coupontype table
+        $couponTypes = \DB::table('coupontype')->orderBy('coupontype')->get(['coupontypeid', 'coupontype']);
+        
+        // Get categories for dropdown
+        $categories = \App\Models\Category::where('ispublished', 1)->orderBy('category')->get(['categoryid', 'category']);
 
         // Return JSON for AJAX modal requests
-        if ($request->ajax() || $request->expectsJson()) {
-            return response()->json([
-                'success' => true,
-                'html' => view('admin.masters.partials.coupon.coupon-code-form', compact('couponCode'))->render(),
-            ]);
+        if ($request->ajax() || $request->expectsJson() || $request->header('X-Requested-With') === 'XMLHttpRequest') {
+            try {
+                $html = view('admin.masters.partials.coupon.coupon-code-form', [
+                    'couponCode' => $couponCode,
+                    'couponTypes' => $couponTypes ?? collect(),
+                    'categories' => $categories ?? collect()
+                ])->render();
+                
+                return response()->json([
+                    'success' => true,
+                    'html' => $html
+                ]);
+            } catch (\Exception $e) {
+                \Log::error('Error rendering coupon form: ' . $e->getMessage());
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Error loading form: ' . $e->getMessage()
+                ], 500);
+            }
         }
 
-        return view('admin.masters.coupon-code-edit', compact('couponCode'));
+        return view('admin.masters.coupon-code-edit', compact('couponCode', 'couponTypes', 'categories'));
     }
 
     public function update(Request $request, $id)
@@ -260,6 +315,14 @@ class CouponCodeController extends Controller
         $validated['isactive'] = $request->has('isactive') ? 1 : 0;
         $validated['ismultiuse'] = $request->has('ismultiuse') ? 1 : 0;
         $validated['isgeneral'] = $request->has('isgeneral') ? 1 : 0;
+        
+        // Set coupontype text from selected coupon type if not provided
+        if (empty($validated['coupontype']) && !empty($validated['fkcoupontypeid'])) {
+            $couponType = \DB::table('coupontype')->where('coupontypeid', $validated['fkcoupontypeid'])->first();
+            if ($couponType) {
+                $validated['coupontype'] = $couponType->coupontype;
+            }
+        }
 
         try {
             $couponCode->update($validated);

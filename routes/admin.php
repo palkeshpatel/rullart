@@ -165,12 +165,7 @@ Route::middleware(['admin'])->prefix('admin')->name('admin.')->group(function ()
     Route::delete('coupon-code/{id}', [\App\Http\Controllers\Admin\CouponCodeController::class, 'destroy'])->name('coupon-code.destroy');
     
     Route::get('discounts', [\App\Http\Controllers\Admin\DiscountController::class, 'index'])->name('discounts');
-    Route::get('discounts/create', [\App\Http\Controllers\Admin\DiscountController::class, 'create'])->name('discounts.create');
     Route::post('discounts', [\App\Http\Controllers\Admin\DiscountController::class, 'store'])->name('discounts.store');
-    Route::get('discounts/{id}', [\App\Http\Controllers\Admin\DiscountController::class, 'show'])->name('discounts.show');
-    Route::get('discounts/{id}/edit', [\App\Http\Controllers\Admin\DiscountController::class, 'edit'])->name('discounts.edit');
-    Route::put('discounts/{id}', [\App\Http\Controllers\Admin\DiscountController::class, 'update'])->name('discounts.update');
-    Route::delete('discounts/{id}', [\App\Http\Controllers\Admin\DiscountController::class, 'destroy'])->name('discounts.destroy');
     
     Route::get('messages', [\App\Http\Controllers\Admin\GiftMessageController::class, 'index'])->name('messages');
     Route::get('messages/create', [\App\Http\Controllers\Admin\GiftMessageController::class, 'create'])->name('messages.create');
