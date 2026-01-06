@@ -16,7 +16,7 @@
                 @endif
                 <div class="modal-body">
                     <div class="row">
-                        <div class="col-md-6">
+                        <div class="col-md-4">
                             <div class="mb-3">
                                 <label class="form-label">Category (EN) <span class="text-danger">*</span></label>
                                 <input type="text" name="category" class="form-control" placeholder="Category Name"
@@ -24,7 +24,7 @@
                                 <div class="invalid-feedback"></div>
                             </div>
                         </div>
-                        <div class="col-md-6">
+                        <div class="col-md-4">
                             <div class="mb-3">
                                 <label class="form-label">Category (AR) <span class="text-danger">*</span></label>
                                 <input type="text" name="categoryAR" class="form-control" placeholder="Category Name"
@@ -32,21 +32,10 @@
                                 <div class="invalid-feedback"></div>
                             </div>
                         </div>
-                    </div>
-                    <div class="row">
-                        <div class="col-md-6">
+                        <div class="col-md-4">
                             <div class="mb-3">
-                                <label class="form-label">Category Code <span class="text-danger">*</span></label>
-                                <input type="text" name="categorycode" class="form-control"
-                                    value="{{ old('categorycode', $category ? $category->categorycode : '') }}"
-                                    required>
-                                <div class="invalid-feedback"></div>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label class="form-label">Parent Category <span class="text-danger">*</span></label>
-                                <select name="parentid" class="form-select" required>
+                                <label class="form-label">Parent Category</label>
+                                <select name="parentid" class="form-select">
                                     <option value="">--PARENT--</option>
                                     <option value="0"
                                         {{ old('parentid', $category ? $category->parentid ?? 0 : '') == 0 ? 'selected' : '' }}>

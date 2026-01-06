@@ -160,13 +160,7 @@ class CategoryController extends Controller
         $validated = $request->validate([
             'category' => 'required|string|max:255',
             'categoryAR' => 'required|string|max:255',
-            'categorycode' => [
-                'required',
-                'string',
-                'max:255',
-                Rule::unique('category', 'categorycode')
-            ],
-            'parentid' => 'required|integer',
+            'parentid' => 'nullable|integer',
             'metatitle' => 'nullable|string|max:500',
             'metatitleAR' => 'nullable|string|max:500',
             'metakeyword' => 'nullable|string|max:1000',
@@ -181,9 +175,6 @@ class CategoryController extends Controller
         ], [
             'category.required' => 'Category name (EN) is required.',
             'categoryAR.required' => 'Category name (AR) is required.',
-            'categorycode.required' => 'Category code is required.',
-            'categorycode.unique' => 'This category code already exists. Please choose a different code.',
-            'parentid.required' => 'Parent category is required.',
             'parentid.integer' => 'Parent category must be a valid selection.',
             'photo.image' => 'Desktop photo must be an image.',
             'photo.max' => 'Desktop photo must not exceed 10MB.',
@@ -191,6 +182,47 @@ class CategoryController extends Controller
             'photo_mobile.max' => 'Mobile photo must not exceed 10MB.',
         ]);
 
+        // Generate categorycode from category name (EN)
+        // Remove special characters, convert to lowercase, replace spaces with hyphens
+        $categoryName = trim($validated['category']);
+        $baseCode = strtolower($categoryName);
+        
+        // Remove Arabic and special characters, keep only alphanumeric and spaces
+        $baseCode = preg_replace('/[^\p{L}\p{N}\s]+/u', '', $baseCode);
+        
+        // Replace spaces and multiple spaces with single hyphen
+        $baseCode = preg_replace('/\s+/', '-', $baseCode);
+        
+        // Remove leading/trailing hyphens
+        $baseCode = trim($baseCode, '-');
+        
+        // If still empty (e.g., only Arabic characters), use transliteration or fallback
+        if (empty($baseCode)) {
+            // Try to create a code from category name using transliteration
+            $baseCode = strtolower(preg_replace('/[^a-z0-9]+/i', '-', $categoryName));
+            $baseCode = trim($baseCode, '-');
+            
+            // If still empty, use timestamp-based fallback
+            if (empty($baseCode)) {
+                $baseCode = 'category-' . time();
+            }
+        }
+        
+        // Ensure categorycode is unique
+        $categorycode = $baseCode;
+        $counter = 1;
+        while (Category::where('categorycode', $categorycode)->exists()) {
+            $categorycode = $baseCode . '-' . $counter;
+            $counter++;
+        }
+        
+        $validated['categorycode'] = $categorycode;
+        
+        // Set default parentid if not provided
+        if (empty($validated['parentid'])) {
+            $validated['parentid'] = 0;
+        }
+        
         // Validate parentid exists if not 0
         if ($validated['parentid'] != 0) {
             $parentExists = Category::where('categoryid', $validated['parentid'])->exists();
@@ -436,13 +468,7 @@ class CategoryController extends Controller
         $validated = $request->validate([
             'category' => 'required|string|max:255',
             'categoryAR' => 'required|string|max:255',
-            'categorycode' => [
-                'required',
-                'string',
-                'max:255',
-                Rule::unique('category', 'categorycode')->ignore($category->categoryid, 'categoryid')
-            ],
-            'parentid' => 'required|integer',
+            'parentid' => 'nullable|integer',
             'metatitle' => 'nullable|string|max:500',
             'metatitleAR' => 'nullable|string|max:500',
             'metakeyword' => 'nullable|string|max:1000',
@@ -457,9 +483,6 @@ class CategoryController extends Controller
         ], [
             'category.required' => 'Category name (EN) is required.',
             'categoryAR.required' => 'Category name (AR) is required.',
-            'categorycode.required' => 'Category code is required.',
-            'categorycode.unique' => 'This category code already exists. Please choose a different code.',
-            'parentid.required' => 'Parent category is required.',
             'parentid.integer' => 'Parent category must be a valid selection.',
             'photo.image' => 'Desktop photo must be an image.',
             'photo.max' => 'Desktop photo must not exceed 10MB.',
@@ -467,6 +490,48 @@ class CategoryController extends Controller
             'photo_mobile.max' => 'Mobile photo must not exceed 10MB.',
         ]);
 
+        // For update: Only regenerate categorycode if category name changed
+        if ($category->category !== $validated['category']) {
+            // Generate categorycode from category name (EN)
+            $categoryName = trim($validated['category']);
+            $baseCode = strtolower($categoryName);
+            
+            // Remove Arabic and special characters, keep only alphanumeric and spaces
+            $baseCode = preg_replace('/[^\p{L}\p{N}\s]+/u', '', $baseCode);
+            
+            // Replace spaces and multiple spaces with single hyphen
+            $baseCode = preg_replace('/\s+/', '-', $baseCode);
+            
+            // Remove leading/trailing hyphens
+            $baseCode = trim($baseCode, '-');
+            
+            // If still empty, use transliteration or fallback
+            if (empty($baseCode)) {
+                $baseCode = strtolower(preg_replace('/[^a-z0-9]+/i', '-', $categoryName));
+                $baseCode = trim($baseCode, '-');
+                
+                if (empty($baseCode)) {
+                    $baseCode = 'category-' . time();
+                }
+            }
+            
+            // Ensure categorycode is unique (excluding current category)
+            $categorycode = $baseCode;
+            $counter = 1;
+            while (Category::where('categorycode', $categorycode)->where('categoryid', '!=', $category->categoryid)->exists()) {
+                $categorycode = $baseCode . '-' . $counter;
+                $counter++;
+            }
+            
+            $validated['categorycode'] = $categorycode;
+        }
+        // If category name didn't change, keep existing categorycode (don't include it in validated)
+        
+        // Set default parentid if not provided
+        if (empty($validated['parentid'])) {
+            $validated['parentid'] = 0;
+        }
+        
         // Validate parentid exists if not 0
         if ($validated['parentid'] != 0) {
             $parentExists = Category::where('categoryid', $validated['parentid'])->exists();

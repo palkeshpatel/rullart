@@ -404,19 +404,11 @@
                                     },
                                     categoryAR: {
                                         required: true
-                                    },
-                                    parentid: {
-                                        required: true
-                                    },
-                                    categorycode: {
-                                        required: true
                                     }
                                 },
                                 messages: {
                                     category: 'Category name (EN) is required.',
-                                    categoryAR: 'Category name (AR) is required.',
-                                    categorycode: 'Category code is required.',
-                                    parentid: 'Parent category is required.'
+                                    categoryAR: 'Category name (AR) is required.'
                                 },
                                 errorElement: 'div',
                                 errorClass: 'invalid-feedback',
