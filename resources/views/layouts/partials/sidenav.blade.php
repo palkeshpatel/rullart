@@ -168,7 +168,7 @@
                         </li>
                         <li class="side-nav-item">
                             <a href="{{ route('admin.gift-products') }}"
-                                class="side-nav-link {{ request()->routeIs('admin.gift-products*') ? 'active' : '' }}">
+                                class="side-nav-link {{ request()->routeIs('admin.gift-products*') && !request()->routeIs('admin.gift-products4*') ? 'active' : '' }}">
                                 <span class="menu-text">Gift Product</span>
                             </a>
                         </li>
