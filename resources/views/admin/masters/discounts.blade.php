@@ -9,10 +9,6 @@
                 <div class="card-body">
                     <form id="discountForm" method="POST" action="{{ route('admin.discounts.store') }}" novalidate>
                         @csrf
-                        @if($discount)
-                            @method('PUT')
-                            <input type="hidden" name="discount_id" value="{{ $discount->id }}">
-                        @endif
                         
                         <div class="row">
                             <div class="col-md-6">
@@ -107,21 +103,14 @@
             function submitDiscountForm(form) {
                 const formData = new FormData(form);
                 const url = form.action;
-                const method = form.querySelector('[name="_method"]')?.value || 'POST';
+                const method = 'POST';
                 const submitBtn = form.querySelector('button[type="submit"]');
                 const originalText = submitBtn.innerHTML;
                 submitBtn.disabled = true;
                 submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Saving...';
                 
-                // Update URL if editing
-                @if($discount)
-                    const updateUrl = '{{ route("admin.discounts.update", $discount->id) }}';
-                @else
-                    const updateUrl = url;
-                @endif
-                
                 $.ajax({
-                    url: @if($discount) updateUrl @else url @endif,
+                    url: url,
                     method: method,
                     data: formData,
                     processData: false,
