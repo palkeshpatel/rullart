@@ -42,10 +42,12 @@
                         <table id="returnRequestsTable" class="table table-bordered table-striped table-hover" style="width:100%">
                             <thead>
                                 <tr>
-                                    <th>Order No</th>
-                                    <th>Name</th>
+                                    <th>First Name</th>
+                                    <th>Last Name</th>
                                     <th>Email</th>
+                                    <th>Order No</th>
                                     <th>Mobile</th>
+                                    <th>Reason</th>
                                     <th>Submit Date</th>
                                     <th>Action</th>
                                 </tr>
@@ -193,6 +195,18 @@
                                 }
                             },
                             columns: [{
+                                    data: 'firstname',
+                                    name: 'firstname'
+                                },
+                                {
+                                    data: 'lastname',
+                                    name: 'lastname'
+                                },
+                                {
+                                    data: 'email',
+                                    name: 'email'
+                                },
+                                {
                                     data: 'orderno',
                                     name: 'orderno',
                                     render: function(data) {
@@ -200,16 +214,15 @@
                                     }
                                 },
                                 {
-                                    data: 'name',
-                                    name: 'name'
-                                },
-                                {
-                                    data: 'email',
-                                    name: 'email'
-                                },
-                                {
                                     data: 'mobile',
                                     name: 'mobile'
+                                },
+                                {
+                                    data: 'reason',
+                                    name: 'reason',
+                                    render: function(data) {
+                                        return '<div class="text-truncate" style="max-width: 200px;" title="' + (data || 'N/A') + '">' + (data || 'N/A') + '</div>';
+                                    }
                                 },
                                 {
                                     data: 'submiton',
@@ -231,7 +244,7 @@
                             ],
                             pageLength: 25,
                             lengthMenu: [[25, 50, 100], [25, 50, 100]],
-                            order: [[4, 'desc']],
+                            order: [[6, 'desc']],
                             language: {
                                 processing: '<div class="spinner-border spinner-border-sm" role="status"><span class="visually-hidden">Loading...</span></div>',
                                 emptyTable: "No return requests found",
@@ -240,11 +253,11 @@
                             responsive: true,
                             columnDefs: [{
                                     responsivePriority: 1,
-                                    targets: [0, 1, 5]
+                                    targets: [0, 1, 7]
                                 },
                                 {
                                     responsivePriority: 2,
-                                    targets: [2, 3, 4]
+                                    targets: [2, 3, 4, 5, 6]
                                 }
                             ]
                         });
@@ -273,19 +286,23 @@
                                 
                                 AdminAjax.request(returnRequestBaseUrl + '/' + deleteReturnRequestId, 'DELETE')
                                     .then(res => {
-                                        bootstrap.Modal.getInstance(document.getElementById('deleteReturnRequestModal')).hide();
-                                        showToast('Return request deleted successfully', 'success');
-                                        
-                                        showLoader();
-                                        table.ajax.reload(function() {
-                                            hideLoader();
-                                            const newTotalPages = table.page.info().pages;
-                                            if (currentPage >= newTotalPages && newTotalPages > 0) {
-                                                table.page(newTotalPages - 1).draw('page');
-                                            } else {
-                                                table.page(currentPage).draw('page');
-                                            }
-                                        }, false);
+                                        if (res.success) {
+                                            bootstrap.Modal.getInstance(document.getElementById('deleteReturnRequestModal')).hide();
+                                            showToast(res.message || 'Return request deleted successfully', 'success');
+                                            
+                                            showLoader();
+                                            table.ajax.reload(function() {
+                                                hideLoader();
+                                                const newTotalPages = table.page.info().pages;
+                                                if (currentPage >= newTotalPages && newTotalPages > 0) {
+                                                    table.page(newTotalPages - 1).draw('page');
+                                                } else {
+                                                    table.page(currentPage).draw('page');
+                                                }
+                                            }, false);
+                                        } else {
+                                            showToast(res.message || 'Failed to delete return request.', 'error');
+                                        }
                                     })
                                     .catch(err => {
                                         showToast(err.message || 'Failed to delete return request.', 'error');

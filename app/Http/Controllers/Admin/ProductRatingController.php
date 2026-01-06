@@ -25,8 +25,8 @@ class ProductRatingController extends Controller
     private function getDataTablesData(Request $request)
     {
         try {
-            $query = ProductRating::with(['product', 'customer']);
-            $filteredCountQuery = ProductRating::with(['product', 'customer']);
+            $query = ProductRating::with(['product']);
+            $filteredCountQuery = ProductRating::with(['product']);
 
             // Get total records count
             $totalRecords = ProductRating::count();
@@ -49,21 +49,15 @@ class ProductRatingController extends Controller
             $searchValue = $request->input('search.value', '');
             if (!empty($searchValue)) {
                 $query->where(function($q) use ($searchValue) {
-                    $q->whereHas('customer', function($customerQuery) use ($searchValue) {
-                        $customerQuery->where('firstname', 'like', "%{$searchValue}%")
-                          ->orWhere('lastname', 'like', "%{$searchValue}%");
-                    })->orWhereHas('product', function($productQuery) use ($searchValue) {
+                    $q->whereHas('product', function($productQuery) use ($searchValue) {
                         $productQuery->where('title', 'like', "%{$searchValue}%");
-                    });
+                    })->orWhere('review', 'like', "%{$searchValue}%");
                 });
 
                 $filteredCountQuery->where(function($q) use ($searchValue) {
-                    $q->whereHas('customer', function($customerQuery) use ($searchValue) {
-                        $customerQuery->where('firstname', 'like', "%{$searchValue}%")
-                          ->orWhere('lastname', 'like', "%{$searchValue}%");
-                    })->orWhereHas('product', function($productQuery) use ($searchValue) {
+                    $q->whereHas('product', function($productQuery) use ($searchValue) {
                         $productQuery->where('title', 'like', "%{$searchValue}%");
-                    });
+                    })->orWhere('review', 'like', "%{$searchValue}%");
                 });
             }
 
@@ -86,13 +80,11 @@ class ProductRatingController extends Controller
             $data = [];
             $ratingBaseUrl = url('/admin/productrate');
             foreach ($ratings as $rating) {
-                $customerName = $rating->customer ? trim(($rating->customer->firstname ?? '') . ' ' . ($rating->customer->lastname ?? '')) : 'N/A';
                 $data[] = [
                     'product' => [
                         'title' => $rating->product ? $rating->product->title : 'N/A',
                         'photo' => $rating->product ? $rating->product->photo : null
                     ],
-                    'customer' => $customerName ?: 'N/A',
                     'rate' => $rating->rate ?? 0,
                     'review' => $rating->review ?? 'No review',
                     'submiton' => $rating->submiton ? \Carbon\Carbon::parse($rating->submiton)->format('d/M/Y H:i') : 'N/A',
@@ -188,5 +180,81 @@ class ProductRatingController extends Controller
         };
 
         return Response::stream($callback, 200, $headers_array);
+    }
+
+    public function edit($id)
+    {
+        try {
+            $rating = ProductRating::with(['product'])->findOrFail($id);
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'rateid' => $rating->rateid,
+                    'rate' => $rating->rate,
+                    'review' => $rating->review,
+                    'ispublished' => $rating->ispublished,
+                    'product_title' => $rating->product ? $rating->product->title : 'N/A'
+                ]
+            ]);
+        } catch (Exception $e) {
+            Log::error('ProductRating Edit Error: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Rating not found.'
+            ], 404);
+        }
+    }
+
+    public function update(Request $request, $id)
+    {
+        try {
+            $request->validate([
+                'rate' => 'required|integer|min:1|max:5',
+                'review' => 'nullable|string|max:1000',
+                'ispublished' => 'required|boolean'
+            ]);
+
+            $rating = ProductRating::findOrFail($id);
+            $rating->rate = $request->input('rate');
+            $rating->review = $request->input('review', '');
+            $rating->ispublished = $request->input('ispublished', 0);
+            $rating->save();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Rating updated successfully.'
+            ]);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation failed.',
+                'errors' => $e->errors()
+            ], 422);
+        } catch (Exception $e) {
+            Log::error('ProductRating Update Error: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to update rating.'
+            ], 500);
+        }
+    }
+
+    public function destroy($id)
+    {
+        try {
+            $rating = ProductRating::findOrFail($id);
+            $rating->delete();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Rating deleted successfully.'
+            ]);
+        } catch (Exception $e) {
+            Log::error('ProductRating Delete Error: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to delete rating.'
+            ], 500);
+        }
     }
 }

@@ -39,7 +39,8 @@ class ReturnRequestController extends Controller
                       ->orWhere('lastname', 'like', "%{$searchValue}%")
                       ->orWhere('email', 'like', "%{$searchValue}%")
                       ->orWhere('orderno', 'like', "%{$searchValue}%")
-                      ->orWhere('mobile', 'like', "%{$searchValue}%");
+                      ->orWhere('mobile', 'like', "%{$searchValue}%")
+                      ->orWhere('reason', 'like', "%{$searchValue}%");
                 });
 
                 $filteredCountQuery->where(function($q) use ($searchValue) {
@@ -47,7 +48,8 @@ class ReturnRequestController extends Controller
                       ->orWhere('lastname', 'like', "%{$searchValue}%")
                       ->orWhere('email', 'like', "%{$searchValue}%")
                       ->orWhere('orderno', 'like', "%{$searchValue}%")
-                      ->orWhere('mobile', 'like', "%{$searchValue}%");
+                      ->orWhere('mobile', 'like', "%{$searchValue}%")
+                      ->orWhere('reason', 'like', "%{$searchValue}%");
                 });
             }
 
@@ -71,10 +73,12 @@ class ReturnRequestController extends Controller
             $returnRequestBaseUrl = url('/admin/returnrequest');
             foreach ($returnRequests as $returnRequest) {
                 $data[] = [
-                    'orderno' => $returnRequest->orderno ?? 'N/A',
-                    'name' => trim(($returnRequest->firstname ?? '') . ' ' . ($returnRequest->lastname ?? '')),
+                    'firstname' => $returnRequest->firstname ?? 'N/A',
+                    'lastname' => $returnRequest->lastname ?? 'N/A',
                     'email' => $returnRequest->email ?? 'N/A',
+                    'orderno' => $returnRequest->orderno ?? 'N/A',
                     'mobile' => $returnRequest->mobile ?? 'N/A',
+                    'reason' => $returnRequest->reason ?? 'N/A',
                     'submiton' => $returnRequest->submiton ? \Carbon\Carbon::parse($returnRequest->submiton)->format('d/M/Y H:i') : 'N/A',
                     'action' => $returnRequest->requestid ?? $returnRequest->id // For action buttons
                 ];
@@ -160,5 +164,24 @@ class ReturnRequestController extends Controller
         };
 
         return Response::stream($callback, 200, $headers_array);
+    }
+
+    public function destroy($id)
+    {
+        try {
+            $returnRequest = ReturnRequest::findOrFail($id);
+            $returnRequest->delete();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Return request deleted successfully.'
+            ]);
+        } catch (Exception $e) {
+            Log::error('ReturnRequest Delete Error: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to delete return request.'
+            ], 500);
+        }
     }
 }

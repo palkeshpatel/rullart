@@ -71,7 +71,6 @@
                             <thead>
                                 <tr>
                                     <th>Product</th>
-                                    <th>Customer</th>
                                     <th>Rating</th>
                                     <th>Review</th>
                                     <th>Date</th>
@@ -84,6 +83,46 @@
                             </tbody>
                         </table>
                     </div>
+                </div>
+            </div>
+
+            <!-- Edit Rating Modal -->
+            <div class="modal fade" id="editRatingModal" tabindex="-1" aria-labelledby="editRatingModalLabel" aria-hidden="true">
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="editRatingModalLabel">Edit Review</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <form id="editRatingForm">
+                            @csrf
+                            @method('PUT')
+                            <div class="modal-body">
+                                <div class="mb-3">
+                                    <label for="editRating" class="form-label">Rating</label>
+                                    <input type="number" class="form-control" id="editRating" name="rate" min="1" max="5" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="editReview" class="form-label">Review</label>
+                                    <textarea class="form-control" id="editReview" name="review" rows="4"></textarea>
+                                </div>
+                                <div class="mb-3">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="editIsPublished" name="ispublished" value="1">
+                                        <label class="form-check-label" for="editIsPublished">
+                                            Is Published?
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                <button type="submit" class="btn btn-primary">Save</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
                 </div>
             </div>
         </div>
@@ -214,10 +253,6 @@
                                     }
                                 },
                                 {
-                                    data: 'customer',
-                                    name: 'customer'
-                                },
-                                {
                                     data: 'rate',
                                     name: 'rate',
                                     render: function(data) {
@@ -255,8 +290,8 @@
                                     searchable: false,
                                     render: function(data, type, row) {
                                         let html = '<div class="d-flex gap-1">';
-                                        html += '<a href="javascript:void(0);" class="btn btn-light btn-icon btn-sm rounded-circle view-rating-btn" data-rating-id="' + row.action + '" title="View">';
-                                        html += '<i class="ti ti-eye fs-lg"></i></a>';
+                                        html += '<a href="javascript:void(0);" class="btn btn-light btn-icon btn-sm rounded-circle edit-rating-btn" data-rating-id="' + row.action + '" title="Edit">';
+                                        html += '<i class="ti ti-edit fs-lg"></i></a>';
                                         html += '<a href="javascript:void(0);" class="btn btn-light btn-icon btn-sm rounded-circle delete-rating-btn" data-rating-id="' + row.action + '" title="Delete">';
                                         html += '<i class="ti ti-trash fs-lg"></i></a>';
                                         html += '</div>';
@@ -266,7 +301,7 @@
                             ],
                             pageLength: 25,
                             lengthMenu: [[25, 50, 100], [25, 50, 100]],
-                            order: [[4, 'desc']],
+                            order: [[3, 'desc']],
                             language: {
                                 processing: '<div class="spinner-border spinner-border-sm" role="status"><span class="visually-hidden">Loading...</span></div>',
                                 emptyTable: "No product reviews found",
@@ -275,11 +310,11 @@
                             responsive: true,
                             columnDefs: [{
                                     responsivePriority: 1,
-                                    targets: [0, 1, 6]
+                                    targets: [0, 5]
                                 },
                                 {
                                     responsivePriority: 2,
-                                    targets: [2, 3, 4, 5]
+                                    targets: [1, 2, 3, 4]
                                 }
                             ]
                         });
@@ -299,6 +334,72 @@
                             table.ajax.reload();
                         });
 
+                        // Edit Rating Modal
+                        const editModal = new bootstrap.Modal(document.getElementById('editRatingModal'));
+                        let currentRatingId = null;
+
+                        $(document).on('click', '.edit-rating-btn', function(e) {
+                            e.preventDefault();
+                            const ratingId = $(this).data('rating-id');
+                            currentRatingId = ratingId;
+
+                            // Fetch rating data
+                            AdminAjax.request(ratingBaseUrl + '/' + ratingId + '/edit', 'GET')
+                                .then(res => {
+                                    if (res.success && res.data) {
+                                        $('#editRating').val(res.data.rate);
+                                        $('#editReview').val(res.data.review || '');
+                                        $('#editIsPublished').prop('checked', res.data.ispublished == 1 || res.data.ispublished === true);
+                                        editModal.show();
+                                    } else {
+                                        showToast('Failed to load rating data.', 'error');
+                                    }
+                                })
+                                .catch(err => {
+                                    showToast(err.message || 'Failed to load rating data.', 'error');
+                                });
+                        });
+
+                        // Handle form submission
+                        $('#editRatingForm').on('submit', function(e) {
+                            e.preventDefault();
+                            
+                            if (!currentRatingId) {
+                                showToast('Rating ID not found.', 'error');
+                                return;
+                            }
+
+                            const formData = {
+                                _method: 'PUT',
+                                rate: $('#editRating').val(),
+                                review: $('#editReview').val(),
+                                ispublished: $('#editIsPublished').is(':checked') ? 1 : 0
+                            };
+
+                            AdminAjax.request(ratingBaseUrl + '/' + currentRatingId, 'PUT', formData)
+                                .then(res => {
+                                    if (res.success) {
+                                        showToast('Rating updated successfully', 'success');
+                                        editModal.hide();
+                                        showLoader();
+                                        table.ajax.reload(function() {
+                                            hideLoader();
+                                        }, false);
+                                    } else {
+                                        showToast(res.message || 'Failed to update rating.', 'error');
+                                    }
+                                })
+                                .catch(err => {
+                                    showToast(err.message || 'Failed to update rating.', 'error');
+                                });
+                        });
+
+                        // Reset form when modal is closed
+                        $('#editRatingModal').on('hidden.bs.modal', function() {
+                            currentRatingId = null;
+                            $('#editRatingForm')[0].reset();
+                        });
+
                         $(document).on('click', '.delete-rating-btn', function(e) {
                             e.preventDefault();
                             if (confirm('Are you sure you want to delete this rating?')) {
@@ -308,17 +409,21 @@
                                 
                                 AdminAjax.request(ratingBaseUrl + '/' + ratingId, 'DELETE')
                                     .then(res => {
-                                        showToast('Rating deleted successfully', 'success');
-                                        showLoader();
-                                        table.ajax.reload(function() {
-                                            hideLoader();
-                                            const newTotalPages = table.page.info().pages;
-                                            if (currentPage >= newTotalPages && newTotalPages > 0) {
-                                                table.page(newTotalPages - 1).draw('page');
-                                            } else {
-                                                table.page(currentPage).draw('page');
-                                            }
-                                        }, false);
+                                        if (res.success) {
+                                            showToast('Rating deleted successfully', 'success');
+                                            showLoader();
+                                            table.ajax.reload(function() {
+                                                hideLoader();
+                                                const newTotalPages = table.page.info().pages;
+                                                if (currentPage >= newTotalPages && newTotalPages > 0) {
+                                                    table.page(newTotalPages - 1).draw('page');
+                                                } else {
+                                                    table.page(currentPage).draw('page');
+                                                }
+                                            }, false);
+                                        } else {
+                                            showToast(res.message || 'Failed to delete rating.', 'error');
+                                        }
                                     })
                                     .catch(err => {
                                         showToast(err.message || 'Failed to delete rating.', 'error');

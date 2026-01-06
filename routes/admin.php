@@ -49,10 +49,14 @@ Route::middleware(['admin'])->prefix('admin')->name('admin.')->group(function ()
     Route::get('wishlist/export', [\App\Http\Controllers\Admin\WishlistController::class, 'export'])->name('wishlist.export');
     Route::get('productrate', [\App\Http\Controllers\Admin\ProductRatingController::class, 'index'])->name('product-rate');
     Route::get('productrate/export', [\App\Http\Controllers\Admin\ProductRatingController::class, 'export'])->name('product-rate.export');
+    Route::get('productrate/{id}/edit', [\App\Http\Controllers\Admin\ProductRatingController::class, 'edit'])->name('product-rate.edit');
+    Route::put('productrate/{id}', [\App\Http\Controllers\Admin\ProductRatingController::class, 'update'])->name('product-rate.update');
+    Route::delete('productrate/{id}', [\App\Http\Controllers\Admin\ProductRatingController::class, 'destroy'])->name('product-rate.destroy');
     Route::get('mobiledevice', [\App\Http\Controllers\Admin\MobileDeviceController::class, 'index'])->name('mobile-device');
     Route::get('mobiledevice/export', [\App\Http\Controllers\Admin\MobileDeviceController::class, 'export'])->name('mobile-device.export');
     Route::get('returnrequest', [\App\Http\Controllers\Admin\ReturnRequestController::class, 'index'])->name('return-request');
     Route::get('returnrequest/export', [\App\Http\Controllers\Admin\ReturnRequestController::class, 'export'])->name('return-request.export');
+    Route::delete('returnrequest/{id}', [\App\Http\Controllers\Admin\ReturnRequestController::class, 'destroy'])->name('return-request.destroy');
 
     // Manage Products
     Route::get('category', [\App\Http\Controllers\Admin\CategoryController::class, 'index'])->name('category');
