@@ -35,9 +35,10 @@ class CourierCompanyController extends Controller
             $filteredCountQuery = CourierCompany::query();
 
             // Filter by active status
-            if ($request->has('active') && $request->active !== '') {
-                $query->where('isactive', $request->active);
-                $filteredCountQuery->where('isactive', $request->active);
+            $activeFilter = $request->input('active');
+            if ($activeFilter !== null && $activeFilter !== '' && $activeFilter !== '--All--') {
+                $query->where('isactive', $activeFilter);
+                $filteredCountQuery->where('isactive', $activeFilter);
             }
 
             // DataTables search

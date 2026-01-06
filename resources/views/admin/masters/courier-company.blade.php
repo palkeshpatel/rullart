@@ -159,12 +159,16 @@
                             if (!loadingModal) {
                                 $('body').append(loaderHtml());
                                 const modalEl = document.getElementById('courierDataTableLoader');
-                                loadingModal = new bootstrap.Modal(modalEl, {
-                                    backdrop: 'static',
-                                    keyboard: false
-                                });
+                                if (modalEl) {
+                                    loadingModal = new bootstrap.Modal(modalEl, {
+                                        backdrop: 'static',
+                                        keyboard: false
+                                    });
+                                }
                             }
-                            loadingModal.show();
+                            if (loadingModal) {
+                                loadingModal.show();
+                            }
                         }
                         
                         function hideLoader() {
@@ -360,52 +364,115 @@
                             cleanupModals();
                             const url = courierBaseUrl + '/' + courierId;
                             $('#courierViewModalContainer').html(loaderHtml());
-                            const loadingModal = new bootstrap.Modal($('#courierModal')[0], {
-                                backdrop: 'static',
-                                keyboard: false
-                            });
-                            loadingModal.show();
+                            
+                            // Wait a bit for DOM to update before creating modal
+                            setTimeout(function() {
+                                const loadingModalEl = document.getElementById('courierModal');
+                                let loadingModal = null;
+                                if (loadingModalEl) {
+                                    loadingModal = new bootstrap.Modal(loadingModalEl, {
+                                        backdrop: 'static',
+                                        keyboard: false
+                                    });
+                                    loadingModal.show();
+                                }
 
-                            AdminAjax.get(url).then(response => {
-                                loadingModal.hide();
-                                cleanupModals();
-                                $('#courierViewModalContainer').html(response.html);
-                                const modalEl = document.getElementById('courierViewModal');
-                                const modal = new bootstrap.Modal(modalEl);
-                                modal.show();
-
-                                modalEl.addEventListener('hidden.bs.modal', function() {
+                                AdminAjax.get(url).then(response => {
+                                    if (loadingModal) {
+                                        loadingModal.hide();
+                                    }
                                     cleanupModals();
-                                }, { once: true });
-                            }).catch(err => {
-                                loadingModal.hide();
-                                cleanupModals();
-                                AdminAjax.showError('Failed to load courier company details.');
-                            });
+                                    if (response && response.html) {
+                                        $('#courierViewModalContainer').html(response.html);
+                                        // Wait for DOM to update
+                                        setTimeout(function() {
+                                            const modalEl = document.getElementById('courierViewModal');
+                                            if (modalEl) {
+                                                const modal = new bootstrap.Modal(modalEl);
+                                                modal.show();
+
+                                                modalEl.addEventListener('hidden.bs.modal', function() {
+                                                    cleanupModals();
+                                                }, { once: true });
+                                                
+                                                // Handle edit button click in view modal
+                                                $(modalEl).on('click', '.edit-courier-btn', function(e) {
+                                                    e.preventDefault();
+                                                    const editCourierId = $(this).data('courier-id');
+                                                    modal.hide();
+                                                    setTimeout(function() {
+                                                        openCourierFormModal(editCourierId);
+                                                    }, 300);
+                                                });
+                                            } else {
+                                                console.error('Courier view modal element not found');
+                                                showToast('Failed to load courier company details', 'error');
+                                            }
+                                        }, 100);
+                                    } else {
+                                        console.error('Invalid response:', response);
+                                        showToast('Failed to load courier company details', 'error');
+                                    }
+                                }).catch(err => {
+                                    if (loadingModal) {
+                                        loadingModal.hide();
+                                    }
+                                    cleanupModals();
+                                    console.error('Error loading courier company view:', err);
+                                    showToast('Failed to load courier company details: ' + (err.message || 'Unknown error'), 'error');
+                                });
+                            }, 100);
                         }
 
                         function openCourierFormModal(courierId = null) {
                             cleanupModals();
                             const url = courierId ? courierBaseUrl + '/' + courierId + '/edit' : courierBaseUrl + '/create';
                             $('#courierModalContainer').html(loaderHtml());
-                            const loadingModal = new bootstrap.Modal($('#courierModal')[0], {
-                                backdrop: 'static',
-                                keyboard: false
-                            });
-                            loadingModal.show();
+                            
+                            // Wait a bit for DOM to update before creating modal
+                            setTimeout(function() {
+                                const loadingModalEl = document.getElementById('courierModal');
+                                let loadingModal = null;
+                                if (loadingModalEl) {
+                                    loadingModal = new bootstrap.Modal(loadingModalEl, {
+                                        backdrop: 'static',
+                                        keyboard: false
+                                    });
+                                    loadingModal.show();
+                                }
 
-                            AdminAjax.get(url).then(response => {
-                                loadingModal.hide();
-                                cleanupModals();
-                                $('#courierModalContainer').html(response.html);
-                                const modalEl = document.getElementById('courierModal');
-                                const modal = new bootstrap.Modal(modalEl);
-                                modal.show();
-                                setupCourierValidation(courierId, modal);
-                            }).catch(err => {
-                                loadingModal.hide();
-                                cleanupModals();
-                            });
+                                AdminAjax.get(url).then(response => {
+                                    if (loadingModal) {
+                                        loadingModal.hide();
+                                    }
+                                    cleanupModals();
+                                    if (response && response.html) {
+                                        $('#courierModalContainer').html(response.html);
+                                        // Wait for DOM to update
+                                        setTimeout(function() {
+                                            const modalEl = document.getElementById('courierModal');
+                                            if (modalEl) {
+                                                const modal = new bootstrap.Modal(modalEl);
+                                                modal.show();
+                                                setupCourierValidation(courierId, modal);
+                                            } else {
+                                                console.error('Courier modal element not found');
+                                                showToast('Failed to load courier company form', 'error');
+                                            }
+                                        }, 100);
+                                    } else {
+                                        console.error('Invalid response:', response);
+                                        showToast('Failed to load courier company form', 'error');
+                                    }
+                                }).catch(err => {
+                                    if (loadingModal) {
+                                        loadingModal.hide();
+                                    }
+                                    cleanupModals();
+                                    console.error('Error loading courier company form:', err);
+                                    showToast('Failed to load courier company form: ' + (err.message || 'Unknown error'), 'error');
+                                });
+                            }, 100);
                         }
 
                         function setupCourierValidation(courierId, modal) {
@@ -416,10 +483,18 @@
 
                             $form.validate({
                                 rules: {
-                                    name: { required: true }
+                                    name: { 
+                                        required: true 
+                                    },
+                                    tracking_url: {
+                                        url: true
+                                    }
                                 },
                                 messages: {
-                                    name: 'Courier Company Name is required.'
+                                    name: 'Courier Company Name is required.',
+                                    tracking_url: {
+                                        url: 'Please enter a valid URL.'
+                                    }
                                 },
                                 errorElement: 'div',
                                 errorClass: 'invalid-feedback',
@@ -525,6 +600,17 @@
                                         <div class="modal-content">
                                             <div class="modal-body text-center p-4">
                                                 <div class="spinner-border"></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="modal fade" id="courierDataTableLoader" tabindex="-1" aria-hidden="true">
+                                    <div class="modal-dialog modal-dialog-centered">
+                                        <div class="modal-content border-0">
+                                            <div class="modal-body text-center p-4">
+                                                <div class="spinner-border text-primary" role="status">
+                                                    <span class="visually-hidden">Loading...</span>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>

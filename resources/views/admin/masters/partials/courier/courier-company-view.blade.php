@@ -1,8 +1,8 @@
-<div class="modal fade" id="courierCompanyViewModal" tabindex="-1" aria-labelledby="courierCompanyViewModalLabel" aria-hidden="true">
+<div class="modal fade" id="courierViewModal" tabindex="-1" aria-labelledby="courierViewModalLabel" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="courierCompanyViewModalLabel">Courier Company Details - {{ $courierCompany->name }}</h5>
+                <h5 class="modal-title" id="courierViewModalLabel">Courier Company Details - {{ $courierCompany->name }}</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
