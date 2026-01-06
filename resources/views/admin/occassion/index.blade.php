@@ -401,13 +401,11 @@
                             $form.validate({
                                 rules: {
                                     occassion: { required: true },
-                                    occassionAR: { required: true },
-                                    occassioncode: { required: true }
+                                    occassionAR: { required: true }
                                 },
                                 messages: {
                                     occassion: 'Occasion name (EN) is required.',
-                                    occassionAR: 'Occasion name (AR) is required.',
-                                    occassioncode: 'Occasion code is required.'
+                                    occassionAR: 'Occasion name (AR) is required.'
                                 },
                                 errorElement: 'div',
                                 errorClass: 'invalid-feedback',

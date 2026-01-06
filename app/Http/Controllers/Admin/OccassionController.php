@@ -44,14 +44,12 @@ class OccassionController extends Controller
             if (!empty($searchValue)) {
                 $query->where(function ($q) use ($searchValue) {
                     $q->where('occassion', 'like', "%{$searchValue}%")
-                        ->orWhere('occassionAR', 'like', "%{$searchValue}%")
-                        ->orWhere('occassioncode', 'like', "%{$searchValue}%");
+                        ->orWhere('occassionAR', 'like', "%{$searchValue}%");
                 });
 
                 $filteredCountQuery->where(function ($q) use ($searchValue) {
                     $q->where('occassion', 'like', "%{$searchValue}%")
-                        ->orWhere('occassionAR', 'like', "%{$searchValue}%")
-                        ->orWhere('occassioncode', 'like', "%{$searchValue}%");
+                        ->orWhere('occassionAR', 'like', "%{$searchValue}%");
                 });
             }
 
@@ -118,12 +116,6 @@ class OccassionController extends Controller
         $validated = $request->validate([
             'occassion' => 'required|string|max:255',
             'occassionAR' => 'required|string|max:255',
-            'occassioncode' => [
-                'required',
-                'string',
-                'max:255',
-                Rule::unique('occassion', 'occassioncode')
-            ],
             'metatitle' => 'nullable|string|max:500',
             'metatitleAR' => 'nullable|string|max:500',
             'metakeyword' => 'nullable|string|max:1000',
@@ -137,13 +129,44 @@ class OccassionController extends Controller
         ], [
             'occassion.required' => 'Occasion name (EN) is required.',
             'occassionAR.required' => 'Occasion name (AR) is required.',
-            'occassioncode.required' => 'Occasion code is required.',
-            'occassioncode.unique' => 'This occasion code already exists. Please choose a different code.',
             'photo.image' => 'Photo must be an image.',
             'photo.max' => 'Photo must not exceed 10MB.',
             'photo_mobile.image' => 'Mobile photo must be an image.',
             'photo_mobile.max' => 'Mobile photo must not exceed 10MB.',
         ]);
+
+        // Generate occasioncode from occasion name (EN)
+        $occasionName = trim($validated['occassion']);
+        $baseCode = strtolower($occasionName);
+        
+        // Remove Arabic and special characters, keep only alphanumeric and spaces
+        $baseCode = preg_replace('/[^\p{L}\p{N}\s]+/u', '', $baseCode);
+        
+        // Replace spaces and multiple spaces with single hyphen
+        $baseCode = preg_replace('/\s+/', '-', $baseCode);
+        
+        // Remove leading/trailing hyphens
+        $baseCode = trim($baseCode, '-');
+        
+        // If still empty, use transliteration or fallback
+        if (empty($baseCode)) {
+            $baseCode = strtolower(preg_replace('/[^a-z0-9]+/i', '-', $occasionName));
+            $baseCode = trim($baseCode, '-');
+            
+            if (empty($baseCode)) {
+                $baseCode = 'occasion-' . time();
+            }
+        }
+        
+        // Ensure occasioncode is unique
+        $occasioncode = $baseCode;
+        $counter = 1;
+        while (Occassion::where('occassioncode', $occasioncode)->exists()) {
+            $occasioncode = $baseCode . '-' . $counter;
+            $counter++;
+        }
+        
+        $validated['occassioncode'] = $occasioncode;
 
         // Handle boolean fields
         $validated['ispublished'] = $request->has('ispublished') ? 1 : 0;
@@ -152,10 +175,14 @@ class OccassionController extends Controller
         $validated['updateddate'] = now();
 
         // Handle file uploads using trait
+        // photo field is NOT NULL in database, so always set it (empty string if no file)
         if ($request->hasFile('photo')) {
             $validated['photo'] = $this->uploadImage($request->file('photo'), null, 'occassion');
+        } else {
+            $validated['photo'] = ''; // Set empty string if no photo uploaded (matching CI project)
         }
 
+        // photo_mobile can be NULL, so only set if file is uploaded
         if ($request->hasFile('photo_mobile')) {
             $validated['photo_mobile'] = $this->uploadImage($request->file('photo_mobile'), null, 'occassion');
         }
@@ -336,12 +363,6 @@ class OccassionController extends Controller
         $validated = $request->validate([
             'occassion' => 'required|string|max:255',
             'occassionAR' => 'required|string|max:255',
-            'occassioncode' => [
-                'required',
-                'string',
-                'max:255',
-                Rule::unique('occassion', 'occassioncode')->ignore($occassion->occassionid, 'occassionid')
-            ],
             'metatitle' => 'nullable|string|max:500',
             'metatitleAR' => 'nullable|string|max:500',
             'metakeyword' => 'nullable|string|max:1000',
@@ -355,13 +376,48 @@ class OccassionController extends Controller
         ], [
             'occassion.required' => 'Occasion name (EN) is required.',
             'occassionAR.required' => 'Occasion name (AR) is required.',
-            'occassioncode.required' => 'Occasion code is required.',
-            'occassioncode.unique' => 'This occasion code already exists. Please choose a different code.',
             'photo.image' => 'Photo must be an image.',
             'photo.max' => 'Photo must not exceed 10MB.',
             'photo_mobile.image' => 'Mobile photo must be an image.',
             'photo_mobile.max' => 'Mobile photo must not exceed 10MB.',
         ]);
+
+        // For update: Only regenerate occasioncode if occasion name changed
+        if ($occassion->occassion !== $validated['occassion']) {
+            // Generate occasioncode from occasion name (EN)
+            $occasionName = trim($validated['occassion']);
+            $baseCode = strtolower($occasionName);
+            
+            // Remove Arabic and special characters, keep only alphanumeric and spaces
+            $baseCode = preg_replace('/[^\p{L}\p{N}\s]+/u', '', $baseCode);
+            
+            // Replace spaces and multiple spaces with single hyphen
+            $baseCode = preg_replace('/\s+/', '-', $baseCode);
+            
+            // Remove leading/trailing hyphens
+            $baseCode = trim($baseCode, '-');
+            
+            // If still empty, use transliteration or fallback
+            if (empty($baseCode)) {
+                $baseCode = strtolower(preg_replace('/[^a-z0-9]+/i', '-', $occasionName));
+                $baseCode = trim($baseCode, '-');
+                
+                if (empty($baseCode)) {
+                    $baseCode = 'occasion-' . time();
+                }
+            }
+            
+            // Ensure occasioncode is unique (excluding current occasion)
+            $occasioncode = $baseCode;
+            $counter = 1;
+            while (Occassion::where('occassioncode', $occasioncode)->where('occassionid', '!=', $occassion->occassionid)->exists()) {
+                $occasioncode = $baseCode . '-' . $counter;
+                $counter++;
+            }
+            
+            $validated['occassioncode'] = $occasioncode;
+        }
+        // If occasion name didn't change, keep existing occasioncode
 
         // Handle boolean fields
         $validated['ispublished'] = $request->has('ispublished') ? 1 : 0;
@@ -382,11 +438,16 @@ class OccassionController extends Controller
         }
 
         // Upload photo if found
+        // photo field is NOT NULL in database, so always set it (empty string if no file)
         if ($photoFile && $photoFile->isValid()) {
             $validated['photo'] = $this->uploadImage($photoFile, $occassion->photo, 'occassion');
+        } else {
+            // If no new photo uploaded, keep existing photo or set empty string
+            $validated['photo'] = $occassion->photo ?? '';
         }
 
         // Upload photo_mobile if found
+        // photo_mobile can be NULL, so only update if file is uploaded
         if ($photoMobileFile && $photoMobileFile->isValid()) {
             $validated['photo_mobile'] = $this->uploadImage($photoMobileFile, $occassion->photo_mobile, 'occassion');
         }

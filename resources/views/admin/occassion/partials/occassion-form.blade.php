@@ -16,7 +16,7 @@
                 @endif
                 <div class="modal-body">
                     <div class="row">
-                        <div class="col-md-6">
+                        <div class="col-md-4">
                             <div class="mb-3">
                                 <label class="form-label">Occasion Name (EN) <span class="text-danger">*</span></label>
                                 <input type="text" name="occassion" class="form-control" placeholder="Occasion Name"
@@ -24,7 +24,7 @@
                                 <div class="invalid-feedback"></div>
                             </div>
                         </div>
-                        <div class="col-md-6">
+                        <div class="col-md-4">
                             <div class="mb-3">
                                 <label class="form-label">Occasion Name (AR) <span class="text-danger">*</span></label>
                                 <input type="text" name="occassionAR" class="form-control" placeholder="Occasion Name (AR)"
@@ -32,17 +32,7 @@
                                 <div class="invalid-feedback"></div>
                             </div>
                         </div>
-                    </div>
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label class="form-label">Occasion Code <span class="text-danger">*</span></label>
-                                <input type="text" name="occassioncode" class="form-control"
-                                    value="{{ old('occassioncode', $occassion ? $occassion->occassioncode : '') }}" required>
-                                <div class="invalid-feedback"></div>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
+                        <div class="col-md-4">
                             <div class="mb-3">
                                 <div class="form-check form-switch">
                                     <input class="form-check-input" type="checkbox" name="ispublished" value="1"
