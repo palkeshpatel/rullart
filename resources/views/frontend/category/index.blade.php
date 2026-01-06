@@ -93,10 +93,10 @@
         <div class="inside-header">
             <ol class="breadcrumb">
                 <li class="breadcrumb-item">
-                    <a href="{{ route('home', ['locale' => $locale]) }}">{{ __('Home') }}</a>
+                    <a href="{{ route('home', ['locale' => $locale]) }}">{{ trans('common.Home') }}</a>
                 </li>
                 @if (isset($isall) && $isall)
-                    <li class="breadcrumb-item active" dir="ltr">{{ __('All') }}</li>
+                    <li class="breadcrumb-item active" dir="ltr">{{ trans('common.All') }}</li>
                 @else
                     <li class="breadcrumb-item active" dir="ltr">{{ $categoryTitle }}</li>
                 @endif
@@ -105,24 +105,24 @@
             <h1>
                 <span>
                     <span class="before-icon"></span>
-                    {{ isset($isall) && $isall ? __('All') : $categoryTitle }}
+                    {{ isset($isall) && $isall ? trans('common.All') : $categoryTitle }}
                     <span class="after-icon"></span>
                 </span>
             </h1>
 
             @if ($productcnt >= 0)
                 <p class="results-num">
-                    {{ $productcnt }} {{ __('Results Found') }}</p>
+                    {{ $productcnt }} {{ trans('common.Results Found') }}</p>
 
                 <div
                     class="sort-by {{ !empty($collections['category']->category_description ?? '') ? 'sort-by-mobile-bottom' : '' }}">
                     <select class="cs" name="sortby" id="sortby">
-                        <option value="relevance" {{ $sortby == 'relevance' ? 'selected' : '' }}>{{ __('Relevance') }}
+                        <option value="relevance" {{ $sortby == 'relevance' ? 'selected' : '' }}>{{ trans('common.Relevance') }}
                         </option>
                         <option value="lowtohigh" {{ $sortby == 'lowtohigh' ? 'selected' : '' }}>
-                            {{ __('Price Low to High') }}</option>
+                            {{ trans('common.Price Low to High') }}</option>
                         <option value="hightolow" {{ $sortby == 'hightolow' ? 'selected' : '' }}>
-                            {{ __('Price High to Low') }}</option>
+                            {{ trans('common.Price High to Low') }}</option>
                     </select>
                 </div>
             @endif
@@ -140,7 +140,7 @@
                     @endif
 
                     <a class="btn filter-toggle hidden-lg hidden-md" href="javascript:;" id="filterToggle">
-                        <span class="icon-plus"></span>{{ __('Refine Results') }}
+                        <span class="icon-plus"></span>{{ trans('common.Refine Results') }}
                     </a>
 
                     <div class="row" style="display:flex; flex-wrap:wrap; clear: both;">
@@ -192,12 +192,25 @@
                                                     <span class="product-content">
                                                         <span class="product-title">{{ $productTitle }}</span>
                                                         <span class="product-price">
+                                                            @php
+                                                                // Translate currency code for Arabic locale
+                                                                $displayCurrency = $currencyCode;
+                                                                if ($locale == 'ar') {
+                                                                    $currencyTranslation = trans('common.' . $currencyCode, [], 'ar');
+                                                                    // If translation exists and is not the key itself, use it
+                                                                    if ($currencyTranslation != 'common.' . $currencyCode) {
+                                                                        $displayCurrency = $currencyTranslation;
+                                                                    } elseif ($currencyCode == 'KWD' || $currencyCode == 'KD') {
+                                                                        $displayCurrency = 'دك';
+                                                                    }
+                                                                }
+                                                            @endphp
                                                             @if ($discount > 0)
                                                                 <span class="standard-price">{{ number_format($price * $currencyRate, 0) }}
-                                                                    {{ $currencyCode }}</span>
+                                                                    {{ $displayCurrency }}</span>
                                                             @endif
                                                             <span class="actual-price">{{ number_format($finalPrice, 0) }}
-                                                                {{ $currencyCode }}</span>
+                                                                {{ $displayCurrency }}</span>
                                                         </span>
                                                     </span>
                                                     @if ($discount > 0)
@@ -211,7 +224,7 @@
                                                             class="product-discount">-{{ number_format($discountPercent, 0) }}%</span>
                                                     @endif
                                                     @if ($isSoldOut)
-                                                        <p class="sold-out">{{ __('SOLD OUT') }}</p>
+                                                        <p class="sold-out">{{ trans('common.SOLD OUT') }}</p>
                                                     @endif
                                                 </a>
                                             </div>
@@ -226,7 +239,7 @@
 
                                 <div class="catalog-footer {{ $showfooter }}">
                                     <a class="btn btn-load" href="#"
-                                        id="showall">{{ __('SHOW MORE PRODUCTS') }}</a>
+                                        id="showall">{{ trans('common.SHOW MORE PRODUCTS') }}</a>
                                 </div>
 
                                 @if (!empty($collections['category']->category_other_details_title ?? ''))

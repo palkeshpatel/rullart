@@ -163,14 +163,14 @@
                                 $('body').append(loaderHtml());
                                 const modalEl = document.getElementById('couponDataTableLoader');
                                 if (modalEl) {
-                                    loadingModal = new bootstrap.Modal(modalEl, {
-                                        backdrop: 'static',
-                                        keyboard: false
-                                    });
-                                }
+                                loadingModal = new bootstrap.Modal(modalEl, {
+                                    backdrop: 'static',
+                                    keyboard: false
+                                });
+                            }
                             }
                             if (loadingModal) {
-                                loadingModal.show();
+                            loadingModal.show();
                             }
                         }
                         
@@ -377,27 +377,27 @@
                             let loadingModal = null;
                             if (loadingModalEl) {
                                 loadingModal = new bootstrap.Modal(loadingModalEl, {
-                                    backdrop: 'static',
-                                    keyboard: false
-                                });
-                                loadingModal.show();
+                                backdrop: 'static',
+                                keyboard: false
+                            });
+                            loadingModal.show();
                             }
 
                             AdminAjax.get(url).then(response => {
                                 if (loadingModal) {
-                                    loadingModal.hide();
+                                loadingModal.hide();
                                 }
                                 cleanupModals();
                                 if (response && response.html) {
-                                    $('#couponCodeViewModalContainer').html(response.html);
-                                    const modalEl = document.getElementById('couponCodeViewModal');
+                                $('#couponCodeViewModalContainer').html(response.html);
+                                const modalEl = document.getElementById('couponCodeViewModal');
                                     if (modalEl) {
-                                        const modal = new bootstrap.Modal(modalEl);
-                                        modal.show();
+                                const modal = new bootstrap.Modal(modalEl);
+                                modal.show();
 
-                                        modalEl.addEventListener('hidden.bs.modal', function() {
-                                            cleanupModals();
-                                        }, { once: true });
+                                modalEl.addEventListener('hidden.bs.modal', function() {
+                                    cleanupModals();
+                                }, { once: true });
                                     } else {
                                         console.error('Coupon view modal element not found');
                                         showToast('Failed to load coupon code details', 'error');
@@ -408,7 +408,7 @@
                                 }
                             }).catch(err => {
                                 if (loadingModal) {
-                                    loadingModal.hide();
+                                loadingModal.hide();
                                 }
                                 cleanupModals();
                                 console.error('Error loading coupon view:', err);
@@ -427,26 +427,26 @@
                                 let loadingModal = null;
                                 if (loadingModalEl) {
                                     loadingModal = new bootstrap.Modal(loadingModalEl, {
-                                        backdrop: 'static',
-                                        keyboard: false
-                                    });
-                                    loadingModal.show();
+                                backdrop: 'static',
+                                keyboard: false
+                            });
+                            loadingModal.show();
                                 }
 
-                                AdminAjax.get(url).then(response => {
+                            AdminAjax.get(url).then(response => {
                                     if (loadingModal) {
-                                        loadingModal.hide();
+                                loadingModal.hide();
                                     }
-                                    cleanupModals();
+                                cleanupModals();
                                     if (response && response.html) {
-                                        $('#couponCodeModalContainer').html(response.html);
+                                $('#couponCodeModalContainer').html(response.html);
                                         // Wait for DOM to update
                                         setTimeout(function() {
-                                            const modalEl = document.getElementById('couponCodeModal');
+                                const modalEl = document.getElementById('couponCodeModal');
                                             if (modalEl) {
-                                                const modal = new bootstrap.Modal(modalEl);
-                                                modal.show();
-                                                setupCouponValidation(couponId, modal);
+                                const modal = new bootstrap.Modal(modalEl);
+                                modal.show();
+                                setupCouponValidation(couponId, modal);
                                             } else {
                                                 console.error('Coupon modal element not found');
                                                 showToast('Failed to load coupon form', 'error');
@@ -456,14 +456,14 @@
                                         console.error('Invalid response:', response);
                                         showToast('Failed to load coupon form', 'error');
                                     }
-                                }).catch(err => {
+                            }).catch(err => {
                                     if (loadingModal) {
-                                        loadingModal.hide();
+                                loadingModal.hide();
                                     }
-                                    cleanupModals();
+                                cleanupModals();
                                     console.error('Error loading coupon form:', err);
                                     showToast('Failed to load coupon form: ' + (err.message || 'Unknown error'), 'error');
-                                });
+                            });
                             }, 100);
                         }
 
@@ -523,7 +523,7 @@
                                     }, 1500);
                                     // Reload table after a short delay to ensure data is saved
                                     setTimeout(() => {
-                                        showLoader();
+                                    showLoader();
                                         table.ajax.reload(function(json) {
                                             hideLoader();
                                             console.log('Table reloaded, data:', json);

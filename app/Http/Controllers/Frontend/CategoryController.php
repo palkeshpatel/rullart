@@ -5,11 +5,20 @@ namespace App\Http\Controllers\Frontend;
 use App\Models\Category;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\App;
+use Illuminate\Support\Facades\Session;
 
 class CategoryController extends FrontendController
 {
     public function index($locale, $categoryCode)
     {
+        // Ensure locale is set correctly from URL segment
+        if (!in_array($locale, ['en', 'ar'])) {
+            $locale = $this->locale ?? 'en';
+        }
+        app()->setLocale($locale);
+        session(['locale' => $locale]);
+        
         $currentDb = config('database.connections.mysql.database');
         $currentPort = request()->getPort();
 
@@ -165,7 +174,15 @@ class CategoryController extends FrontendController
 
     public function whatsNew()
     {
-        $locale = app()->getLocale();
+        // Get locale from URL segment (most reliable) or session
+        $locale = request()->segment(1);
+        if (!in_array($locale, ['en', 'ar'])) {
+            $locale = session('locale', app()->getLocale() ?: 'en');
+        }
+        
+        // Ensure locale is set in application
+        app()->setLocale($locale);
+        session(['locale' => $locale]);
 
         // Get filter parameters
         $sortby = request()->get('sortby', 'relevance');
@@ -183,13 +200,14 @@ class CategoryController extends FrontendController
             }
 
             // Create dummy category object for "What's New"
+            $whatsNewTranslation = trans('common.Whats New', [], $locale);
             $categoryObj = (object)[
                 'categoryid' => 0,
                 'categorycode' => 'whatsnew',
-                'category' => __('What\'s New'),
-                'categoryAR' => __('What\'s New'),
-                'metatitle' => __('What\'s New'),
-                'metatitleAR' => __('What\'s New'),
+                'category' => $whatsNewTranslation,
+                'categoryAR' => $whatsNewTranslation,
+                'metatitle' => $whatsNewTranslation,
+                'metatitleAR' => $whatsNewTranslation,
                 'metakeyword' => '',
                 'metakeywordAR' => '',
                 'metadescr' => '',
@@ -199,7 +217,7 @@ class CategoryController extends FrontendController
 
             $collections['category'] = $categoryObj;
 
-            $metaTitle = __('What\'s New');
+            $metaTitle = $whatsNewTranslation;
             $metaDescription = '';
 
             // Prepare view data using helper method
@@ -223,7 +241,15 @@ class CategoryController extends FrontendController
 
     public function sale()
     {
-        $locale = app()->getLocale();
+        // Get locale from URL segment (most reliable) or session
+        $locale = request()->segment(1);
+        if (!in_array($locale, ['en', 'ar'])) {
+            $locale = session('locale', app()->getLocale() ?: 'en');
+        }
+        
+        // Ensure locale is set in application
+        app()->setLocale($locale);
+        session(['locale' => $locale]);
 
         // Get filter parameters
         $sortby = request()->get('sortby', 'relevance');
@@ -241,13 +267,14 @@ class CategoryController extends FrontendController
             }
 
             // Create dummy category object for "Sale"
+            $saleTranslation = trans('common.Sale', [], $locale);
             $categoryObj = (object)[
                 'categoryid' => 0,
                 'categorycode' => 'sale',
-                'category' => __('Sale'),
-                'categoryAR' => __('Sale'),
-                'metatitle' => __('Sale'),
-                'metatitleAR' => __('Sale'),
+                'category' => $saleTranslation,
+                'categoryAR' => $saleTranslation,
+                'metatitle' => $saleTranslation,
+                'metatitleAR' => $saleTranslation,
                 'metakeyword' => '',
                 'metakeywordAR' => '',
                 'metadescr' => '',
@@ -257,7 +284,7 @@ class CategoryController extends FrontendController
 
             $collections['category'] = $categoryObj;
 
-            $metaTitle = __('Sale');
+            $metaTitle = $saleTranslation;
             $metaDescription = '';
 
             // Prepare view data using helper method

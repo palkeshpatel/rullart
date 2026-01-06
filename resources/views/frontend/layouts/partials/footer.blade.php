@@ -23,7 +23,7 @@
                     <div id="ra-social" class="col-xs-7 col-sm-6 ra-social">
                         <ul class="list-unstyled clearfix">
                             <li class="lbl">
-                                {{ __('follow us') }}
+                                {{ trans('common.follow us') }}
                             </li>
                             <li>
                                 <a class="whatsapp" href="https://wa.me/96594495818?text=Rullart&amp;source=website" target="_blank">
@@ -71,16 +71,16 @@
                     <div class="col-sm-6 ra-footer-links">
                         <ul class="list-unstyled clearfix">
                             <li>
-                                <a href="{{ route('contact', ['locale' => $locale]) }}">{{ __('contact us') }}</a>
+                                <a href="{{ route('contact', ['locale' => $locale]) }}">{{ trans('common.contact us') }}</a>
                             </li>
                             <li>
-                                <a href="{{ route('shipping', ['locale' => $locale]) }}">{{ __('shipping') }}</a>
+                                <a href="{{ route('shipping', ['locale' => $locale]) }}">{{ trans('common.shipping') }}</a>
                             </li>
                             <li>
-                                <a href="{{ route('page.show', ['locale' => $locale, 'slug' => 'terms']) }}">{{ __('Privacy Policy') }}</a>
+                                <a href="{{ route('page.show', ['locale' => $locale, 'slug' => 'terms']) }}">{{ trans('common.Privacy Policy') }}</a>
                             </li>
                         </ul>
-                        <p>© {{ date('Y') }} rullart. {{ __('Designed & Developed by') }} <a target="_blank" href="https://www.uno-digital.com">UNO Digital</a></p>
+                        <p>© {{ date('Y') }} rullart. {{ trans('common.Designed & Developed by') }} <a target="_blank" href="https://www.uno-digital.com">UNO Digital</a></p>
                     </div>
 
                     <div class="col-sm-12 ra-app sm-visible">

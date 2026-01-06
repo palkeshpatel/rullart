@@ -132,7 +132,7 @@
                                             <span class="discount-badge">{{ round(($discount / $price) * 100) }}%</span>
                                         @endif
                                         @if ($isSoldOut)
-                                            <span class="sold-out-badge">{{ __('Sold Out') }}</span>
+                                            <span class="sold-out-badge">{{ trans('common.Sold Out') }}</span>
                                         @endif
                                     </div>
                                     <div class="product-info">

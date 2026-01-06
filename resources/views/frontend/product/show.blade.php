@@ -16,7 +16,7 @@
         <div class="inside-header">
             <ol class="breadcrumb">
                 <li class="breadcrumb-item">
-                    <a href="{{ route('home', ['locale' => $locale]) }}">{{ __('Home') }}</a>
+                    <a href="{{ route('home', ['locale' => $locale]) }}">{{ trans('common.Home') }}</a>
                 </li>
                 @if (!empty($parentcategory ?? ''))
                     <li class="breadcrumb-item product active">
@@ -115,13 +115,26 @@
                                 {!! nl2br(e($productData->shortdescr ?? '')) !!}
                             </p>
                             <p class="product-price">
+                                @php
+                                    // Translate currency code for Arabic locale
+                                    $displayCurrency = $currencyCode;
+                                    if ($locale == 'ar') {
+                                        $currencyTranslation = trans('common.' . $currencyCode, [], 'ar');
+                                        // If translation exists and is not the key itself, use it
+                                        if ($currencyTranslation != 'common.' . $currencyCode) {
+                                            $displayCurrency = $currencyTranslation;
+                                        } elseif ($currencyCode == 'KWD' || $currencyCode == 'KD') {
+                                            $displayCurrency = 'دك';
+                                        }
+                                    }
+                                @endphp
                                 @if ($discount > 0)
                                     <span
                                         class="standard-price">{{ number_format($productData->price * $currencyRate, 0) }}
-                                        {{ $currencyCode }}</span>
+                                        {{ $displayCurrency }}</span>
                                 @endif
                                 <span class="actual-price" id="price">{{ number_format($finalPrice, 0) }}
-                                    {{ $currencyCode }}</span>
+                                    {{ $displayCurrency }}</span>
                             </p>
 
                             {{-- Quantity and Size Selection --}}
@@ -186,9 +199,9 @@
                                             <input type="checkbox" name="giftoccasion"
                                                 class="giftoccasion">{{ __('Add Gift Message') }}
                                             @if ($giftMessageCharge > 0)
-                                                ({{ __('additional fee of') }}
+                                                ({{ trans('common.additional fee of') }}
                                                 {{ number_format($giftMessageCharge * $currencyRate, 0) }}
-                                                {{ $currencyCode }} {{ __('applies') }})
+                                                {{ $displayCurrency }} {{ trans('common.applies') }})
                                             @endif
                                         </label>
                                     </div>
@@ -255,7 +268,7 @@
                                                 </button>
                                             @else
                                                 <button id="addToCartSoldout" type="button"
-                                                    class="btn btn-primary disabled">{{ __('SOLD OUT') }}</button>
+                                                    class="btn btn-primary disabled">{{ trans('common.SOLD OUT') }}</button>
                                             @endif
                                         </div>
                                     @endif
@@ -364,6 +377,8 @@
                                     : $related->price;
                                 $relatedFinalPrice = $relatedPrice * $currencyRate;
                                 $relatedPhoto = $related->photo1 ?? '';
+                                // Use the same displayCurrency from main product
+                                $relatedDisplayCurrency = $displayCurrency ?? $currencyCode;
                             @endphp
                             <div class="col-xs-6 col-sm-3">
                                 <div class="product-item">
@@ -377,7 +392,7 @@
                                             <span class="product-title">{{ $relatedTitle }}</span>
                                             <span class="product-price">
                                                 <span class="actual-price">{{ number_format($relatedFinalPrice, 0) }}
-                                                    {{ $currencyCode }}</span>
+                                                    {{ $relatedDisplayCurrency }}</span>
                                             </span>
                                         </span>
                                     </a>

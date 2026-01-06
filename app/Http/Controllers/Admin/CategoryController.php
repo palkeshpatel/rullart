@@ -222,7 +222,7 @@ class CategoryController extends Controller
         if (empty($validated['parentid'])) {
             $validated['parentid'] = 0;
         }
-        
+
         // Validate parentid exists if not 0
         if ($validated['parentid'] != 0) {
             $parentExists = Category::where('categoryid', $validated['parentid'])->exists();
@@ -531,7 +531,7 @@ class CategoryController extends Controller
         if (empty($validated['parentid'])) {
             $validated['parentid'] = 0;
         }
-        
+
         // Validate parentid exists if not 0
         if ($validated['parentid'] != 0) {
             $parentExists = Category::where('categoryid', $validated['parentid'])->exists();

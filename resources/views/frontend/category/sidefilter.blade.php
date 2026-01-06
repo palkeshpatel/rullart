@@ -14,7 +14,7 @@
             <use xlink:href="/static/images/symbol-defs.svg#icon-close"></use>
         </svg>
     </a>
-    <h3 class="filters-heading">{{ __('Refine By') }}</h3>
+    <h3 class="filters-heading">{{ trans('common.Refine By') }}</h3>
     
     {{-- Subcategories Filter --}}
     <div class="filter-item">
@@ -60,7 +60,7 @@
     {{-- Colors Filter --}}
     @if(count($colorsArr) > 0)
         <div class="filter-item">
-            <h4 class="filter-heading">{{ __('Colors') }}</h4>
+            <h4 class="filter-heading">{{ trans('common.Colors') }}</h4>
             <div class="filter-content">
                 <ul class="list-unstyled color-filter">
                     @foreach($colorsArr as $value)
@@ -86,7 +86,7 @@
     {{-- Price Range Filter --}}
     @if(count($pricerange) > 0)
         <div class="filter-item">
-            <h4 class="filter-heading">{{ __('Price range') }}</h4>
+            <h4 class="filter-heading">{{ trans('common.Price range') }}</h4>
             <div class="filter-content">
                 <ul class="list-unstyled price-filter">
                     @foreach($pricerange as $value)
@@ -112,7 +112,7 @@
     {{-- Sizes Filter --}}
     @if(count($sizesArr) > 0)
         <div class="filter-item">
-            <h4 class="filter-heading">{{ __('Size') }}</h4>
+            <h4 class="filter-heading">{{ trans('common.Size') }}</h4>
             <div class="filter-content">
                 <ul class="list-unstyled color-filter">
                     @foreach($sizesArr as $value)
