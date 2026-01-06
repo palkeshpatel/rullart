@@ -6,21 +6,23 @@ use Illuminate\Database\Eloquent\Model;
 
 class MobileDevice extends Model
 {
-    protected $table = 'mantrajap_device';
-    protected $primaryKey = 'id';
+    protected $table = 'customers_devices';
+    protected $primaryKey = 'deviceid';
     public $incrementing = true;
     public $timestamps = false;
 
     protected $fillable = [
+        'deviceid',
         'fkleadform_id',
         'fkcustomerid',
-        'device_id',
-        'os',
-        'version',
+        'device_uid',
         'device_name',
-        'isactive',
+        'device_version',
+        'device_otherdetails',
         'lastlogin',
         'registerdate',
+        'update_date',
+        'badge',
     ];
 
     public function customer()

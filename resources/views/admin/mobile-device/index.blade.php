@@ -13,7 +13,7 @@
                             class="btn btn-success btn-sm" title="Export to Excel">
                             <i class="ti ti-file-excel me-1"></i> Export
                         </a>
-                        <button type="button" class="btn btn-sm btn-primary">
+                        <button type="button" class="btn btn-sm btn-primary" id="sendToAllBtn">
                             <i class="ti ti-send"></i> Send To All Customer
                         </button>
                     </div>
@@ -53,7 +53,6 @@
                                     <th>Is Active?</th>
                                     <th>Last Login</th>
                                     <th>Register Date</th>
-                                    <th>Select</th>
                                     <th>Action</th>
                                 </tr>
                             </thead>
@@ -63,6 +62,56 @@
                         </table>
                     </div>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notification to Customer Modal -->
+    <div class="modal fade" id="notificationModal" tabindex="-1" aria-labelledby="notificationModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="notificationModalLabel">Notification to Customer</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form id="notificationForm">
+                    @csrf
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label for="deviceId" class="form-label">Device id</label>
+                            <input type="text" class="form-control" id="deviceId" name="device_id" readonly>
+                        </div>
+                        <div class="mb-3">
+                            <label for="redirectType" class="form-label">Redirect Type</label>
+                            <select class="form-select" id="redirectType" name="redirect_type" required>
+                                <option value="category">category</option>
+                                <option value="product">product</option>
+                                <option value="home">home</option>
+                            </select>
+                        </div>
+                        <div class="mb-3" id="categoryField">
+                            <label for="categoryId" class="form-label">Category</label>
+                            <select class="form-select" id="categoryId" name="category_id">
+                                <option value="">--Select--</option>
+                                @foreach($categories as $category)
+                                    <option value="{{ $category->categoryid }}">{{ $category->category }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label for="notificationTitle" class="form-label">Title</label>
+                            <input type="text" class="form-control" id="notificationTitle" name="title" placeholder="Title" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="notificationMessage" class="form-label">Message</label>
+                            <textarea class="form-control" id="notificationMessage" name="message" rows="4" placeholder="Message" required></textarea>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="submit" class="btn btn-primary">Send Message</button>
+                        <button type="button" class="btn btn-danger" data-bs-dismiss="modal">Cancel</button>
+                    </div>
+                </form>
             </div>
         </div>
     </div>
@@ -216,15 +265,6 @@
                                     orderable: false,
                                     searchable: false,
                                     render: function(data, type, row) {
-                                        return '<input type="checkbox" class="form-check-input" value="' + row.action + '">';
-                                    }
-                                },
-                                {
-                                    data: 'action',
-                                    name: 'action',
-                                    orderable: false,
-                                    searchable: false,
-                                    render: function(data, type, row) {
                                         let html = '<div class="d-flex gap-1">';
                                         html += '<a href="javascript:void(0);" class="btn btn-light btn-icon btn-sm rounded-circle send-notification-btn" data-device-id="' + row.action + '" title="Send Notification">';
                                         html += '<i class="ti ti-send fs-lg"></i></a>';
@@ -244,11 +284,11 @@
                             responsive: true,
                             columnDefs: [{
                                     responsivePriority: 1,
-                                    targets: [0, 1, 7]
+                                    targets: [0, 1, 6]
                                 },
                                 {
                                     responsivePriority: 2,
-                                    targets: [2, 3, 4, 5, 6]
+                                    targets: [2, 3, 4, 5]
                                 }
                             ]
                         });
@@ -261,6 +301,112 @@
                         $('#perPageSelect').on('change', function() {
                             showLoader();
                             table.page.len(parseInt($(this).val())).draw();
+                        });
+
+                        // Notification Modal
+                        const notificationModal = new bootstrap.Modal(document.getElementById('notificationModal'));
+                        let isSendToAll = false;
+
+
+                        // Handle redirect type change
+                        $('#redirectType').on('change', function() {
+                            if ($(this).val() === 'category') {
+                                $('#categoryField').show();
+                                $('#categoryId').prop('required', true);
+                            } else {
+                                $('#categoryField').hide();
+                                $('#categoryId').prop('required', false);
+                            }
+                        });
+
+
+                        // Open modal for "Send To All"
+                        $('#sendToAllBtn').on('click', function() {
+                            isSendToAll = true;
+                            
+                            $('#deviceId').val('All').prop('readonly', true);
+                            $('#redirectType').val('category');
+                            $('#categoryId').val('');
+                            $('#notificationTitle').val('');
+                            $('#notificationMessage').val('');
+                            $('#categoryField').show();
+                            notificationModal.show();
+                        });
+
+                        // Open modal for individual device
+                        $(document).on('click', '.send-notification-btn', function(e) {
+                            e.preventDefault();
+                            isSendToAll = false;
+                            
+                            // Get device_id from table row
+                            const row = table.row($(this).closest('tr'));
+                            const rowData = row.data();
+                            const deviceIdValue = rowData.device_id;
+                            
+                            // Set device ID in readonly field
+                            $('#deviceId').val(deviceIdValue !== 'N/A' ? deviceIdValue : 'All').prop('readonly', true);
+                            $('#redirectType').val('category');
+                            $('#categoryId').val('');
+                            $('#notificationTitle').val('');
+                            $('#notificationMessage').val('');
+                            $('#categoryField').show();
+                            notificationModal.show();
+                        });
+
+                        // Handle form submission
+                        $('#notificationForm').on('submit', function(e) {
+                            e.preventDefault();
+                            
+                            let deviceIdsToSend = [];
+                            
+                            if (isSendToAll) {
+                                // Send to all - use 'All' to indicate all devices
+                                deviceIdsToSend = ['All'];
+                            } else {
+                                // Send to single device
+                                const deviceId = $('#deviceId').val();
+                                if (deviceId && deviceId !== 'All') {
+                                    deviceIdsToSend = [deviceId];
+                                } else {
+                                    deviceIdsToSend = ['All'];
+                                }
+                            }
+                            
+                            const formData = {
+                                device_ids: deviceIdsToSend,
+                                device_id: $('#deviceId').val(), // Keep for backward compatibility
+                                redirect_type: $('#redirectType').val(),
+                                category_id: $('#categoryId').val() || null,
+                                title: $('#notificationTitle').val(),
+                                message: $('#notificationMessage').val()
+                            };
+
+                            const submitBtn = $(this).find('button[type="submit"]');
+                            const originalText = submitBtn.html();
+                            submitBtn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-1"></span> Sending...');
+
+                            AdminAjax.request(deviceBaseUrl + '/send-notification', 'POST', formData)
+                                .then(res => {
+                                    if (res.success) {
+                                        showToast(res.message || 'Notification sent successfully', 'success');
+                                        notificationModal.hide();
+                                        $('#notificationForm')[0].reset();
+                                        isSendToAll = false;
+                                    } else {
+                                        showToast(res.message || 'Failed to send notification.', 'error');
+                                    }
+                                    submitBtn.prop('disabled', false).html(originalText);
+                                })
+                                .catch(err => {
+                                    showToast(err.message || 'Failed to send notification.', 'error');
+                                    submitBtn.prop('disabled', false).html(originalText);
+                                });
+                        });
+
+                        // Reset form when modal is closed
+                        $('#notificationModal').on('hidden.bs.modal', function() {
+                            $('#notificationForm')[0].reset();
+                            isSendToAll = false;
                         });
 
                         function cleanupLoader() {
@@ -288,6 +434,39 @@
                                     </div>
                                 </div>
                             `;
+                        }
+
+                        function showToast(message, type = 'success') {
+                            let toastContainer = $('#global-toast-container');
+                            if (!toastContainer.length) {
+                                toastContainer = $('<div id="global-toast-container" class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 9999;"></div>');
+                                $('body').append(toastContainer);
+                            }
+
+                            const toastBg = type === 'error' ? 'bg-danger' : 'bg-success';
+                            const toastId = 'toast-' + Date.now();
+                            const toast = $(`
+                                <div id="${toastId}" class="toast ${toastBg} text-white border-0" role="alert">
+                                    <div class="d-flex">
+                                        <div class="toast-body">
+                                            <i class="ti ti-${type === 'error' ? 'alert-circle' : 'check-circle'} me-2"></i>
+                                            ${message}
+                                        </div>
+                                        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+                                    </div>
+                                </div>
+                            `);
+
+                            toastContainer.append(toast);
+                            const bsToast = new bootstrap.Toast(toast[0], { autohide: true, delay: 5000 });
+                            bsToast.show();
+
+                            toast.on('hidden.bs.toast', function() {
+                                $(this).remove();
+                                if (toastContainer.find('.toast').length === 0) {
+                                    toastContainer.remove();
+                                }
+                            });
                         }
                     });
                 });

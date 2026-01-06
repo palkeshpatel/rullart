@@ -54,6 +54,8 @@ Route::middleware(['admin'])->prefix('admin')->name('admin.')->group(function ()
     Route::delete('productrate/{id}', [\App\Http\Controllers\Admin\ProductRatingController::class, 'destroy'])->name('product-rate.destroy');
     Route::get('mobiledevice', [\App\Http\Controllers\Admin\MobileDeviceController::class, 'index'])->name('mobile-device');
     Route::get('mobiledevice/export', [\App\Http\Controllers\Admin\MobileDeviceController::class, 'export'])->name('mobile-device.export');
+    Route::get('mobiledevice/devices', [\App\Http\Controllers\Admin\MobileDeviceController::class, 'getDevices'])->name('mobile-device.devices');
+    Route::post('mobiledevice/send-notification', [\App\Http\Controllers\Admin\MobileDeviceController::class, 'sendNotification'])->name('mobile-device.send-notification');
     Route::get('returnrequest', [\App\Http\Controllers\Admin\ReturnRequestController::class, 'index'])->name('return-request');
     Route::get('returnrequest/export', [\App\Http\Controllers\Admin\ReturnRequestController::class, 'export'])->name('return-request.export');
     Route::delete('returnrequest/{id}', [\App\Http\Controllers\Admin\ReturnRequestController::class, 'destroy'])->name('return-request.destroy');
