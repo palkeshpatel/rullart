@@ -33,7 +33,7 @@
                             </div>
                             
                             <div class="mb-3">
-                                <label class="form-label">Description</label>
+                                <label class="form-label">Description (EN)</label>
                                 <textarea name="shortdescr" class="form-control" rows="3" placeholder="Description">{{ old('shortdescr', $product ? $product->shortdescr : '') }}</textarea>
                                 <div class="invalid-feedback"></div>
                             </div>
