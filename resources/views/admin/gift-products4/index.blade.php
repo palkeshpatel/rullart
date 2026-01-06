@@ -199,6 +199,10 @@
                         let isFirstDraw = true;
                         showLoader();
                         
+                        let loaderTimeout = setTimeout(function() {
+                            hideLoader();
+                        }, 10000); // 10 second fallback
+                        
                         let table = $('#giftProducts4Table').DataTable({
                             processing: true,
                             serverSide: true,
@@ -215,6 +219,7 @@
                                     console.log('📤 DataTables request:', d);
                                 },
                                 dataSrc: function(json) {
+                                    clearTimeout(loaderTimeout);
                                     hideLoader();
                                     isFirstDraw = false;
                                     console.log('📥 DataTables response:', json);
@@ -225,10 +230,20 @@
                                     return json.data;
                                 },
                                 error: function(xhr, error, thrown) {
+                                    clearTimeout(loaderTimeout);
                                     hideLoader();
                                     console.error('❌ DataTables AJAX Error:', error);
-                                    alert('Error loading data. Status: ' + xhr.status);
+                                    console.error('Response:', xhr.responseText);
+                                    if (xhr.responseJSON && xhr.responseJSON.error) {
+                                        alert('Error: ' + xhr.responseJSON.error);
+                                    } else {
+                                        alert('Error loading data. Status: ' + xhr.status);
+                                    }
                                 }
+                            },
+                            drawCallback: function(settings) {
+                                clearTimeout(loaderTimeout);
+                                hideLoader();
                             },
                             columns: [{
                                     data: 'productcode',

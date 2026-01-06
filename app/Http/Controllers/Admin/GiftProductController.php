@@ -196,7 +196,7 @@ class GiftProductController extends Controller
             'longdescrAR' => 'nullable|string',
             'price' => 'required|numeric|min:0',
             'discount' => 'nullable|numeric|min:0',
-            'sellingprice' => 'nullable|numeric|min:0',
+            'sellingprice' => 'required|numeric|min:0',
             'metatitle' => 'nullable|string|max:500',
             'metatitleAR' => 'nullable|string|max:500',
             'metakeyword' => 'nullable|string|max:1000',
@@ -226,6 +226,7 @@ class GiftProductController extends Controller
             'productcode.required' => 'Product code is required.',
             'productcode.unique' => 'This product code already exists.',
             'price.required' => 'Price is required.',
+            'sellingprice.required' => 'Selling Price [KWD] is required.',
         ]);
 
         // Handle boolean fields - Gift products always have isgift = 1
@@ -563,7 +564,7 @@ class GiftProductController extends Controller
             'longdescrAR' => 'nullable|string',
             'price' => 'required|numeric|min:0',
             'discount' => 'nullable|numeric|min:0',
-            'sellingprice' => 'nullable|numeric|min:0',
+            'sellingprice' => 'required|numeric|min:0',
             'metatitle' => 'nullable|string|max:500',
             'metatitleAR' => 'nullable|string|max:500',
             'metakeyword' => 'nullable|string|max:1000',
@@ -593,6 +594,7 @@ class GiftProductController extends Controller
             'productcode.required' => 'Product code is required.',
             'productcode.unique' => 'This product code already exists.',
             'price.required' => 'Price is required.',
+            'sellingprice.required' => 'Selling Price [KWD] is required.',
         ]);
 
         // Handle boolean fields - Gift products always have isgift = 1

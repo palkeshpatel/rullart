@@ -141,7 +141,7 @@
                             </div>
                             
                             <div class="mb-3">
-                                <label class="form-label">Selling Price [KWD]</label>
+                                <label class="form-label">Selling Price [KWD] <span class="text-danger">*</span></label>
                                 <input type="number" step="0.001" name="sellingprice" class="form-control" placeholder="selling price"
                                     value="{{ old('sellingprice', $product ? $product->sellingprice : '') }}">
                                 <div class="invalid-feedback"></div>
@@ -447,13 +447,19 @@
                         required: true,
                         number: true,
                         min: 0
+                    },
+                    sellingprice: {
+                        required: true,
+                        number: true,
+                        min: 0
                     }
                 },
                 messages: {
                     productcode: 'Product Code is required.',
                     title: 'Title [EN] is required.',
                     titleAR: 'Title [AR] is required.',
-                    price: 'Product Price [KWD] is required and must be a valid number.'
+                    price: 'Product Price [KWD] is required and must be a valid number.',
+                    sellingprice: 'Selling Price [KWD] is required and must be a valid number.'
                 },
                 errorElement: 'div',
                 errorClass: 'invalid-feedback',

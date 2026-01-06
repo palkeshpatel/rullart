@@ -104,7 +104,7 @@ class GiftProduct4Controller extends Controller
             // Format data
             $data = [];
             foreach ($products as $product) {
-                $photoUrl = $product->photo1 ? asset('storage/' . $product->photo1) : null;
+                $photoUrl = $product->photo1 ? asset('storage/upload/product/' . $product->photo1) : null;
                 $data[] = [
                     'productcode' => $product->productcode ?? '',
                     'title' => $product->title ?? '',
@@ -140,22 +140,50 @@ class GiftProduct4Controller extends Controller
     {
         // Get categories for dropdown
         $categories = Category::orderBy('category')->get();
+        
+        // Get colors (filtervalues where fkfilterid = 2)
+        $colors = DB::table('filtervalues')
+            ->where('fkfilterid', 2)
+            ->orderBy('displayorder')
+            ->orderBy('filtervalue')
+            ->get(['filtervalueid', 'filtervalue', 'filtervalueAR']);
+        
+        // Get occasions
+        $occasions = \App\Models\Occassion::where('ispublished', 1)
+            ->orderBy('occassion')
+            ->get(['occassionid', 'occassion', 'occassionAR']);
 
         // Return JSON for AJAX modal requests
         if ($request->ajax() || $request->expectsJson()) {
             return response()->json([
                 'success' => true,
-                'html' => view('admin.gift-products4.partials.gift-product4-form', ['product' => null, 'categories' => $categories])->render(),
+                'html' => view('admin.gift-products4.partials.gift-product4-form', [
+                    'product' => null, 
+                    'categories' => $categories,
+                    'colors' => $colors,
+                    'occasions' => $occasions,
+                    'productFilters' => collect()
+                ])->render(),
             ]);
         }
 
-        return view('admin.gift-products4.create', compact('categories'));
+        return view('admin.gift-products4.create', compact('categories', 'colors', 'occasions'));
     }
 
     public function store(Request $request)
     {
+        // Normalize inputs (trim whitespace from productcode, title, titleAR) - same as GiftProductController
+        $productcode = trim($request->productcode ?? '');
+        $title = trim($request->title ?? '');
+        $titleAR = trim(preg_replace('/\s+/u', ' ', $request->titleAR ?? ''));
+
+        $request->merge([
+            'productcode' => $productcode,
+            'title' => $title,
+            'titleAR' => $titleAR,
+        ]);
+
         $validated = $request->validate([
-            'fkcategoryid' => 'required|integer|exists:category,categoryid',
             'title' => [
                 'required',
                 'string',
@@ -192,19 +220,18 @@ class GiftProduct4Controller extends Controller
             'photo3' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:10240',
             'photo4' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:10240',
             'photo5' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:10240',
-            'video' => 'nullable|string|max:500',
-            'videoposter' => 'nullable|string|max:500',
-            'ispublished' => 'nullable',
-            'isnew' => 'nullable',
-            'ispopular' => 'nullable',
-            'internation_ship' => 'nullable',
             'productcategoryid' => 'nullable|integer',
             'productcategoryid2' => 'nullable|integer',
             'productcategoryid3' => 'nullable|integer',
             'productcategoryid4' => 'required|integer|exists:category,categoryid',
+            'subcategory1' => 'nullable|integer',
+            'subcategory2' => 'nullable|integer',
+            'subcategory3' => 'nullable|integer',
+            'barcode' => 'nullable|string|max:255',
+            'quantity' => 'nullable|integer|min:0',
+            'occasion' => 'nullable|integer|exists:occassion,occassionid',
+            'color' => 'nullable|integer|exists:filtervalues,filtervalueid',
         ], [
-            'fkcategoryid.required' => 'Category is required.',
-            'fkcategoryid.exists' => 'Selected category does not exist.',
             'title.required' => 'Product title (EN) is required.',
             'title.unique' => 'This product title (EN) already exists.',
             'titleAR.required' => 'Product title (AR) is required.',
@@ -212,22 +239,61 @@ class GiftProduct4Controller extends Controller
             'productcode.required' => 'Product code is required.',
             'productcode.unique' => 'This product code already exists.',
             'price.required' => 'Price is required.',
-            'sellingprice.required' => 'Selling price is required.',
+            'sellingprice.required' => 'Selling Price [KWD] is required.',
             'productcategoryid4.required' => 'Gift Product Category 4 is required.',
             'productcategoryid4.exists' => 'Selected Gift Product Category 4 does not exist.',
         ]);
 
-        // Handle boolean fields
-        $validated['ispublished'] = $request->has('ispublished') ? 1 : 0;
-        $validated['isnew'] = $request->has('isnew') ? 1 : 0;
-        $validated['ispopular'] = $request->has('ispopular') ? 1 : 0;
+        // Handle boolean fields - Gift Products 4 are identified by productcategoryid4
+        $validated['ispublished'] = 1; // Default to published
+        $validated['isnew'] = 0;
+        $validated['ispopular'] = 0;
         $validated['isgift'] = 0; // Gift Products 4 are identified by productcategoryid4, not isgift flag
-        $validated['internation_ship'] = $request->has('internation_ship') ? 1 : 0;
+        $validated['internation_ship'] = 0;
         $validated['discount'] = $validated['discount'] ?? 0;
-        $validated['updatedby'] = Auth::check() ? Auth::id() : 1;
-        $validated['updateddate'] = now();
+        
+        // Use productcategoryid as main category (fkcategoryid) if provided
+        $validated['fkcategoryid'] = $request->input('productcategoryid') ?? 0;
+        
+        // Handle subcategories - map subcategory1 to productcategoryid2, subcategory2 to productcategoryid3
+        if ($request->has('subcategory1') && $request->subcategory1) {
+            $validated['productcategoryid2'] = $request->subcategory1;
+        } elseif ($request->has('productcategoryid2') && $request->productcategoryid2) {
+            $validated['productcategoryid2'] = $request->productcategoryid2;
+        } else {
+            $validated['productcategoryid2'] = 0;
+        }
+        
+        if ($request->has('subcategory2') && $request->subcategory2) {
+            $validated['productcategoryid3'] = $request->subcategory2;
+        } elseif ($request->has('productcategoryid3') && $request->productcategoryid3) {
+            $validated['productcategoryid3'] = $request->productcategoryid3;
+        } else {
+            $validated['productcategoryid3'] = 0;
+        }
 
-        // Handle file uploads (photo1-5) using trait
+        // Handle shortdescr - set to empty string if not provided (NOT NULL constraint)
+        $validated['shortdescr'] = $validated['shortdescr'] ?? '';
+        $validated['shortdescrAR'] = $validated['shortdescrAR'] ?? '';
+        
+        // Handle longdescr - set to empty string if not provided (NOT NULL constraint)
+        $validated['longdescr'] = $validated['longdescr'] ?? '';
+        $validated['longdescrAR'] = $validated['longdescrAR'] ?? '';
+
+        // Handle metatitle - set to empty string if not provided (NOT NULL constraint)
+        $validated['metatitle'] = $validated['metatitle'] ?? '';
+        $validated['metatitleAR'] = $validated['metatitleAR'] ?? '';
+        $validated['metakeyword'] = $validated['metakeyword'] ?? '';
+        $validated['metakeywordAR'] = $validated['metakeywordAR'] ?? '';
+        $validated['metadescr'] = $validated['metadescr'] ?? '';
+        $validated['metadescrAR'] = $validated['metadescrAR'] ?? '';
+        
+        // Handle sellingprice - set to price if not provided (NOT NULL constraint)
+        if (!isset($validated['sellingprice']) || $validated['sellingprice'] === null || $validated['sellingprice'] === '') {
+            $validated['sellingprice'] = $validated['price'] ?? 0;
+        }
+        
+        // Handle photo fields - set to empty string if not provided (NOT NULL constraint)
         for ($i = 1; $i <= 5; $i++) {
             if ($request->hasFile("photo{$i}")) {
                 $validated["photo{$i}"] = $this->uploadImage($request->file("photo{$i}"), null, 'product');
@@ -236,12 +302,42 @@ class GiftProduct4Controller extends Controller
             }
         }
 
+        $validated['updatedby'] = Auth::check() ? Auth::id() : 1;
+        $validated['updateddate'] = now();
+
         try {
             DB::beginTransaction();
+            
+            // Double-check productcode doesn't exist (case-insensitive check)
+            $checkProductcode = trim($validated['productcode'] ?? '');
+            if (!empty($checkProductcode)) {
+                $existingProduct = Product::whereRaw('LOWER(productcode) = ?', [strtolower($checkProductcode)])->first();
+                if ($existingProduct) {
+                    DB::rollBack();
+                    Log::warning('Gift Product 4: Product code already exists (pre-insert check)', [
+                        'productcode' => $checkProductcode,
+                        'existing_productid' => $existingProduct->productid,
+                        'existing_productcode' => $existingProduct->productcode,
+                    ]);
+                    if ($request->ajax() || $request->expectsJson()) {
+                        return response()->json([
+                            'success' => false,
+                            'message' => 'This product code already exists. Please choose a different code.',
+                            'errors' => ['productcode' => ['This product code already exists. Please choose a different code.']]
+                        ], 422);
+                    }
+                    return back()->withErrors(['productcode' => 'This product code already exists. Please choose a different code.'])->withInput();
+                }
+            }
             
             // Remove fields that don't belong to products table
             $productData = $validated;
             unset($productData['barcode'], $productData['quantity'], $productData['occasion'], $productData['color']);
+            
+            Log::info('Gift Product 4: Attempting to create product', [
+                'productcode' => $productData['productcode'] ?? 'N/A',
+                'title' => $productData['title'] ?? 'N/A',
+            ]);
             
             $product = Product::create($productData);
             $product->refresh();
@@ -291,17 +387,40 @@ class GiftProduct4Controller extends Controller
             return redirect()->route('admin.gift-products4')
                 ->with('success', 'Gift Product 4 created successfully');
         } catch (\Illuminate\Database\QueryException $e) {
+            DB::rollBack();
+            
+            Log::error('Gift Product 4 QueryException', [
+                'code' => $e->getCode(),
+                'message' => $e->getMessage(),
+                'productcode' => $request->input('productcode'),
+                'validated_productcode' => isset($validated) ? ($validated['productcode'] ?? 'N/A') : 'N/A',
+            ]);
+            
             $errorMessage = 'An error occurred while saving the gift product 4.';
             $errorField = 'productcode';
 
             if ($e->getCode() == 23000) {
-                if (strpos($e->getMessage(), 'productcode') !== false) {
+                // Check for specific column errors - look for "Column 'X' cannot be null" pattern
+                if (preg_match("/Column '(\w+)' cannot be null/i", $e->getMessage(), $matches)) {
+                    $column = $matches[1] ?? '';
+                    if ($column === 'sellingprice') {
+                        $errorMessage = 'Selling price is required.';
+                        $errorField = 'sellingprice';
+                    } elseif ($column === 'productcode') {
+                        $errorMessage = 'Product code is required.';
+                        $errorField = 'productcode';
+                    } else {
+                        $errorMessage = "Column '{$column}' cannot be null. Please provide a value.";
+                        $errorField = $column;
+                    }
+                } elseif (preg_match("/Duplicate entry.*for key.*productcode/i", $e->getMessage()) || 
+                          (strpos($e->getMessage(), 'productcode') !== false && strpos($e->getMessage(), 'Duplicate') !== false)) {
                     $errorMessage = 'This product code already exists. Please choose a different code.';
                     $errorField = 'productcode';
-                } elseif (strpos($e->getMessage(), 'title') !== false && strpos($e->getMessage(), 'titleAR') === false) {
+                } elseif (preg_match("/Duplicate entry.*for key.*title/i", $e->getMessage()) && strpos($e->getMessage(), 'titleAR') === false) {
                     $errorMessage = 'This product title (EN) already exists. Please choose a different title.';
                     $errorField = 'title';
-                } elseif (strpos($e->getMessage(), 'titleAR') !== false) {
+                } elseif (preg_match("/Duplicate entry.*for key.*titleAR/i", $e->getMessage())) {
                     $errorMessage = 'This product title (AR) already exists. Please choose a different title.';
                     $errorField = 'titleAR';
                 } else {
@@ -322,6 +441,8 @@ class GiftProduct4Controller extends Controller
 
             return back()->withErrors([$errorField => $errorMessage])->withInput();
         } catch (\Exception $e) {
+            DB::rollBack();
+            
             Log::error('Gift product 4 creation error: ' . $e->getMessage());
 
             if ($request->ajax() || $request->expectsJson()) {
@@ -364,7 +485,6 @@ class GiftProduct4Controller extends Controller
         // Get colors (filtervalues where fkfilterid = 2)
         $colors = DB::table('filtervalues')
             ->where('fkfilterid', 2)
-            ->where('ispublished', 1)
             ->orderBy('displayorder')
             ->orderBy('filtervalue')
             ->get(['filtervalueid', 'filtervalue', 'filtervalueAR']);
@@ -476,8 +596,18 @@ class GiftProduct4Controller extends Controller
             }
         }
 
+        // Normalize inputs (trim whitespace from productcode, title, titleAR) - same as GiftProductController
+        $productcode = trim($request->productcode ?? '');
+        $title = trim($request->title ?? '');
+        $titleAR = trim(preg_replace('/\s+/u', ' ', $request->titleAR ?? ''));
+
+        $request->merge([
+            'productcode' => $productcode,
+            'title' => $title,
+            'titleAR' => $titleAR,
+        ]);
+
         $validated = $request->validate([
-            'fkcategoryid' => 'required|integer|exists:category,categoryid',
             'title' => [
                 'required',
                 'string',
@@ -514,19 +644,18 @@ class GiftProduct4Controller extends Controller
             'photo3' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:10240',
             'photo4' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:10240',
             'photo5' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:10240',
-            'video' => 'nullable|string|max:500',
-            'videoposter' => 'nullable|string|max:500',
-            'ispublished' => 'nullable',
-            'isnew' => 'nullable',
-            'ispopular' => 'nullable',
-            'internation_ship' => 'nullable',
             'productcategoryid' => 'nullable|integer',
             'productcategoryid2' => 'nullable|integer',
             'productcategoryid3' => 'nullable|integer',
             'productcategoryid4' => 'required|integer|exists:category,categoryid',
+            'subcategory1' => 'nullable|integer',
+            'subcategory2' => 'nullable|integer',
+            'subcategory3' => 'nullable|integer',
+            'barcode' => 'nullable|string|max:255',
+            'quantity' => 'nullable|integer|min:0',
+            'occasion' => 'nullable|integer|exists:occassion,occassionid',
+            'color' => 'nullable|integer|exists:filtervalues,filtervalueid',
         ], [
-            'fkcategoryid.required' => 'Category is required.',
-            'fkcategoryid.exists' => 'Selected category does not exist.',
             'title.required' => 'Product title (EN) is required.',
             'title.unique' => 'This product title (EN) already exists.',
             'titleAR.required' => 'Product title (AR) is required.',
@@ -534,22 +663,61 @@ class GiftProduct4Controller extends Controller
             'productcode.required' => 'Product code is required.',
             'productcode.unique' => 'This product code already exists.',
             'price.required' => 'Price is required.',
-            'sellingprice.required' => 'Selling price is required.',
+            'sellingprice.required' => 'Selling Price [KWD] is required.',
             'productcategoryid4.required' => 'Gift Product Category 4 is required.',
             'productcategoryid4.exists' => 'Selected Gift Product Category 4 does not exist.',
         ]);
 
-        // Handle boolean fields
-        $validated['ispublished'] = $request->has('ispublished') ? 1 : 0;
-        $validated['isnew'] = $request->has('isnew') ? 1 : 0;
-        $validated['ispopular'] = $request->has('ispopular') ? 1 : 0;
+        // Handle boolean fields - Gift Products 4 are identified by productcategoryid4
+        $validated['ispublished'] = 1; // Default to published
+        $validated['isnew'] = 0;
+        $validated['ispopular'] = 0;
         $validated['isgift'] = 0; // Gift Products 4 are identified by productcategoryid4, not isgift flag
-        $validated['internation_ship'] = $request->has('internation_ship') ? 1 : 0;
+        $validated['internation_ship'] = 0;
         $validated['discount'] = $validated['discount'] ?? 0;
-        $validated['updatedby'] = Auth::check() ? Auth::id() : 1;
-        $validated['updateddate'] = now();
+        
+        // Use productcategoryid as main category (fkcategoryid) if provided
+        $validated['fkcategoryid'] = $request->input('productcategoryid') ?? (isset($product) && $product ? $product->fkcategoryid : 0);
+        
+        // Handle subcategories - map subcategory1 to productcategoryid2, subcategory2 to productcategoryid3
+        if ($request->has('subcategory1') && $request->subcategory1) {
+            $validated['productcategoryid2'] = $request->subcategory1;
+        } elseif ($request->has('productcategoryid2') && $request->productcategoryid2) {
+            $validated['productcategoryid2'] = $request->productcategoryid2;
+        } else {
+            $validated['productcategoryid2'] = (isset($product) && $product) ? ($product->productcategoryid2 ?? 0) : 0;
+        }
+        
+        if ($request->has('subcategory2') && $request->subcategory2) {
+            $validated['productcategoryid3'] = $request->subcategory2;
+        } elseif ($request->has('productcategoryid3') && $request->productcategoryid3) {
+            $validated['productcategoryid3'] = $request->productcategoryid3;
+        } else {
+            $validated['productcategoryid3'] = (isset($product) && $product) ? ($product->productcategoryid3 ?? 0) : 0;
+        }
 
-        // Handle file uploads
+        // Handle shortdescr - set to empty string if not provided (NOT NULL constraint)
+        $validated['shortdescr'] = $validated['shortdescr'] ?? '';
+        $validated['shortdescrAR'] = $validated['shortdescrAR'] ?? '';
+        
+        // Handle longdescr - set to empty string if not provided (NOT NULL constraint)
+        $validated['longdescr'] = $validated['longdescr'] ?? '';
+        $validated['longdescrAR'] = $validated['longdescrAR'] ?? '';
+
+        // Handle metatitle - set to empty string if not provided (NOT NULL constraint)
+        $validated['metatitle'] = $validated['metatitle'] ?? '';
+        $validated['metatitleAR'] = $validated['metatitleAR'] ?? '';
+        $validated['metakeyword'] = $validated['metakeyword'] ?? '';
+        $validated['metakeywordAR'] = $validated['metakeywordAR'] ?? '';
+        $validated['metadescr'] = $validated['metadescr'] ?? '';
+        $validated['metadescrAR'] = $validated['metadescrAR'] ?? '';
+        
+        // Handle sellingprice - set to price if not provided (NOT NULL constraint)
+        if (!isset($validated['sellingprice']) || $validated['sellingprice'] === null || $validated['sellingprice'] === '') {
+            $validated['sellingprice'] = $validated['price'] ?? (isset($product) && $product ? ($product->sellingprice ?? $product->price ?? 0) : 0);
+        }
+        
+        // Handle photo fields - keep existing if not uploading new one
         for ($i = 1; $i <= 5; $i++) {
             $photoFile = $request->file("photo{$i}");
             
@@ -560,9 +728,12 @@ class GiftProduct4Controller extends Controller
             if ($photoFile && $photoFile->isValid()) {
                 $validated["photo{$i}"] = $this->uploadImage($photoFile, $product->{"photo{$i}"}, 'product');
             } else {
-                $validated["photo{$i}"] = $product->{"photo{$i}"} ?? '';
+                $validated["photo{$i}"] = (isset($product) && $product) ? ($product->{"photo{$i}"} ?? '') : '';
             }
         }
+
+        $validated['updatedby'] = Auth::check() ? Auth::id() : 1;
+        $validated['updateddate'] = now();
 
         try {
             DB::beginTransaction();
