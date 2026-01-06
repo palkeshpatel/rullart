@@ -16,46 +16,28 @@
     </a>
     <h3 class="filters-heading">{{ trans('common.Refine By') }}</h3>
     
-    {{-- Subcategories Filter --}}
-    <div class="filter-item">
-        <div class="filter-content">
-            <ul class="list-unstyled cat-filters">
-                @if(!empty($subcategory))
-                    @php
-                        $subcategorycnt = count($subcategory);
-                    @endphp
-                    
-                    @foreach($subcategory as $row)
-                        @php
-                            $active = '';
-                            if ($categoryCode == $row->categorycode) {
-                                $active = "class='active'";
-                            }
-                            $catName = $locale == 'ar' ? ($row->categoryAR ?? $row->category) : ($row->category ?? '');
-                        @endphp
-                        
-                        @if($row->parentid == 0)
-                            @if($row->productcnt > 0 && $subcategorycnt > 1)
-                                <li {!! $active !!}>
-                                    <a href="{{ route('category.index', ['locale' => $locale, 'categoryCode' => $row->categorycode]) }}">
-                                        {{ $catName }}
-                                    </a>
-                                </li>
-                            @endif
-                        @else
-                            @if($row->productcnt > 0)
-                                <li {!! $active !!}>
-                                    <a href="{{ route('category.index', ['locale' => $locale, 'categoryCode' => $row->categorycode]) }}">
-                                        {{ $catName }}
-                                    </a>
-                                </li>
-                            @endif
-                        @endif
-                    @endforeach
-                @endif
-            </ul>
+    {{-- "All" link --}}
+    @php
+        // Get current category code for "all" link
+        $currentCategoryCode = $collections['category']->categorycode ?? '';
+        
+        // Check if "all" should be active (when viewing the main category without subcategory filter)
+        $isAllActive = ($categoryCode == $currentCategoryCode);
+    @endphp
+    
+    @if(!empty($currentCategoryCode))
+        <div class="filter-item">
+            <div class="filter-content">
+                <ul class="list-unstyled cat-filters">
+                    <li {!! $isAllActive ? "class='active'" : '' !!}>
+                        <a href="{{ route('category.index', ['locale' => $locale, 'categoryCode' => $currentCategoryCode]) }}">
+                            {{ strtolower(trans('common.All')) }}
+                        </a>
+                    </li>
+                </ul>
+            </div>
         </div>
-    </div>
+    @endif
     
     {{-- Colors Filter --}}
     @if(count($colorsArr) > 0)
