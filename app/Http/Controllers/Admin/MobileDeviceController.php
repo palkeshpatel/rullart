@@ -23,7 +23,7 @@ class MobileDeviceController extends Controller
 
         // Load initial view (for non-DataTables requests)
         $categories = Category::where('ispublished', 1)
-            ->whereNull('parentid')
+            ->where('parentid', 0)
             ->orderBy('displayorder', 'asc')
             ->get(['categoryid', 'category', 'categorycode']);
 
@@ -228,8 +228,9 @@ class MobileDeviceController extends Controller
             $request->validate([
                 'device_id' => 'nullable|string',
                 'device_ids' => 'nullable|array',
-                'redirect_type' => 'required|string',
+                'redirect_type' => 'required|string|in:category,product,other',
                 'category_id' => 'nullable|integer',
+                'product_code' => 'nullable|string',
                 'title' => 'required|string|max:500',
                 'message' => 'required|string|max:5000'
             ]);
@@ -238,6 +239,7 @@ class MobileDeviceController extends Controller
             $deviceIds = $request->input('device_ids', []);
             $redirectType = $request->input('redirect_type');
             $categoryId = $request->input('category_id');
+            $productCode = $request->input('product_code');
             $title = $request->input('title');
             $message = $request->input('message');
             $adminId = auth()->guard('admin')->id() ?? 1;
@@ -247,7 +249,10 @@ class MobileDeviceController extends Controller
             if ($redirectType === 'category' && $categoryId) {
                 $category = Category::find($categoryId);
                 $redirectCode = $category ? $category->categorycode : null;
+            } elseif ($redirectType === 'product' && $productCode) {
+                $redirectCode = $productCode;
             }
+            // For 'other', redirect_code remains null
 
             // Get devices to send notification to
             $devices = [];

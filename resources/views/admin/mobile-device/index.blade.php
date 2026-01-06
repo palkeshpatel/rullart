@@ -86,25 +86,31 @@
                             <select class="form-select" id="redirectType" name="redirect_type" required>
                                 <option value="category">category</option>
                                 <option value="product">product</option>
-                                <option value="home">home</option>
+                                <option value="other">other</option>
                             </select>
                         </div>
-                        <div class="mb-3" id="categoryField">
+                        <div class="mb-3" id="categoryField" style="display: none;">
                             <label for="categoryId" class="form-label">Category</label>
                             <select class="form-select" id="categoryId" name="category_id">
                                 <option value="">--Select--</option>
-                                @foreach($categories as $category)
-                                    <option value="{{ $category->categoryid }}">{{ $category->category }}</option>
-                                @endforeach
+                                @if(isset($categories) && is_iterable($categories))
+                                    @foreach($categories as $category)
+                                        <option value="{{ $category->categoryid }}">{{ $category->category }}</option>
+                                    @endforeach
+                                @endif
                             </select>
+                        </div>
+                        <div class="mb-3" id="productCodeField" style="display: none;">
+                            <label for="productCode" class="form-label">Product Code</label>
+                            <input type="text" class="form-control" id="productCode" name="product_code" placeholder="Product Code">
                         </div>
                         <div class="mb-3">
                             <label for="notificationTitle" class="form-label">Title</label>
-                            <input type="text" class="form-control" id="notificationTitle" name="title" placeholder="Title" required>
+                            <input type="text" class="form-control" id="notificationTitle" name="title" placeholder="Title">
                         </div>
                         <div class="mb-3">
                             <label for="notificationMessage" class="form-label">Message</label>
-                            <textarea class="form-control" id="notificationMessage" name="message" rows="4" placeholder="Message" required></textarea>
+                            <textarea class="form-control" id="notificationMessage" name="message" rows="4" placeholder="Message"></textarea>
                         </div>
                     </div>
                     <div class="modal-footer">
@@ -307,18 +313,105 @@
                         const notificationModal = new bootstrap.Modal(document.getElementById('notificationModal'));
                         let isSendToAll = false;
 
+                        // Setup Validation
+                        function setupNotificationValidation() {
+                            const $form = $('#notificationForm');
+                            if (!$form.length) {
+                                return;
+                            }
+
+                            // Remove existing validator if any
+                            if ($form.data('validator')) {
+                                $form.data('validator', null);
+                            }
+
+                            // Add custom method for conditional category validation
+                            if ($.validator && $.validator.methods) {
+                                $.validator.addMethod("requiredIfCategory", function(value, element) {
+                                    const redirectType = $('#redirectType').val();
+                                    if (redirectType === 'category') {
+                                        return value && value !== '' && value !== null;
+                                    }
+                                    return true;
+                                }, "Please select category");
+                                
+                                $.validator.addMethod("requiredIfProduct", function(value, element) {
+                                    const redirectType = $('#redirectType').val();
+                                    if (redirectType === 'product') {
+                                        return value && value !== '' && value !== null;
+                                    }
+                                    return true;
+                                }, "Product code is required");
+                            }
+
+                            $form.validate({
+                                rules: {
+                                    redirect_type: {
+                                        required: true
+                                    },
+                                    category_id: {
+                                        requiredIfCategory: true
+                                    },
+                                    product_code: {
+                                        requiredIfProduct: true
+                                    },
+                                    title: {
+                                        required: true
+                                    },
+                                    message: {
+                                        required: true
+                                    }
+                                },
+                                messages: {
+                                    redirect_type: 'Redirect type is required.',
+                                    category_id: 'Please select category',
+                                    product_code: 'Product code is required',
+                                    title: 'Title is required',
+                                    message: 'Message is required'
+                                },
+                                errorElement: 'div',
+                                errorClass: 'invalid-feedback',
+                                highlight: function(el) {
+                                    $(el).addClass('is-invalid').removeClass('is-valid');
+                                },
+                                unhighlight: function(el) {
+                                    $(el).removeClass('is-invalid').addClass('is-valid');
+                                },
+                                errorPlacement: function(error, element) {
+                                    error.insertAfter(element);
+                                },
+                                submitHandler: function(form) {
+                                    submitNotificationForm(form);
+                                }
+                            });
+                        }
 
                         // Handle redirect type change
                         $('#redirectType').on('change', function() {
-                            if ($(this).val() === 'category') {
-                                $('#categoryField').show();
-                                $('#categoryId').prop('required', true);
-                            } else {
-                                $('#categoryField').hide();
-                                $('#categoryId').prop('required', false);
+                            const redirectType = $(this).val();
+                            const $categoryField = $('#categoryField');
+                            const $categoryId = $('#categoryId');
+                            const $productCodeField = $('#productCodeField');
+                            const $productCode = $('#productCode');
+                            
+                            // Hide all conditional fields first
+                            $categoryField.hide();
+                            $productCodeField.hide();
+                            
+                            // Clear values and remove validation errors
+                            $categoryId.val('').removeClass('is-invalid is-valid');
+                            $productCode.val('').removeClass('is-invalid is-valid');
+                            $categoryId.next('.invalid-feedback').remove();
+                            $productCode.next('.invalid-feedback').remove();
+                            
+                            // Show appropriate field based on redirect type
+                            if (redirectType === 'category') {
+                                $categoryField.show();
+                            } else if (redirectType === 'product') {
+                                $productCodeField.show();
                             }
+                            // For 'other', no additional fields are shown
                         });
-
 
                         // Open modal for "Send To All"
                         $('#sendToAllBtn').on('click', function() {
@@ -327,10 +420,29 @@
                             $('#deviceId').val('All').prop('readonly', true);
                             $('#redirectType').val('category');
                             $('#categoryId').val('');
+                            $('#productCode').val('');
                             $('#notificationTitle').val('');
                             $('#notificationMessage').val('');
                             $('#categoryField').show();
+                            $('#productCodeField').hide();
+                            
+                            // Reset validation state
+                            $('#notificationForm').find('.is-invalid, .is-valid').removeClass('is-invalid is-valid');
+                            $('#notificationForm').find('.invalid-feedback').remove();
+                            
                             notificationModal.show();
+                            
+                            // Setup validation after modal is shown
+                            setTimeout(function() {
+                                if (typeof jQuery !== 'undefined' && typeof jQuery.fn.validate !== 'undefined') {
+                                    setupNotificationValidation();
+                                } else {
+                                    // Load jQuery Validate if not available
+                                    loadjQueryValidate(function() {
+                                        setupNotificationValidation();
+                                    });
+                                }
+                            }, 100);
                         });
 
                         // Open modal for individual device
@@ -347,16 +459,33 @@
                             $('#deviceId').val(deviceIdValue !== 'N/A' ? deviceIdValue : 'All').prop('readonly', true);
                             $('#redirectType').val('category');
                             $('#categoryId').val('');
+                            $('#productCode').val('');
                             $('#notificationTitle').val('');
                             $('#notificationMessage').val('');
                             $('#categoryField').show();
+                            $('#productCodeField').hide();
+                            
+                            // Reset validation state
+                            $('#notificationForm').find('.is-invalid, .is-valid').removeClass('is-invalid is-valid');
+                            $('#notificationForm').find('.invalid-feedback').remove();
+                            
                             notificationModal.show();
+                            
+                            // Setup validation after modal is shown
+                            setTimeout(function() {
+                                if (typeof jQuery !== 'undefined' && typeof jQuery.fn.validate !== 'undefined') {
+                                    setupNotificationValidation();
+                                } else {
+                                    // Load jQuery Validate if not available
+                                    loadjQueryValidate(function() {
+                                        setupNotificationValidation();
+                                    });
+                                }
+                            }, 100);
                         });
 
-                        // Handle form submission
-                        $('#notificationForm').on('submit', function(e) {
-                            e.preventDefault();
-                            
+                        // Submit Form
+                        function submitNotificationForm(form) {
                             let deviceIdsToSend = [];
                             
                             if (isSendToAll) {
@@ -377,11 +506,12 @@
                                 device_id: $('#deviceId').val(), // Keep for backward compatibility
                                 redirect_type: $('#redirectType').val(),
                                 category_id: $('#categoryId').val() || null,
+                                product_code: $('#productCode').val() || null,
                                 title: $('#notificationTitle').val(),
                                 message: $('#notificationMessage').val()
                             };
 
-                            const submitBtn = $(this).find('button[type="submit"]');
+                            const submitBtn = $(form).find('button[type="submit"]');
                             const originalText = submitBtn.html();
                             submitBtn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-1"></span> Sending...');
 
@@ -401,11 +531,36 @@
                                     showToast(err.message || 'Failed to send notification.', 'error');
                                     submitBtn.prop('disabled', false).html(originalText);
                                 });
-                        });
+                        }
+
+                        // Load jQuery Validate if not available
+                        function loadjQueryValidate(callback) {
+                            if (typeof jQuery !== 'undefined' && typeof jQuery.fn.validate !== 'undefined') {
+                                if (callback) callback();
+                                return;
+                            }
+
+                            const script = document.createElement('script');
+                            script.src = 'https://cdn.jsdelivr.net/npm/jquery-validation@1.19.5/dist/jquery.validate.min.js';
+                            script.onload = function() {
+                                if (callback) callback();
+                            };
+                            script.onerror = function() {
+                                console.error('Failed to load jQuery Validate');
+                            };
+                            document.head.appendChild(script);
+                        }
 
                         // Reset form when modal is closed
                         $('#notificationModal').on('hidden.bs.modal', function() {
                             $('#notificationForm')[0].reset();
+                            $('#categoryField').hide();
+                            $('#productCodeField').hide();
+                            $('#notificationForm').find('.is-invalid, .is-valid').removeClass('is-invalid is-valid');
+                            $('#notificationForm').find('.invalid-feedback').remove();
+                            if ($('#notificationForm').data('validator')) {
+                                $('#notificationForm').data('validator', null);
+                            }
                             isSendToAll = false;
                         });
 
