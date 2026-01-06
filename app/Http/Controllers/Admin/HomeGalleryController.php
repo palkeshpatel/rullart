@@ -116,6 +116,8 @@ class HomeGalleryController extends Controller
         // Handle file uploads using trait
         if ($request->hasFile('photo')) {
             $validated['photo'] = $this->uploadImage($request->file('photo'), null, 'homegallery');
+        } else {
+            $validated['photo'] = ''; // Set empty string if no photo uploaded (NOT NULL constraint)
         }
 
         if ($request->hasFile('photo_mobile')) {
@@ -129,6 +131,13 @@ class HomeGalleryController extends Controller
         if ($request->hasFile('photo_mobile_ar')) {
             $validated['photo_mobile_ar'] = $this->uploadImage($request->file('photo_mobile_ar'), null, 'homegallery');
         }
+
+        // Set default values for NOT NULL fields if not provided
+        $validated['descr'] = $validated['descr'] ?? '';
+        $validated['titleAR'] = $validated['titleAR'] ?? '';
+        $validated['descrAR'] = $validated['descrAR'] ?? '';
+        $validated['link'] = $validated['link'] ?? '';
+        $validated['videourl'] = $validated['videourl'] ?? '';
 
         try {
             // Get the next ID if auto-increment is not working
@@ -346,6 +355,9 @@ class HomeGalleryController extends Controller
         }
         if ($photoFile) {
             $validated['photo'] = $this->uploadImage($photoFile, $homeGallery->photo, 'homegallery');
+        } else {
+            // Keep existing photo if no new one uploaded
+            $validated['photo'] = $homeGallery->photo ?? '';
         }
 
         $photoMobileFile = $request->file('photo_mobile');
@@ -354,6 +366,9 @@ class HomeGalleryController extends Controller
         }
         if ($photoMobileFile) {
             $validated['photo_mobile'] = $this->uploadImage($photoMobileFile, $homeGallery->photo_mobile, 'homegallery');
+        } else {
+            // Keep existing photo if no new one uploaded
+            $validated['photo_mobile'] = $homeGallery->photo_mobile;
         }
 
         $photoArFile = $request->file('photo_ar');
@@ -362,6 +377,9 @@ class HomeGalleryController extends Controller
         }
         if ($photoArFile) {
             $validated['photo_ar'] = $this->uploadImage($photoArFile, $homeGallery->photo_ar, 'homegallery');
+        } else {
+            // Keep existing photo if no new one uploaded
+            $validated['photo_ar'] = $homeGallery->photo_ar;
         }
 
         $photoMobileArFile = $request->file('photo_mobile_ar');
@@ -370,7 +388,17 @@ class HomeGalleryController extends Controller
         }
         if ($photoMobileArFile) {
             $validated['photo_mobile_ar'] = $this->uploadImage($photoMobileArFile, $homeGallery->photo_mobile_ar, 'homegallery');
+        } else {
+            // Keep existing photo if no new one uploaded
+            $validated['photo_mobile_ar'] = $homeGallery->photo_mobile_ar;
         }
+
+        // Set default values for NOT NULL fields if not provided
+        $validated['descr'] = $validated['descr'] ?? '';
+        $validated['titleAR'] = $validated['titleAR'] ?? '';
+        $validated['descrAR'] = $validated['descrAR'] ?? '';
+        $validated['link'] = $validated['link'] ?? '';
+        $validated['videourl'] = $validated['videourl'] ?? '';
 
         try {
             $homeGallery->update($validated);

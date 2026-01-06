@@ -19,8 +19,8 @@
                         <div class="col-md-6">
                             <div class="mb-3">
                                 <label class="form-label">Title(EN) <span class="text-danger">*</span></label>
-                                <input type="text" name="title" class="form-control" 
-                                    value="{{ old('title', $homeGallery ? $homeGallery->title : '') }}" required>
+                                <input type="text" name="title" id="title" class="form-control" 
+                                    value="{{ old('title', $homeGallery ? $homeGallery->title : '') }}">
                                 <div class="invalid-feedback"></div>
                             </div>
                         </div>
