@@ -6,7 +6,7 @@
         {{-- <span class="logo logo-light">
             <span class="logo-lg"><span class="text-white fw-bold fs-18">Rullart</span></span>
             <span class="logo-sm"><span class="text-white fw-bold">Rullart</span></span>
-        </span> 
+        </span>
 
         <span class="logo logo-dark">
             <span class="logo-lg"><span class="text-dark fw-bold fs-18">Rullart</span></span>
@@ -98,7 +98,7 @@
                         </li>
                         <li class="side-nav-item">
                             <a href="{{ route('admin.orders') }}"
-                                class="side-nav-link {{ request()->routeIs('admin.orders*') ? 'active' : '' }}">
+                                class="side-nav-link {{ (request()->routeIs('admin.orders') || request()->routeIs('admin.orders.show') || request()->routeIs('admin.orders.edit') || request()->routeIs('admin.orders.export')) && !request()->routeIs('admin.orders-not-process*') ? 'active' : '' }}">
                                 <span class="menu-text">Orders</span>
                             </a>
                         </li>
