@@ -21,8 +21,13 @@ class CategoryController extends Controller
             return $this->getDataTablesData($request);
         }
 
-        // Get parent categories for dropdown
-        $parentCategories = Category::where('parentid', 0)->orWhereNull('parentid')->orderBy('category')->get();
+        // Get parent categories for dropdown (exclude categories 77 and 80 like CI project)
+        $parentCategories = Category::where(function ($query) {
+            $query->where('parentid', 0)->orWhereNull('parentid');
+        })
+            ->where('categoryid', '!=', 77)
+            ->where('categoryid', '!=', 80)
+            ->orderBy('category')->get();
 
         // Return view for initial page load
         return view('admin.category.index', compact('parentCategories'));
@@ -50,10 +55,10 @@ class CategoryController extends Controller
             $parentCategory = $request->input('parent_category');
             if (!empty($parentCategory) && $parentCategory !== '--Parent--') {
                 if ($parentCategory == '0') {
-                    $query->where(function($q) {
+                    $query->where(function ($q) {
                         $q->where('parentid', 0)->orWhereNull('parentid');
                     });
-                    $filteredCountQuery->where(function($q) {
+                    $filteredCountQuery->where(function ($q) {
                         $q->where('parentid', 0)->orWhereNull('parentid');
                     });
                 } else {
@@ -141,8 +146,13 @@ class CategoryController extends Controller
 
     public function create(Request $request)
     {
-        // Get parent categories for dropdown
-        $parentCategories = Category::where('parentid', 0)->orWhereNull('parentid')->orderBy('category')->get();
+        // Get parent categories for dropdown (exclude categories 77 and 80 like CI project)
+        $parentCategories = Category::where(function ($query) {
+            $query->where('parentid', 0)->orWhereNull('parentid');
+        })
+            ->where('categoryid', '!=', 77)
+            ->where('categoryid', '!=', 80)
+            ->orderBy('category')->get();
 
         // Return JSON for AJAX modal requests
         if ($request->ajax() || $request->expectsJson()) {
@@ -186,28 +196,28 @@ class CategoryController extends Controller
         // Remove special characters, convert to lowercase, replace spaces with hyphens
         $categoryName = trim($validated['category']);
         $baseCode = strtolower($categoryName);
-        
+
         // Remove Arabic and special characters, keep only alphanumeric and spaces
         $baseCode = preg_replace('/[^\p{L}\p{N}\s]+/u', '', $baseCode);
-        
+
         // Replace spaces and multiple spaces with single hyphen
         $baseCode = preg_replace('/\s+/', '-', $baseCode);
-        
+
         // Remove leading/trailing hyphens
         $baseCode = trim($baseCode, '-');
-        
+
         // If still empty (e.g., only Arabic characters), use transliteration or fallback
         if (empty($baseCode)) {
             // Try to create a code from category name using transliteration
             $baseCode = strtolower(preg_replace('/[^a-z0-9]+/i', '-', $categoryName));
             $baseCode = trim($baseCode, '-');
-            
+
             // If still empty, use timestamp-based fallback
             if (empty($baseCode)) {
                 $baseCode = 'category-' . time();
             }
         }
-        
+
         // Ensure categorycode is unique
         $categorycode = $baseCode;
         $counter = 1;
@@ -215,9 +225,9 @@ class CategoryController extends Controller
             $categorycode = $baseCode . '-' . $counter;
             $counter++;
         }
-        
+
         $validated['categorycode'] = $categorycode;
-        
+
         // Set default parentid if not provided
         if (empty($validated['parentid'])) {
             $validated['parentid'] = 0;
@@ -348,9 +358,13 @@ class CategoryController extends Controller
     {
         $category = Category::findOrFail($id);
 
-        // Get parent categories for dropdown
-        $parentCategories = Category::where('parentid', 0)->orWhereNull('parentid')
+        // Get parent categories for dropdown (exclude categories 77 and 80 like CI project)
+        $parentCategories = Category::where(function ($query) {
+            $query->where('parentid', 0)->orWhereNull('parentid');
+        })
             ->where('categoryid', '!=', $id) // Exclude current category from parent options
+            ->where('categoryid', '!=', 77)
+            ->where('categoryid', '!=', 80)
             ->orderBy('category')->get();
 
         // Return JSON for AJAX modal requests
@@ -495,26 +509,26 @@ class CategoryController extends Controller
             // Generate categorycode from category name (EN)
             $categoryName = trim($validated['category']);
             $baseCode = strtolower($categoryName);
-            
+
             // Remove Arabic and special characters, keep only alphanumeric and spaces
             $baseCode = preg_replace('/[^\p{L}\p{N}\s]+/u', '', $baseCode);
-            
+
             // Replace spaces and multiple spaces with single hyphen
             $baseCode = preg_replace('/\s+/', '-', $baseCode);
-            
+
             // Remove leading/trailing hyphens
             $baseCode = trim($baseCode, '-');
-            
+
             // If still empty, use transliteration or fallback
             if (empty($baseCode)) {
                 $baseCode = strtolower(preg_replace('/[^a-z0-9]+/i', '-', $categoryName));
                 $baseCode = trim($baseCode, '-');
-                
+
                 if (empty($baseCode)) {
                     $baseCode = 'category-' . time();
                 }
             }
-            
+
             // Ensure categorycode is unique (excluding current category)
             $categorycode = $baseCode;
             $counter = 1;
@@ -522,11 +536,11 @@ class CategoryController extends Controller
                 $categorycode = $baseCode . '-' . $counter;
                 $counter++;
             }
-            
+
             $validated['categorycode'] = $categorycode;
         }
         // If category name didn't change, keep existing categorycode (don't include it in validated)
-        
+
         // Set default parentid if not provided
         if (empty($validated['parentid'])) {
             $validated['parentid'] = 0;
