@@ -151,6 +151,7 @@ Route::middleware(['admin'])->prefix('admin')->name('admin.')->group(function ()
     Route::get('countries', [\App\Http\Controllers\Admin\CountryController::class, 'index'])->name('countries');
     Route::get('countries/create', [\App\Http\Controllers\Admin\CountryController::class, 'create'])->name('countries.create');
     Route::post('countries', [\App\Http\Controllers\Admin\CountryController::class, 'store'])->name('countries.store');
+    Route::post('countries/update-currency-rate', [\App\Http\Controllers\Admin\CountryController::class, 'updateCurrencyRate'])->name('countries.update-currency-rate');
     Route::get('countries/{id}', [\App\Http\Controllers\Admin\CountryController::class, 'show'])->name('countries.show');
     Route::get('countries/{id}/edit', [\App\Http\Controllers\Admin\CountryController::class, 'edit'])->name('countries.edit');
     Route::put('countries/{id}', [\App\Http\Controllers\Admin\CountryController::class, 'update'])->name('countries.update');

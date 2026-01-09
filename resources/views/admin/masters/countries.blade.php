@@ -9,9 +9,14 @@
             <div class="card">
                 <div class="card-header justify-content-between align-items-center border-dashed">
                     <h4 class="card-title mb-0">Countries List</h4>
-                    <a href="javascript:void(0);" class="btn btn-success btn-sm add-country-btn">
-                        <i class="ti ti-plus me-1"></i> Add Country
-                    </a>
+                    <div class="d-flex gap-2">
+                        <a href="javascript:void(0);" class="btn btn-success btn-sm update-currency-rate-btn">
+                            <i class="ti ti-refresh me-1"></i> Update Currency Rate
+                        </a>
+                        <a href="javascript:void(0);" class="btn btn-success btn-sm add-country-btn">
+                            <i class="ti ti-plus me-1"></i> Add Country
+                        </a>
+                    </div>
                 </div>
                 <div class="card-body">
                     <!-- Filters -->
@@ -82,28 +87,6 @@
     <!-- Modal Container -->
     <div id="countryModalContainer"></div>
     <div id="countryViewModalContainer"></div>
-
-    <!-- Delete Confirmation Modal -->
-    <div class="modal fade" id="deleteCountryModal" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">
-                        <i class="ti ti-alert-triangle text-warning me-2"></i>Confirm Delete
-                    </h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <p>Are you sure you want to delete <strong id="deleteCountryName"></strong>?</p>
-                    <p class="text-danger mb-0"><small>This action cannot be undone.</small></p>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="button" class="btn btn-danger" id="confirmDeleteCountryBtn">Delete</button>
-                </div>
-            </div>
-        </div>
-    </div>
 @endsection
 
 @section('scripts')
@@ -267,11 +250,6 @@
                                             '<a href="javascript:void(0);" class="btn btn-light btn-icon btn-sm rounded-circle edit-country-btn" data-country-id="' +
                                             row.action + '" title="Edit">';
                                         html += '<i class="ti ti-edit fs-lg"></i></a>';
-                                        html +=
-                                            '<a href="javascript:void(0);" class="btn btn-light btn-icon btn-sm rounded-circle delete-country-btn" data-country-id="' +
-                                            row.action + '" data-country-name="' + (row.countryname || 'this country') +
-                                            '" title="Delete">';
-                                        html += '<i class="ti ti-trash fs-lg"></i></a>';
                                         html += '</div>';
                                         return html;
                                     }
@@ -340,48 +318,38 @@
                             openCountryFormModal();
                     });
 
-                    $(document).on('click', '.delete-country-btn', function(e) {
-                        e.preventDefault();
-                            deleteCountryId = $(this).data('country-id');
-                        const countryName = $(this).data('country-name') || 'this country';
-                            $('#deleteCountryName').text(countryName);
-                            const deleteModal = new bootstrap.Modal(document.getElementById('deleteCountryModal'));
-                            deleteModal.show();
+                        $(document).on('click', '.update-currency-rate-btn', function(e) {
+                            e.preventDefault();
+                            const btn = $(this);
+                            const originalText = btn.html();
+                            btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-1"></span> Updating...');
+                            
+                            AdminAjax.request('{{ route("admin.countries.update-currency-rate") }}', 'POST')
+                                .then(res => {
+                                    showToast(res.message || 'Currency rates update initiated successfully', 'success');
+                                    btn.prop('disabled', false).html(originalText);
+                                    // Optionally reload the table to show updated rates
+                                    setTimeout(() => {
+                                        showLoader();
+                                        table.ajax.reload();
+                                    }, 1000);
+                                })
+                                .catch(err => {
+                                    showToast(err.message || 'Failed to update currency rates.', 'error');
+                                    btn.prop('disabled', false).html(originalText);
+                                });
                         });
 
-                        $('#confirmDeleteCountryBtn').on('click', function() {
-                            if (deleteCountryId) {
-                                const currentPage = table.page();
-                                const totalPages = table.page.info().pages;
-                                
-                                AdminAjax.request(countryBaseUrl + '/' + deleteCountryId, 'DELETE')
-                                    .then(res => {
-                                        bootstrap.Modal.getInstance(document.getElementById('deleteCountryModal')).hide();
-                                        showToast('Country deleted successfully', 'success');
-                                        
-                                        showLoader();
-                                        table.ajax.reload(function() {
-                                            hideLoader();
-                                            const newTotalPages = table.page.info().pages;
-                                            if (currentPage >= newTotalPages && newTotalPages > 0) {
-                                                table.page(newTotalPages - 1).draw('page');
-                                            } else {
-                                                table.page(currentPage).draw('page');
-                                            }
-                                        }, false);
-                                    })
-                                    .catch(err => {
-                                        showToast(err.message || 'Failed to delete country.', 'error');
-                                    });
-                            }
-                        });
 
                         // Modal functions
                         function openCountryViewModal(countryId) {
                             cleanupModals();
                             const url = countryBaseUrl + '/' + countryId;
-                        $('#countryViewModalContainer').html(loaderHtml());
-                        const loadingModal = new bootstrap.Modal($('#countryModal')[0], {
+                        $('#countryViewModalContainer').html('<div class="text-center p-4"><div class="spinner-border"></div></div>');
+                        // Use a temporary loader modal
+                        const tempLoader = $('<div class="modal fade" id="tempCountryLoader" tabindex="-1"><div class="modal-dialog"><div class="modal-content"><div class="modal-body text-center p-4"><div class="spinner-border"></div></div></div></div></div>');
+                        $('body').append(tempLoader);
+                        const loadingModal = new bootstrap.Modal(tempLoader[0], {
                             backdrop: 'static',
                             keyboard: false
                         });
@@ -389,6 +357,7 @@
 
                         AdminAjax.get(url).then(response => {
                             loadingModal.hide();
+                            tempLoader.remove();
                             cleanupModals();
                             $('#countryViewModalContainer').html(response.html);
                             const modalEl = document.getElementById('countryViewModal');
@@ -400,6 +369,7 @@
                                 }, { once: true });
                             }).catch(err => {
                                 loadingModal.hide();
+                                tempLoader.remove();
                                 cleanupModals();
                                 AdminAjax.showError('Failed to load country details.');
                             });
@@ -408,8 +378,11 @@
                         function openCountryFormModal(countryId = null) {
                             cleanupModals();
                             const url = countryId ? countryBaseUrl + '/' + countryId + '/edit' : countryBaseUrl + '/create';
-                        $('#countryModalContainer').html(loaderHtml());
-                        const loadingModal = new bootstrap.Modal($('#countryModal')[0], {
+                        $('#countryModalContainer').html('<div class="text-center p-4"><div class="spinner-border"></div></div>');
+                        // Use a temporary loader modal
+                        const tempLoader = $('<div class="modal fade" id="tempCountryFormLoader" tabindex="-1"><div class="modal-dialog"><div class="modal-content"><div class="modal-body text-center p-4"><div class="spinner-border"></div></div></div></div></div>');
+                        $('body').append(tempLoader);
+                        const loadingModal = new bootstrap.Modal(tempLoader[0], {
                             backdrop: 'static',
                             keyboard: false
                         });
@@ -417,6 +390,7 @@
 
                         AdminAjax.get(url).then(response => {
                             loadingModal.hide();
+                            tempLoader.remove();
                             cleanupModals();
                             $('#countryModalContainer').html(response.html);
                             const modalEl = document.getElementById('countryModal');
@@ -425,6 +399,7 @@
                             setupCountryValidation(countryId, modal);
                         }).catch(err => {
                             loadingModal.hide();
+                            tempLoader.remove();
                             cleanupModals();
                         });
                     }
@@ -543,11 +518,14 @@
 
                     function loaderHtml() {
                         return `
-        <div class="modal fade" id="countryModal">
-            <div class="modal-dialog">
+        <div class="modal fade" id="countryDataTableLoader" tabindex="-1" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+            <div class="modal-dialog modal-dialog-centered">
                 <div class="modal-content">
                     <div class="modal-body text-center p-4">
-                        <div class="spinner-border"></div>
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <p class="mt-2 mb-0">Loading countries...</p>
                     </div>
                 </div>
             </div>

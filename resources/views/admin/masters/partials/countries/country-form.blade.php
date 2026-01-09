@@ -16,16 +16,44 @@
                     <div class="row">
                         <div class="col-md-6">
                             <div class="mb-3">
-                                <label class="form-label">Country Name(EN) <span class="text-danger">*</span></label>
+                                <label class="form-label">Country Name (EN) <span class="text-danger">*</span></label>
                                 <input type="text" name="countryname" class="form-control" value="{{ old('countryname', $country ? $country->countryname : '') }}" required>
                                 <div class="invalid-feedback"></div>
                             </div>
                         </div>
                         <div class="col-md-6">
                             <div class="mb-3">
-                                <label class="form-label">Country Name(AR) <span class="text-danger">*</span></label>
+                                <label class="form-label">Country Name (AR) <span class="text-danger">*</span></label>
                                 <input type="text" name="countrynameAR" class="form-control" value="{{ old('countrynameAR', $country ? $country->countrynameAR : '') }}" required>
                                 <div class="invalid-feedback"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Shipping Charge (KWD)</label>
+                                <input type="number" step="0.01" name="shipping_charge" class="form-control" value="{{ old('shipping_charge', $country ? $country->shipping_charge : 0) }}">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Free Shipping Over (KWD)</label>
+                                <input type="number" step="0.001" name="free_shipping_over" class="form-control" value="{{ old('free_shipping_over', $country ? $country->free_shipping_over : 0) }}">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Shipping Days (EN)</label>
+                                <input type="text" name="shipping_days" class="form-control" value="{{ old('shipping_days', $country ? $country->shipping_days : '') }}">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Shipping Days (AR)</label>
+                                <input type="text" name="shipping_daysAR" class="form-control" value="{{ old('shipping_daysAR', $country ? $country->shipping_daysAR : '') }}">
                             </div>
                         </div>
                     </div>
@@ -52,43 +80,11 @@
                         </div>
                         <div class="col-md-6">
                             <div class="mb-3">
-                                <label class="form-label">Currency Symbol</label>
-                                <input type="text" name="currencysymbol" class="form-control" value="{{ old('currencysymbol', $country ? $country->currencysymbol : '') }}">
+                                <div class="form-check form-switch mt-4">
+                                    <input class="form-check-input" type="checkbox" name="isactive" value="1" id="isactive" {{ old('isactive', $country ? $country->isactive : 1) ? 'checked' : '' }}>
+                                    <label class="form-check-label" for="isactive">Is Active</label>
+                                </div>
                             </div>
-                        </div>
-                    </div>
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label class="form-label">Shipping Charge</label>
-                                <input type="number" step="0.01" name="shipping_charge" class="form-control" value="{{ old('shipping_charge', $country ? $country->shipping_charge : 0) }}">
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label class="form-label">Free Shipping Over</label>
-                                <input type="number" step="0.001" name="free_shipping_over" class="form-control" value="{{ old('free_shipping_over', $country ? $country->free_shipping_over : 0) }}">
-                            </div>
-                        </div>
-                    </div>
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label class="form-label">Shipping Days(EN)</label>
-                                <input type="text" name="shipping_days" class="form-control" value="{{ old('shipping_days', $country ? $country->shipping_days : '') }}">
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label class="form-label">Shipping Days(AR)</label>
-                                <input type="text" name="shipping_daysAR" class="form-control" value="{{ old('shipping_daysAR', $country ? $country->shipping_daysAR : '') }}">
-                            </div>
-                        </div>
-                    </div>
-                    <div class="mb-3">
-                        <div class="form-check form-switch">
-                            <input class="form-check-input" type="checkbox" name="isactive" value="1" id="isactive" {{ old('isactive', $country ? $country->isactive : 1) ? 'checked' : '' }}>
-                            <label class="form-check-label" for="isactive">Active</label>
                         </div>
                     </div>
                 </div>

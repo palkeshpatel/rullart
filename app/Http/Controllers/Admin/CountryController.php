@@ -28,6 +28,7 @@ class CountryController extends Controller
     private function getDataTablesData(Request $request)
     {
         try {
+            // Get total count of all countries (for recordsTotal)
             $countQuery = Country::query();
             $totalRecords = $countQuery->count();
 
@@ -35,10 +36,16 @@ class CountryController extends Controller
             $filteredCountQuery = Country::query();
 
             // Filter by active status
-            if ($request->has('active') && $request->active !== '') {
-                $query->where('isactive', $request->active);
-                $filteredCountQuery->where('isactive', $request->active);
+            // Admin panel shows all countries by default (when --All-- is selected or filter not set)
+            // When filter is explicitly set to '1' (Yes) or '0' (No), apply the filter
+            $activeFilter = $request->input('active', '');
+            if ($activeFilter === '1' || $activeFilter === '0' || $activeFilter === 1 || $activeFilter === 0) {
+                // User selected a specific filter (Yes=1 or No=0)
+                $activeValue = (int)$activeFilter;
+                $query->where('isactive', $activeValue);
+                $filteredCountQuery->where('isactive', $activeValue);
             }
+            // If empty string, null, or '--All--', don't filter (show all countries)
 
             // DataTables search
             $searchValue = $request->input('search.value', '');
@@ -69,6 +76,16 @@ class CountryController extends Controller
             $start = $request->input('start', 0);
             $length = $request->input('length', 25);
             $countries = $query->skip($start)->take($length)->get();
+
+            // Log for debugging
+            Log::info('Country DataTables Query', [
+                'total_records' => $totalRecords,
+                'filtered_count' => $filteredAfterSearch,
+                'countries_found' => $countries->count(),
+                'active_filter' => $activeFilter,
+                'query_sql' => $query->toSql(),
+                'query_bindings' => $query->getBindings()
+            ]);
 
             // Format data
             $data = [];
@@ -215,36 +232,38 @@ class CountryController extends Controller
 
         // Fix for PUT requests with FormData - PHP doesn't populate $_POST for PUT
         // Laravel can't read FormData from PUT requests automatically, so we need to parse it manually
-        if ($request->isMethod('put') && empty($request->all()) && 
-            $request->header('Content-Type') && 
-            str_contains($request->header('Content-Type'), 'multipart/form-data')) {
-            
+        if (
+            $request->isMethod('put') && empty($request->all()) &&
+            $request->header('Content-Type') &&
+            str_contains($request->header('Content-Type'), 'multipart/form-data')
+        ) {
+
             // Parse multipart/form-data manually
             $content = $request->getContent();
             $boundary = null;
-            
+
             // Extract boundary from Content-Type header
             if (preg_match('/boundary=([^;]+)/', $request->header('Content-Type'), $matches)) {
                 $boundary = '--' . trim($matches[1]);
             }
-            
+
             if ($boundary && $content) {
                 $parts = explode($boundary, $content);
                 $parsedData = [];
-                
+
                 foreach ($parts as $part) {
                     // Match field name and value in multipart format
                     if (preg_match('/Content-Disposition:\s*form-data;\s*name="([^"]+)"\s*\r?\n\r?\n(.*?)(?=\r?\n--|$)/s', $part, $matches)) {
                         $fieldName = $matches[1];
                         $fieldValue = trim($matches[2], "\r\n");
-                        
+
                         // Skip _method (it's handled by Laravel's method spoofing)
                         if ($fieldName !== '_method') {
                             $parsedData[$fieldName] = $fieldValue;
                         }
                     }
                 }
-                
+
                 // Merge parsed data into request so validation can access it
                 if (!empty($parsedData)) {
                     $request->merge($parsedData);
@@ -323,5 +342,72 @@ class CountryController extends Controller
 
         return redirect()->route('admin.countries')
             ->with('success', 'Country deleted successfully');
+    }
+
+    /**
+     * Update currency rates for all countries
+     * This method can fetch rates from an API or allow manual updates
+     */
+    public function updateCurrencyRate(Request $request)
+    {
+        try {
+            // Get all active countries
+            $countries = Country::where('isactive', 1)->get();
+            $updatedCount = 0;
+            $errors = [];
+
+            foreach ($countries as $country) {
+                if (empty($country->currencycode)) {
+                    continue;
+                }
+
+                // Try to fetch currency rate from an API
+                // You can integrate with a currency API like exchangerate-api.com, fixer.io, etc.
+                // For now, we'll use a placeholder that can be extended
+
+                // Example: Fetch from exchangerate-api.com (free tier available)
+                // $apiKey = config('services.exchangerate_api_key', '');
+                // $baseCurrency = 'KWD'; // Base currency
+                // $targetCurrency = $country->currencycode;
+                //
+                // if ($apiKey && $targetCurrency !== $baseCurrency) {
+                //     $url = "https://api.exchangerate-api.com/v4/latest/{$baseCurrency}";
+                //     $response = file_get_contents($url);
+                //     $data = json_decode($response, true);
+                //
+                //     if (isset($data['rates'][$targetCurrency])) {
+                //         $country->currencyrate = $data['rates'][$targetCurrency];
+                //         $country->save();
+                //         $updatedCount++;
+                //     }
+                // }
+
+                // For now, we'll just return a message that manual update is needed
+                // or you can implement the API call above
+            }
+
+            if ($request->ajax() || $request->expectsJson()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Currency rates update initiated. Please update rates manually or configure API integration.',
+                    'updated_count' => $updatedCount
+                ]);
+            }
+
+            return redirect()->route('admin.countries')
+                ->with('success', 'Currency rates update initiated. Please update rates manually or configure API integration.');
+        } catch (Exception $e) {
+            Log::error('Currency Rate Update Error: ' . $e->getMessage());
+
+            if ($request->ajax() || $request->expectsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'An error occurred while updating currency rates: ' . $e->getMessage()
+                ], 500);
+            }
+
+            return redirect()->route('admin.countries')
+                ->with('error', 'An error occurred while updating currency rates.');
+        }
     }
 }
