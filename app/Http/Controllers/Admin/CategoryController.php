@@ -154,15 +154,23 @@ class CategoryController extends Controller
             ->where('categoryid', '!=', 80)
             ->orderBy('category')->get();
 
+        // Calculate default display order (max + 1) for new category
+        $maxDisplayOrder = Category::max('displayorder') ?? 0;
+        $defaultDisplayOrder = $maxDisplayOrder + 1;
+
         // Return JSON for AJAX modal requests
         if ($request->ajax() || $request->expectsJson()) {
             return response()->json([
                 'success' => true,
-                'html' => view('admin.category.partials.category-form', ['category' => null, 'parentCategories' => $parentCategories])->render(),
+                'html' => view('admin.category.partials.category-form', [
+                    'category' => null,
+                    'parentCategories' => $parentCategories,
+                    'defaultDisplayOrder' => $defaultDisplayOrder
+                ])->render(),
             ]);
         }
 
-        return view('admin.category.create', compact('parentCategories'));
+        return view('admin.category.create', compact('parentCategories', 'defaultDisplayOrder'));
     }
 
     public function store(Request $request)
@@ -251,7 +259,15 @@ class CategoryController extends Controller
         // Handle boolean fields
         $validated['ispublished'] = $request->has('ispublished') ? 1 : 0;
         $validated['showmenu'] = $request->has('showmenu') ? 1 : 0;
-        $validated['displayorder'] = $validated['displayorder'] ?? 0;
+
+        // Set displayorder: if not provided, set to max + 1 (like CI project logic)
+        if (!isset($validated['displayorder']) || $validated['displayorder'] === '' || $validated['displayorder'] === null) {
+            $maxDisplayOrder = Category::max('displayorder') ?? 0;
+            $validated['displayorder'] = $maxDisplayOrder + 1;
+        } else {
+            $validated['displayorder'] = (int) $validated['displayorder'];
+        }
+
         $validated['updatedby'] = auth()->id() ?? 1;
         $validated['updateddate'] = now();
 

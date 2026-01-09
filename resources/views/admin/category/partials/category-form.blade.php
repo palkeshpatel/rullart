@@ -121,8 +121,12 @@
                             <div class="mb-3">
                                 <label class="form-label">Display Order</label>
                                 <input type="number" name="displayorder" class="form-control"
-                                    value="{{ old('displayorder', $category ? $category->displayorder ?? 0 : 0) }}">
+                                    value="{{ old('displayorder', $category ? $category->displayorder ?? 0 : ($defaultDisplayOrder ?? '')) }}"
+                                    placeholder="{{ $category ? '' : 'Auto: ' . ($defaultDisplayOrder ?? 'max + 1') }}">
                                 <div class="invalid-feedback"></div>
+                                @if(!$category)
+                                    <small class="text-muted">Leave empty to auto-set to max + 1</small>
+                                @endif
                             </div>
                         </div>
                     </div>
