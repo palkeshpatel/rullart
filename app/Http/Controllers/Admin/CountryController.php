@@ -65,11 +65,11 @@ class CountryController extends Controller
 
             $filteredAfterSearch = $filteredCountQuery->count();
 
-            // Ordering
-            $orderColumnIndex = $request->input('order.0.column', 0);
+            // Ordering - default by countryid ASC
+            $orderColumnIndex = $request->input('order.0.column', 8); // Default to countryid column (index 8)
             $orderDir = $request->input('order.0.dir', 'asc');
             $columns = ['countryname', 'countrynameAR', 'currencycode', 'currencyrate', 'shipping_charge', 'free_shipping_over', 'isocode', 'isactive', 'countryid'];
-            $orderColumn = $columns[$orderColumnIndex] ?? 'countryname';
+            $orderColumn = $columns[$orderColumnIndex] ?? 'countryid';
             $query->orderBy($orderColumn, $orderDir);
 
             // Pagination
@@ -143,10 +143,10 @@ class CountryController extends Controller
                 'max:255',
                 Rule::unique('countrymaster', 'countryname')
             ],
-            'countrynameAR' => 'nullable|string|max:255',
+            'countrynameAR' => 'required|string|max:255',
             'isocode' => 'nullable|string|max:10',
-            'currencycode' => 'nullable|string|max:10',
-            'currencyrate' => 'nullable|numeric',
+            'currencycode' => 'required|string|max:10',
+            'currencyrate' => 'required|numeric',
             'currencysymbol' => 'nullable|string|max:10',
             'shipping_charge' => 'nullable|numeric',
             'free_shipping_over' => 'nullable|numeric',
@@ -155,15 +155,37 @@ class CountryController extends Controller
             'isactive' => 'nullable',
         ], [
             'countryname.unique' => 'This country name already exists. Please choose a different name.',
-            'countryname.required' => 'Country Name(EN) is required.',
+            'countryname.required' => 'Country Name (EN) is required.',
+            'countrynameAR.required' => 'Country Name (AR) is required.',
+            'currencycode.required' => 'Currency Code is required.',
+            'currencyrate.required' => 'Currency Rate is required.',
+            'currencyrate.numeric' => 'Currency Rate must be a number.',
         ]);
 
         $validated['isactive'] = $request->has('isactive') ? 1 : 0;
-        $validated['currencyrate'] = $validated['currencyrate'] ?? 0;
+        // Currency rate is required, so no default needed
         $validated['shipping_charge'] = $validated['shipping_charge'] ?? 0;
         $validated['free_shipping_over'] = $validated['free_shipping_over'] ?? 0;
+        // Set default values for nullable fields that might not have defaults in DB
+        // These fields must be present in the insert even if empty
+        if (!isset($validated['currencysymbol'])) {
+            $validated['currencysymbol'] = '';
+        }
+        if (!isset($validated['shipping_days'])) {
+            $validated['shipping_days'] = '';
+        }
+        if (!isset($validated['shipping_daysAR'])) {
+            $validated['shipping_daysAR'] = '';
+        }
+        if (!isset($validated['isocode'])) {
+            $validated['isocode'] = '';
+        }
 
         try {
+            // Get the next countryid (since it's not auto-increment)
+            $maxCountryId = Country::max('countryid') ?? 0;
+            $validated['countryid'] = $maxCountryId + 1;
+
             $country = Country::create($validated);
 
             if ($request->ajax() || $request->expectsJson()) {
@@ -178,18 +200,55 @@ class CountryController extends Controller
                 ->with('success', 'Country created successfully');
         } catch (\Illuminate\Database\QueryException $e) {
             // Handle database constraint violations
+            Log::error('Country creation QueryException: ' . $e->getMessage());
+            Log::error('SQL Error Code: ' . $e->getCode());
+            Log::error('SQL State: ' . ($e->errorInfo[0] ?? 'N/A'));
+            Log::error('SQL Error: ' . ($e->errorInfo[2] ?? 'N/A'));
+
+            $errorMessage = 'An error occurred while saving the country.';
+            $errorField = 'countryname';
+
             if ($e->getCode() == 23000) {
-                $errorMessage = 'This country name already exists. Please choose a different name.';
+                // Check which constraint was violated
+                $errorInfo = $e->errorInfo[2] ?? '';
+                if (stripos($errorInfo, 'countryname') !== false) {
+                    $errorMessage = 'This country name already exists. Please choose a different name.';
+                    $errorField = 'countryname';
+                } elseif (stripos($errorInfo, 'currencycode') !== false) {
+                    $errorMessage = 'This currency code already exists. Please choose a different code.';
+                    $errorField = 'currencycode';
+                } else {
+                    $errorMessage = 'A database constraint violation occurred: ' . $errorInfo;
+                }
             } else {
-                $errorMessage = 'An error occurred while saving the country.';
+                $errorMessage = 'Database error: ' . ($e->errorInfo[2] ?? $e->getMessage());
             }
 
             if ($request->ajax() || $request->expectsJson()) {
                 return response()->json([
                     'success' => false,
                     'message' => $errorMessage,
-                    'errors' => ['countryname' => [$errorMessage]]
+                    'errors' => [$errorField => [$errorMessage]],
+                    'debug' => config('app.debug') ? [
+                        'sql_error' => $e->errorInfo[2] ?? $e->getMessage(),
+                        'code' => $e->getCode()
+                    ] : []
                 ], 422);
+            }
+
+            return back()->withErrors([$errorField => $errorMessage])->withInput();
+        } catch (\Exception $e) {
+            Log::error('Country creation error: ' . $e->getMessage());
+            Log::error('Stack trace: ' . $e->getTraceAsString());
+
+            $errorMessage = 'An unexpected error occurred: ' . $e->getMessage();
+
+            if ($request->ajax() || $request->expectsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => $errorMessage,
+                    'errors' => ['countryname' => [$errorMessage]]
+                ], 500);
             }
 
             return back()->withErrors(['countryname' => $errorMessage])->withInput();
@@ -278,10 +337,10 @@ class CountryController extends Controller
                 'max:255',
                 Rule::unique('countrymaster', 'countryname')->ignore($country->getKey(), $country->getKeyName())
             ],
-            'countrynameAR' => 'nullable|string|max:255',
+            'countrynameAR' => 'required|string|max:255',
             'isocode' => 'nullable|string|max:10',
-            'currencycode' => 'nullable|string|max:10',
-            'currencyrate' => 'nullable|numeric',
+            'currencycode' => 'required|string|max:10',
+            'currencyrate' => 'required|numeric',
             'currencysymbol' => 'nullable|string|max:10',
             'shipping_charge' => 'nullable|numeric',
             'free_shipping_over' => 'nullable|numeric',
@@ -290,7 +349,11 @@ class CountryController extends Controller
             'isactive' => 'nullable',
         ], [
             'countryname.unique' => 'This country name already exists. Please choose a different name.',
-            'countryname.required' => 'Country Name(EN) is required.',
+            'countryname.required' => 'Country Name (EN) is required.',
+            'countrynameAR.required' => 'Country Name (AR) is required.',
+            'currencycode.required' => 'Currency Code is required.',
+            'currencyrate.required' => 'Currency Rate is required.',
+            'currencyrate.numeric' => 'Currency Rate must be a number.',
         ]);
 
         $validated['isactive'] = $request->has('isactive') ? 1 : 0;
@@ -345,8 +408,8 @@ class CountryController extends Controller
     }
 
     /**
-     * Update currency rates for all countries
-     * This method can fetch rates from an API or allow manual updates
+     * Update currency rates for all countries using free API
+     * Uses exchangerate-api.com (free tier, no API key required)
      */
     public function updateCurrencyRate(Request $request)
     {
@@ -355,49 +418,88 @@ class CountryController extends Controller
             $countries = Country::where('isactive', 1)->get();
             $updatedCount = 0;
             $errors = [];
+            $baseCurrency = 'KWD'; // Base currency is Kuwaiti Dinar
 
+            // Fetch exchange rates from free API (exchangerate-api.com)
+            // Free tier: 1,500 requests/month, no API key required
+            $apiUrl = "https://api.exchangerate-api.com/v4/latest/{$baseCurrency}";
+
+            $context = stream_context_create([
+                'http' => [
+                    'timeout' => 10,
+                    'method' => 'GET',
+                    'header' => 'User-Agent: Laravel Currency Updater'
+                ]
+            ]);
+
+            $response = @file_get_contents($apiUrl, false, $context);
+
+            if ($response === false) {
+                throw new Exception('Failed to fetch currency rates from API. Please check your internet connection.');
+            }
+
+            $data = json_decode($response, true);
+
+            if (!isset($data['rates']) || !is_array($data['rates'])) {
+                throw new Exception('Invalid response from currency API.');
+            }
+
+            $rates = $data['rates'];
+
+            // Update currency rates for each country
             foreach ($countries as $country) {
                 if (empty($country->currencycode)) {
                     continue;
                 }
 
-                // Try to fetch currency rate from an API
-                // You can integrate with a currency API like exchangerate-api.com, fixer.io, etc.
-                // For now, we'll use a placeholder that can be extended
+                $currencyCode = strtoupper(trim($country->currencycode));
 
-                // Example: Fetch from exchangerate-api.com (free tier available)
-                // $apiKey = config('services.exchangerate_api_key', '');
-                // $baseCurrency = 'KWD'; // Base currency
-                // $targetCurrency = $country->currencycode;
-                //
-                // if ($apiKey && $targetCurrency !== $baseCurrency) {
-                //     $url = "https://api.exchangerate-api.com/v4/latest/{$baseCurrency}";
-                //     $response = file_get_contents($url);
-                //     $data = json_decode($response, true);
-                //
-                //     if (isset($data['rates'][$targetCurrency])) {
-                //         $country->currencyrate = $data['rates'][$targetCurrency];
-                //         $country->save();
-                //         $updatedCount++;
-                //     }
-                // }
+                // Skip if same as base currency (KWD = 1.0)
+                if ($currencyCode === $baseCurrency) {
+                    $country->currencyrate = 1.0;
+                    $country->save();
+                    $updatedCount++;
+                    continue;
+                }
 
-                // For now, we'll just return a message that manual update is needed
-                // or you can implement the API call above
+                // Check if rate exists in API response
+                if (isset($rates[$currencyCode])) {
+                    $newRate = (float) $rates[$currencyCode];
+
+                    if ($newRate > 0) {
+                        $country->currencyrate = $newRate;
+                        $country->save();
+                        $updatedCount++;
+                    } else {
+                        $errors[] = "Invalid rate for {$country->countryname} ({$currencyCode})";
+                    }
+                } else {
+                    $errors[] = "Rate not found for {$country->countryname} ({$currencyCode})";
+                }
+            }
+
+            $message = "Currency rates updated successfully. {$updatedCount} countries updated.";
+            if (!empty($errors)) {
+                $message .= " Errors: " . implode(', ', array_slice($errors, 0, 5));
+                if (count($errors) > 5) {
+                    $message .= " and " . (count($errors) - 5) . " more.";
+                }
             }
 
             if ($request->ajax() || $request->expectsJson()) {
                 return response()->json([
                     'success' => true,
-                    'message' => 'Currency rates update initiated. Please update rates manually or configure API integration.',
-                    'updated_count' => $updatedCount
+                    'message' => $message,
+                    'updated_count' => $updatedCount,
+                    'errors' => $errors
                 ]);
             }
 
             return redirect()->route('admin.countries')
-                ->with('success', 'Currency rates update initiated. Please update rates manually or configure API integration.');
+                ->with('success', $message);
         } catch (Exception $e) {
             Log::error('Currency Rate Update Error: ' . $e->getMessage());
+            Log::error('Stack trace: ' . $e->getTraceAsString());
 
             if ($request->ajax() || $request->expectsJson()) {
                 return response()->json([
@@ -407,7 +509,7 @@ class CountryController extends Controller
             }
 
             return redirect()->route('admin.countries')
-                ->with('error', 'An error occurred while updating currency rates.');
+                ->with('error', 'An error occurred while updating currency rates: ' . $e->getMessage());
         }
     }
 }

@@ -261,7 +261,7 @@
                                 [25, 50, 100]
                             ],
                             order: [
-                                [0, 'asc']
+                                [8, 'asc']  // Order by countryid (column index 8) ascending
                             ],
                             language: {
                                 processing: '<div class="spinner-border spinner-border-sm" role="status"><span class="visually-hidden">Loading...</span></div>',
@@ -413,11 +413,18 @@
                         $form.validate({
                             rules: {
                                     countryname: { required: true },
-                                    countrynameAR: { required: true }
+                                    countrynameAR: { required: true },
+                                    currencycode: { required: true },
+                                    currencyrate: { required: true, number: true }
                             },
                             messages: {
-                                    countryname: 'Country Name(EN) is required.',
-                                    countrynameAR: 'Country Name(AR) is required.'
+                                    countryname: 'Country Name (EN) is required.',
+                                    countrynameAR: 'Country Name (AR) is required.',
+                                    currencycode: 'Currency Code is required.',
+                                    currencyrate: { 
+                                        required: 'Currency Rate is required.',
+                                        number: 'Currency Rate must be a number.'
+                                    }
                             },
                             errorElement: 'div',
                             errorClass: 'invalid-feedback',

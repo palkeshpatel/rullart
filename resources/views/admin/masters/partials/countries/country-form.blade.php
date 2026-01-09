@@ -66,16 +66,18 @@
                         </div>
                         <div class="col-md-6">
                             <div class="mb-3">
-                                <label class="form-label">Currency Code</label>
-                                <input type="text" name="currencycode" class="form-control" value="{{ old('currencycode', $country ? $country->currencycode : '') }}">
+                                <label class="form-label">Currency Code <span class="text-danger">*</span></label>
+                                <input type="text" name="currencycode" class="form-control" value="{{ old('currencycode', $country ? $country->currencycode : '') }}" required>
+                                <div class="invalid-feedback"></div>
                             </div>
                         </div>
                     </div>
                     <div class="row">
                         <div class="col-md-6">
                             <div class="mb-3">
-                                <label class="form-label">Currency Rate</label>
-                                <input type="number" step="0.000001" name="currencyrate" class="form-control" value="{{ old('currencyrate', $country ? $country->currencyrate : 0) }}">
+                                <label class="form-label">Currency Rate <span class="text-danger">*</span></label>
+                                <input type="number" step="0.000001" name="currencyrate" class="form-control" value="{{ old('currencyrate', $country ? $country->currencyrate : 0) }}" required>
+                                <div class="invalid-feedback"></div>
                             </div>
                         </div>
                         <div class="col-md-6">
