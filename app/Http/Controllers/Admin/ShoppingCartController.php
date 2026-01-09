@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\ShoppingCartMaster;
+use App\Models\Country;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Response;
@@ -20,17 +21,11 @@ class ShoppingCartController extends Controller
         }
 
         // Get unique countries for filter dropdown
-        $countries = ShoppingCartMaster::whereDoesntHave('order')
-            ->whereHas('addressbook', function ($query) {
-                $query->whereNotNull('country');
-            })
-            ->with('addressbook')
-            ->get()
-            ->pluck('addressbook.country')
-            ->filter()
-            ->unique()
-            ->sort()
-            ->values();
+        // Get countries from countrymaster table ordered by countryid (like CI project does)
+        $countries = Country::where('isactive', 1)
+            ->orderBy('countryid')
+            ->pluck('countryname')
+            ->toArray();
 
         // Return view for initial page load
         return view('admin.orders-not-process.index', compact('countries'));
@@ -45,51 +40,78 @@ class ShoppingCartController extends Controller
             $countQuery = ShoppingCartMaster::whereDoesntHave('order');
             $totalRecords = $countQuery->count();
 
-            $query = ShoppingCartMaster::with(['customer', 'addressbook'])->whereDoesntHave('order');
-            $filteredCountQuery = ShoppingCartMaster::whereDoesntHave('order');
+            // Base query - join with countrymaster and addressbook for country filtering
+            $query = ShoppingCartMaster::select('shoppingcartmaster.*')
+                ->leftJoin('countrymaster', 'shoppingcartmaster.shippingcountryid', '=', 'countrymaster.countryid')
+                ->leftJoin('addressbook', 'shoppingcartmaster.addressid', '=', 'addressbook.addressid')
+                ->leftJoin('ordermaster', 'shoppingcartmaster.cartid', '=', 'ordermaster.fkcartid')
+                ->whereNull('ordermaster.fkcartid')
+                ->with(['customer', 'addressbook']);
+            
+            $filteredCountQuery = ShoppingCartMaster::select('shoppingcartmaster.cartid')
+                ->leftJoin('countrymaster', 'shoppingcartmaster.shippingcountryid', '=', 'countrymaster.countryid')
+                ->leftJoin('addressbook', 'shoppingcartmaster.addressid', '=', 'addressbook.addressid')
+                ->leftJoin('ordermaster', 'shoppingcartmaster.cartid', '=', 'ordermaster.fkcartid')
+                ->whereNull('ordermaster.fkcartid');
 
-            // Filter by country
+            // Filter by country - check both countrymaster.countryname and addressbook.country
             $country = $request->input('country');
             if (!empty($country) && $country !== '--All Country--') {
-                $query->whereHas('addressbook', function ($addressQuery) use ($country) {
-                    $addressQuery->where('country', $country);
+                $query->where(function ($q) use ($country) {
+                    $q->where('countrymaster.countryname', $country)
+                      ->orWhere('addressbook.country', $country);
                 });
-                $filteredCountQuery->whereHas('addressbook', function ($addressQuery) use ($country) {
-                    $addressQuery->where('country', $country);
+                $filteredCountQuery->where(function ($q) use ($country) {
+                    $q->where('countrymaster.countryname', $country)
+                      ->orWhere('addressbook.country', $country);
                 });
             }
 
             $filteredCount = $filteredCountQuery->count();
 
-            // DataTables search
+            // DataTables search - join customers table for search
             $searchValue = $request->input('search.value', '');
             if (!empty($searchValue)) {
-                $query->where(function ($q) use ($searchValue) {
-                    $q->where('cartid', 'like', "%{$searchValue}%")
-                        ->orWhereHas('customer', function ($customerQuery) use ($searchValue) {
-                            $customerQuery->where('firstname', 'like', "%{$searchValue}%")
-                                ->orWhere('lastname', 'like', "%{$searchValue}%")
-                                ->orWhere('email', 'like', "%{$searchValue}%");
-                        });
-                });
+                $query->leftJoin('customers', 'shoppingcartmaster.fkcustomerid', '=', 'customers.customerid')
+                    ->where(function ($q) use ($searchValue) {
+                        $q->where('shoppingcartmaster.cartid', 'like', "%{$searchValue}%")
+                          ->orWhere('customers.firstname', 'like', "%{$searchValue}%")
+                          ->orWhere('customers.lastname', 'like', "%{$searchValue}%")
+                          ->orWhere('customers.email', 'like', "%{$searchValue}%");
+                    });
 
-                $filteredCountQuery->where(function ($q) use ($searchValue) {
-                    $q->where('cartid', 'like', "%{$searchValue}%")
-                        ->orWhereHas('customer', function ($customerQuery) use ($searchValue) {
-                            $customerQuery->where('firstname', 'like', "%{$searchValue}%")
-                                ->orWhere('lastname', 'like', "%{$searchValue}%")
-                                ->orWhere('email', 'like', "%{$searchValue}%");
-                        });
-                });
+                $filteredCountQuery->leftJoin('customers', 'shoppingcartmaster.fkcustomerid', '=', 'customers.customerid')
+                    ->where(function ($q) use ($searchValue) {
+                        $q->where('shoppingcartmaster.cartid', 'like', "%{$searchValue}%")
+                          ->orWhere('customers.firstname', 'like', "%{$searchValue}%")
+                          ->orWhere('customers.lastname', 'like', "%{$searchValue}%")
+                          ->orWhere('customers.email', 'like', "%{$searchValue}%");
+                    });
+            } else {
+                // Join customers table even if no search for consistent query structure
+                $query->leftJoin('customers', 'shoppingcartmaster.fkcustomerid', '=', 'customers.customerid');
+                $filteredCountQuery->leftJoin('customers', 'shoppingcartmaster.fkcustomerid', '=', 'customers.customerid');
             }
 
-            $filteredAfterSearch = $filteredCountQuery->count();
+            // Get filtered count after search - use distinct to avoid duplicate counts from joins
+            $filteredAfterSearch = $filteredCountQuery->distinct('shoppingcartmaster.cartid')->count('shoppingcartmaster.cartid');
 
-            // Ordering
+            // Ordering - use table prefixes for joined columns
             $orderColumnIndex = $request->input('order.0.column', 0);
             $orderDir = $request->input('order.0.dir', 'desc');
-            $columns = ['cartid', 'firstname', 'email', 'total', 'orderdate', 'paymentmethod', 'mobiledevice', 'emailcount', 'emailsenddate', 'cartid'];
-            $orderColumn = $columns[$orderColumnIndex] ?? 'orderdate';
+            $columns = [
+                'shoppingcartmaster.cartid',
+                'customers.firstname',
+                'customers.email',
+                'shoppingcartmaster.total',
+                'shoppingcartmaster.orderdate',
+                'shoppingcartmaster.paymentmethod',
+                'shoppingcartmaster.mobiledevice',
+                'shoppingcartmaster.cartid', // emailcount placeholder
+                'shoppingcartmaster.orderdate', // emailsenddate placeholder
+                'shoppingcartmaster.cartid'
+            ];
+            $orderColumn = $columns[$orderColumnIndex] ?? 'shoppingcartmaster.orderdate';
             $query->orderBy($orderColumn, $orderDir);
 
             // Pagination
