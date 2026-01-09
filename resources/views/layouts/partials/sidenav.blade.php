@@ -3,15 +3,15 @@
 
     <!-- Brand Logo -->
     <a href="{{ route('admin.dashboard') }}" class="logo">
-        <span class="logo logo-light">
+        {{-- <span class="logo logo-light">
             <span class="logo-lg"><span class="text-white fw-bold fs-18">Rullart</span></span>
             <span class="logo-sm"><span class="text-white fw-bold">Rullart</span></span>
-        </span>
+        </span> 
 
         <span class="logo logo-dark">
             <span class="logo-lg"><span class="text-dark fw-bold fs-18">Rullart</span></span>
             <span class="logo-sm"><span class="text-dark fw-bold">Rullart</span></span>
-        </span>
+        </span> --}}
     </a>
 
     <!-- Sidebar Hover Menu Toggle Button -->
@@ -33,8 +33,7 @@
                     <a href="{{ route('admin.dashboard') }}" class="link-reset">
                         <img src="{{ asset('resources/images/rullart-logo.svg') }}" alt="Rullart Logo" class="mb-2"
                             style="height: 50px; width: auto; max-width: 100%; object-fit: contain;">
-                        <span
-                            class="sidenav-user-name fw-bold">{{ Auth::guard('admin')->user()->name ?? 'Admin' }}</span>
+
                     </a>
                 </div>
                 <div>
