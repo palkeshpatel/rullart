@@ -39,75 +39,73 @@ class OrderController extends Controller
             // Get total records count (before filtering)
             $totalRecords = $countQuery->count();
 
-            // Build base query for data
-        $query = Order::with('customer');
+            // Build base query for data - join customers table for email sorting
+            $query = Order::select('ordermaster.*')
+                ->leftJoin('customers', 'ordermaster.fkcustomerid', '=', 'customers.customerid');
 
-            // Build count query for filtered results
-            $filteredCountQuery = Order::query();
+            // Build count query for filtered results - join customers for email search
+            $filteredCountQuery = Order::select('ordermaster.orderid')
+                ->leftJoin('customers', 'ordermaster.fkcustomerid', '=', 'customers.customerid');
 
         // Filter by status
             $status = $request->input('status');
             if (!empty($status)) {
-                $query->where('fkorderstatus', $status);
-                $filteredCountQuery->where('fkorderstatus', $status);
+                $query->where('ordermaster.fkorderstatus', $status);
+                $filteredCountQuery->where('ordermaster.fkorderstatus', $status);
         }
 
         // Filter by country
             $country = $request->input('country');
             if (!empty($country) && $country !== '--All Country--') {
-                $query->where('country', $country);
-                $filteredCountQuery->where('country', $country);
+                $query->where('ordermaster.country', $country);
+                $filteredCountQuery->where('ordermaster.country', $country);
         }
 
             // Get filtered count (after filters but before search)
-            $filteredCount = $filteredCountQuery->count();
+            $filteredCount = $filteredCountQuery->distinct('ordermaster.orderid')->count('ordermaster.orderid');
 
             // DataTables search (global search)
             $searchValue = $request->input('search.value', '');
             if (!empty($searchValue)) {
                 $query->where(function ($q) use ($searchValue) {
-                    $q->where('orderid', 'like', "%{$searchValue}%")
-                        ->orWhere('firstname', 'like', "%{$searchValue}%")
-                        ->orWhere('lastname', 'like', "%{$searchValue}%")
-                        ->orWhere('mobile', 'like', "%{$searchValue}%")
-                        ->orWhereHas('customer', function($customerQuery) use ($searchValue) {
-                            $customerQuery->where('email', 'like', "%{$searchValue}%");
-                        });
+                    $q->where('ordermaster.orderid', 'like', "%{$searchValue}%")
+                        ->orWhere('ordermaster.firstname', 'like', "%{$searchValue}%")
+                        ->orWhere('ordermaster.lastname', 'like', "%{$searchValue}%")
+                        ->orWhere('ordermaster.mobile', 'like', "%{$searchValue}%")
+                        ->orWhere('customers.email', 'like', "%{$searchValue}%");
                 });
 
                 // Apply same search to count query
                 $filteredCountQuery->where(function ($q) use ($searchValue) {
-                    $q->where('orderid', 'like', "%{$searchValue}%")
-                        ->orWhere('firstname', 'like', "%{$searchValue}%")
-                        ->orWhere('lastname', 'like', "%{$searchValue}%")
-                        ->orWhere('mobile', 'like', "%{$searchValue}%")
-                        ->orWhereHas('customer', function($customerQuery) use ($searchValue) {
-                            $customerQuery->where('email', 'like', "%{$searchValue}%");
+                    $q->where('ordermaster.orderid', 'like', "%{$searchValue}%")
+                        ->orWhere('ordermaster.firstname', 'like', "%{$searchValue}%")
+                        ->orWhere('ordermaster.lastname', 'like', "%{$searchValue}%")
+                        ->orWhere('ordermaster.mobile', 'like', "%{$searchValue}%")
+                        ->orWhere('customers.email', 'like', "%{$searchValue}%");
                   });
-            });
-        }
+            }
 
             // Get filtered count after search
-            $filteredAfterSearch = $filteredCountQuery->count();
+            $filteredAfterSearch = $filteredCountQuery->distinct('ordermaster.orderid')->count('ordermaster.orderid');
 
             // Ordering
             $orderColumnIndex = $request->input('order.0.column', 0);
             $orderDir = $request->input('order.0.dir', 'desc');
 
             $columns = [
-                'orderid',
-                'firstname',
-                'email',
-                'total',
-                'fkorderstatus',
-                'country',
-                'orderdate',
-                'shipping_charge',
-                'paymentmethod',
-                'tranid'
+                'ordermaster.orderid',
+                'ordermaster.firstname',
+                'customers.email',  // Use joined table column
+                'ordermaster.total',
+                'ordermaster.fkorderstatus',
+                'ordermaster.country',
+                'ordermaster.orderdate',
+                'ordermaster.shipping_charge',
+                'ordermaster.paymentmethod',
+                'ordermaster.tranid'
             ];
 
-            $orderColumn = $columns[$orderColumnIndex] ?? 'orderdate';
+            $orderColumn = $columns[$orderColumnIndex] ?? 'ordermaster.orderdate';
             $query->orderBy($orderColumn, $orderDir);
 
             // Pagination
@@ -118,6 +116,11 @@ class OrderController extends Controller
             // Format data for DataTables
             $data = [];
             foreach ($orders as $order) {
+                // Load customer relationship if not already loaded
+                if (!$order->relationLoaded('customer')) {
+                    $order->load('customer');
+                }
+                
                 $data[] = [
                     'orderid' => $order->orderid ?? '',
                     'name' => trim(($order->firstname ?? '') . ' ' . ($order->lastname ?? '')),
