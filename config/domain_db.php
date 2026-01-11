@@ -11,10 +11,10 @@
  * - 'production': Maps domain names to database names (for production)
  *
  * Usage:
- * - Local: http://localhost:8000 -> rullart_rullart_kuwaitbeta
- * - Local: http://localhost:9000 -> rullart_rullart_qatarbeta
- * - Production: https://betakuwait.techiebrothers.in -> rullart_rullart_kuwaitbeta
- * - Production: https://betaqatar.techiebrothers.in -> rullart_rullart_qatarbeta
+ * - Local: http://localhost:8000 -> rullart_kuwaitalpha
+ * - Local: http://localhost:9000 -> rullart_qataralpha
+ * - Production: https://betakuwait.techiebrothers.in -> rullart_kuwaitalpha
+ * - Production: https://betaqatar.techiebrothers.in -> rullart_qataralpha
  */
 
 return [
@@ -29,8 +29,8 @@ return [
     |
     */
     'local' => [
-        '8000' => 'rullart_rullart_kuwaitbeta',
-        '9000' => 'rullart_rullart_qatarbeta',
+        '8000' => 'rullart_kuwaitalpha',
+        '9000' => 'rullart_qataralpha',
     ],
 
     /*
@@ -56,7 +56,7 @@ return [
     | This should match your .env DB_DATABASE value.
     |
     */
-    'default' => env('DB_DATABASE', 'rullart_rullart_kuwaitbeta'),
+    'default' => env('DB_DATABASE', 'rullart_kuwaitalpha'),
 
     /*
     |--------------------------------------------------------------------------

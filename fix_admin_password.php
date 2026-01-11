@@ -36,7 +36,7 @@ echo "Username: {$username}\n";
 // Check which CI database to use based on Laravel DB
 $laravelDb = env('DB_DATABASE', 'rullart_kuwaitbeta_laravel');
 if (strpos($laravelDb, 'qatarbeta') !== false) {
-    $ciConfig['database'] = 'rullart_rullart_qatarbeta';
+    $ciConfig['database'] = 'rullart_qataralpha';
     echo "Using Qatar CI database: {$ciConfig['database']}\n";
 } else {
     echo "Using Kuwait CI database: {$ciConfig['database']}\n";

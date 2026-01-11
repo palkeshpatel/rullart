@@ -45,7 +45,7 @@ class MigrateFromCI extends Command
             'description' => 'Kuwait Database (Laravel runs on port 8000)'
         ],
         '2' => [
-            'ci_db' => 'rullart_rullart_qatarbeta',
+            'ci_db' => 'rullart_qataralpha',
             'laravel_db' => 'rullart_qatarbeta_laravel',
             'laravel_port' => 8001,  // Laravel server port, not MySQL
             'description' => 'Qatar Database (Laravel runs on port 8001)'

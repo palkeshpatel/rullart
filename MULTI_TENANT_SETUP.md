@@ -4,16 +4,18 @@ This Laravel application supports multi-tenant database switching based on domai
 
 ## 📋 Overview
 
-- **Kuwait Tenant**: Database `rullart_rullart_kuwaitbeta`
-- **Qatar Tenant**: Database `rullart_rullart_qatarbeta`
+-   **Kuwait Tenant**: Database `rullart_kuwaitalpha`
+-   **Qatar Tenant**: Database `rullart_qataralpha`
 
 ### Production Domains
-- `https://betakuwait.techiebrothers.in` → Kuwait database
-- `https://betaqatar.techiebrothers.in` → Qatar database
+
+-   `https://betakuwait.techiebrothers.in` → Kuwait database
+-   `https://betaqatar.techiebrothers.in` → Qatar database
 
 ### Local Development
-- `http://localhost:8000` → Kuwait database
-- `http://localhost:9000` → Qatar database
+
+-   `http://localhost:8000` → Kuwait database
+-   `http://localhost:9000` → Qatar database
 
 ---
 
@@ -22,6 +24,7 @@ This Laravel application supports multi-tenant database switching based on domai
 ### Step 1: Configure `.env` File
 
 #### Local Development (.env)
+
 ```env
 APP_ENV=local
 APP_DEBUG=true
@@ -35,6 +38,7 @@ DB_DATABASE=dummy_db  # This will be overridden by domain switching
 ```
 
 #### Production (.env)
+
 ```env
 APP_ENV=production
 APP_DEBUG=false
@@ -58,19 +62,20 @@ The mapping is configured in `config/domain_db.php`:
 ```php
 return [
     'local' => [
-        '8000' => 'rullart_rullart_kuwaitbeta',  // Kuwait
-        '9000' => 'rullart_rullart_qatarbeta',   // Qatar
+        '8000' => 'rullart_kuwaitalpha',  // Kuwait
+        '9000' => 'rullart_qataralpha',   // Qatar
     ],
     'production' => [
-        'betakuwait.techiebrothers.in' => 'rullart_rullart_kuwaitbeta',
-        'betaqatar.techiebrothers.in'  => 'rullart_rullart_qatarbeta',
+        'betakuwait.techiebrothers.in' => 'rullart_kuwaitalpha',
+        'betaqatar.techiebrothers.in'  => 'rullart_qataralpha',
     ],
-    'default' => env('DB_DATABASE', 'rullart_rullart_kuwaitbeta'),
+    'default' => env('DB_DATABASE', 'rullart_kuwaitalpha'),
     'enabled' => env('DB_SWITCHING_ENABLED', true),
 ];
 ```
 
 **To add a new tenant:**
+
 1. Add the mapping to `config/domain_db.php`
 2. Ensure the database exists
 3. Run migrations on the new database
@@ -82,20 +87,22 @@ return [
 The database switching logic is implemented in `app/Providers/AppServiceProvider.php`:
 
 1. **Automatic Detection**: On each HTTP request, the system:
-   - Checks the environment (local/production)
-   - Gets the port (local) or domain (production)
-   - Looks up the corresponding database from the mapping
-   - Switches the database connection automatically
+
+    - Checks the environment (local/production)
+    - Gets the port (local) or domain (production)
+    - Looks up the corresponding database from the mapping
+    - Switches the database connection automatically
 
 2. **Console Commands**: Artisan commands (migrations, seeders, etc.) use the default `.env` database. This allows you to:
-   - Run migrations on specific databases
-   - Use `--database` flag if needed
-   - Work with the default database for maintenance tasks
 
-3. **Error Handling**: 
-   - If no mapping is found, uses the default database
-   - In production, aborts with 403 if tenant not configured (security)
-   - Logs all database switches for debugging
+    - Run migrations on specific databases
+    - Use `--database` flag if needed
+    - Work with the default database for maintenance tasks
+
+3. **Error Handling**:
+    - If no mapping is found, uses the default database
+    - In production, aborts with 403 if tenant not configured (security)
+    - Logs all database switches for debugging
 
 ---
 
@@ -104,15 +111,19 @@ The database switching logic is implemented in `app/Providers/AppServiceProvider
 Open **two terminal windows**:
 
 #### Terminal 1 - Kuwait (Port 8000)
+
 ```bash
 php artisan serve --port=8000
 ```
+
 Access at: `http://localhost:8000`
 
 #### Terminal 2 - Qatar (Port 9000)
+
 ```bash
 php artisan serve --port=9000
 ```
+
 Access at: `http://localhost:9000`
 
 ---
@@ -158,7 +169,7 @@ class ProductController extends Controller
     {
         $tenant = TenantHelper::getTenantName();
         $products = Product::all();
-        
+
         return view('products.index', [
             'products' => $products,
             'tenant' => $tenant,
@@ -211,28 +222,32 @@ php artisan db:seed
 ### Debugging
 
 Database switches are logged when:
-- `APP_ENV=local` OR
-- `APP_DEBUG=true`
+
+-   `APP_ENV=local` OR
+-   `APP_DEBUG=true`
 
 Check logs in `storage/logs/laravel.log` for entries like:
+
 ```
-Database Switch [switched]: Environment=local, Database=rullart_rullart_kuwaitbeta, Key=8000
+Database Switch [switched]: Environment=local, Database=rullart_kuwaitalpha, Key=8000
 ```
 
 ### Common Issues
 
 1. **"Tenant not configured" error in production**
-   - Check that the domain is added to `config/domain_db.php`
-   - Verify the domain matches exactly (case-sensitive)
+
+    - Check that the domain is added to `config/domain_db.php`
+    - Verify the domain matches exactly (case-sensitive)
 
 2. **Wrong database being used**
-   - Check `config/domain_db.php` mapping
-   - Verify port/domain is correct
-   - Check logs for database switch information
+
+    - Check `config/domain_db.php` mapping
+    - Verify port/domain is correct
+    - Check logs for database switch information
 
 3. **Artisan commands using wrong database**
-   - Artisan commands use `.env` database by default
-   - This is intentional - use `--database` flag if needed
+    - Artisan commands use `.env` database by default
+    - This is intentional - use `--database` flag if needed
 
 ---
 
@@ -286,23 +301,23 @@ dd([
 
 ## 📝 Notes
 
-- Database switching happens automatically on every HTTP request
-- Console commands (artisan) use the default `.env` database
-- The system is environment-aware (local vs production)
-- All database switches are logged for debugging
-- The system gracefully falls back to default database if mapping not found
+-   Database switching happens automatically on every HTTP request
+-   Console commands (artisan) use the default `.env` database
+-   The system is environment-aware (local vs production)
+-   All database switches are logged for debugging
+-   The system gracefully falls back to default database if mapping not found
 
 ---
 
 ## 🎯 Summary
 
 This multi-tenant setup allows you to:
-- ✅ Use the same codebase for multiple tenants
-- ✅ Automatically switch databases based on domain/port
-- ✅ Develop locally using different ports
-- ✅ Deploy to production with different domains
-- ✅ Maintain separate databases for each tenant
-- ✅ Use helper methods to get tenant information
+
+-   ✅ Use the same codebase for multiple tenants
+-   ✅ Automatically switch databases based on domain/port
+-   ✅ Develop locally using different ports
+-   ✅ Deploy to production with different domains
+-   ✅ Maintain separate databases for each tenant
+-   ✅ Use helper methods to get tenant information
 
 For questions or issues, check the logs or review the implementation in `AppServiceProvider.php`.
-

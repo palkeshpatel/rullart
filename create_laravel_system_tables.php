@@ -167,8 +167,8 @@ if (empty($failedTables)) {
     echo "\n✅ All Laravel system tables are ready!\n";
     echo "\nYou can now use the CI database directly.\n";
     echo "Make sure your .env file points to the correct database:\n";
-    echo "  - Port 8000: DB_DATABASE=rullart_rullart_kuwaitbeta\n";
-    echo "  - Port 8001: DB_DATABASE=rullart_rullart_qatarbeta\n";
+    echo "  - Port 8000: DB_DATABASE=rullart_kuwaitalpha\n";
+    echo "  - Port 8001: DB_DATABASE=rullart_qataralpha\n";
 } else {
     echo "\n⚠ Some tables failed to create. Please check the errors above.\n";
     exit(1);

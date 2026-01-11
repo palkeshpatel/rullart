@@ -873,7 +873,7 @@ All errors return HTTP 200 with `status: false`:
 
 The API automatically switches databases based on the port:
 
--   **Port 8000** → Kuwait database (`rullart_rullart_kuwaitbeta`)
--   **Port 9000** → Qatar database (`rullart_rullart_qatarbeta`)
+-   **Port 8000** → Kuwait database (`rullart_kuwaitalpha`)
+-   **Port 9000** → Qatar database (`rullart_qataralpha`)
 
 This is handled automatically by the `AppServiceProvider`.
