@@ -14,9 +14,10 @@
                             <select id="statusFilter" class="form-select form-select-sm">
                                 <option value="">--All Status--</option>
                                 <option value="2">Process</option>
-                                <option value="1">Pending</option>
-                                <option value="7">Delivered</option>
-                                <option value="8">Cancelled</option>
+                                <option value="4">Delivered</option>
+                                <option value="5">Cancelled</option>
+                                <option value="6">Returned</option>
+                                <option value="7">Shipped</option>
                             </select>
                         </div>
                         <div class="col-md-3">
@@ -243,11 +244,13 @@
                                     name: 'status',
                                     orderable: false,
                                     render: function(data, type, row) {
+                                        // Match CI project: status IDs 2, 4, 5, 6, 7 in order: Process, Delivered, Cancelled, Returned, Shipped
                                         const statusOptions = {
-                                            '1': 'Pending',
                                             '2': 'Process',
-                                            '7': 'Delivered',
-                                            '8': 'Cancelled'
+                                            '4': 'Delivered',
+                                            '5': 'Cancelled',
+                                            '6': 'Returned',
+                                            '7': 'Shipped'
                                         };
                                         let html = '<select class="form-select form-select-sm order-status" data-order-id="' + row.action + '">';
                                         Object.keys(statusOptions).forEach(key => {

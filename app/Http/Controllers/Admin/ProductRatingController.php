@@ -50,13 +50,19 @@ class ProductRatingController extends Controller
             if (!empty($searchValue)) {
                 $query->where(function($q) use ($searchValue) {
                     $q->whereHas('product', function($productQuery) use ($searchValue) {
-                        $productQuery->where('title', 'like', "%{$searchValue}%");
+                        $productQuery->where('shortdescr', 'like', "%{$searchValue}%") // Product title
+                          ->orWhere('shortdescrAR', 'like', "%{$searchValue}%")
+                          ->orWhere('title', 'like', "%{$searchValue}%") // Short description
+                          ->orWhere('titleAR', 'like', "%{$searchValue}%");
                     })->orWhere('review', 'like', "%{$searchValue}%");
                 });
 
                 $filteredCountQuery->where(function($q) use ($searchValue) {
                     $q->whereHas('product', function($productQuery) use ($searchValue) {
-                        $productQuery->where('title', 'like', "%{$searchValue}%");
+                        $productQuery->where('shortdescr', 'like', "%{$searchValue}%") // Product title
+                          ->orWhere('shortdescrAR', 'like', "%{$searchValue}%")
+                          ->orWhere('title', 'like', "%{$searchValue}%") // Short description
+                          ->orWhere('titleAR', 'like', "%{$searchValue}%");
                     })->orWhere('review', 'like', "%{$searchValue}%");
                 });
             }
@@ -76,13 +82,13 @@ class ProductRatingController extends Controller
             $length = $request->input('length', 25);
             $ratings = $query->skip($start)->take($length)->get();
 
-            // Format data for DataTables
+            // Format data for DataTables - Match CI project: shortdescr is product title
             $data = [];
             $ratingBaseUrl = url('/admin/productrate');
             foreach ($ratings as $rating) {
                 $data[] = [
                     'product' => [
-                        'title' => $rating->product ? $rating->product->title : 'N/A',
+                        'title' => $rating->product ? ($rating->product->shortdescr ?? 'N/A') : 'N/A', // Use shortdescr as title (matching CI/frontend)
                         'photo' => $rating->product ? $rating->product->photo : null
                     ],
                     'rate' => $rating->rate ?? 0,
@@ -122,7 +128,10 @@ class ProductRatingController extends Controller
                 $q->where('firstname', 'like', "%{$search}%")
                   ->orWhere('lastname', 'like', "%{$search}%");
             })->orWhereHas('product', function($q) use ($search) {
-                $q->where('title', 'like', "%{$search}%");
+                $q->where('shortdescr', 'like', "%{$search}%") // Product title
+                  ->orWhere('shortdescrAR', 'like', "%{$search}%")
+                  ->orWhere('title', 'like', "%{$search}%") // Short description
+                  ->orWhere('titleAR', 'like', "%{$search}%");
             });
         }
 
@@ -168,7 +177,7 @@ class ProductRatingController extends Controller
                 fputcsv($file, [
                     $customerName ?: 'N/A',
                     $rating->product->productcode ?? 'N/A',
-                    $rating->product->title ?? 'N/A',
+                    $rating->product ? ($rating->product->shortdescr ?? 'N/A') : 'N/A', // Use shortdescr as title (matching CI/frontend)
                     $rating->rate ?? 0,
                     $rating->review ?? '',
                     $rating->submiton ? \Carbon\Carbon::parse($rating->submiton)->format('d-M-Y H:i:s') : 'N/A',
@@ -193,7 +202,7 @@ class ProductRatingController extends Controller
                     'rate' => $rating->rate,
                     'review' => $rating->review,
                     'ispublished' => $rating->ispublished,
-                    'product_title' => $rating->product ? $rating->product->title : 'N/A'
+                    'product_title' => $rating->product ? ($rating->product->shortdescr ?? 'N/A') : 'N/A' // Use shortdescr as title (matching CI/frontend)
                 ]
             ]);
         } catch (Exception $e) {

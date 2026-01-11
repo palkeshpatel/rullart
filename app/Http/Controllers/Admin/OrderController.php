@@ -229,6 +229,30 @@ class OrderController extends Controller
             ->with('success', 'Order updated successfully');
     }
 
+    /**
+     * Update order status via AJAX
+     */
+    public function updateStatus(Request $request, $id)
+    {
+        $order = Order::findOrFail($id);
+
+        // Update order status
+        if ($request->has('status')) {
+            $order->fkorderstatus = $request->status;
+            $order->save();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Order status updated successfully'
+            ]);
+        }
+
+        return response()->json([
+            'success' => false,
+            'message' => 'Status parameter is required'
+        ], 400);
+    }
+
     public function export(Request $request)
     {
         $query = Order::with('customer');

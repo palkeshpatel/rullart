@@ -40,7 +40,10 @@ class WishlistController extends Controller
                           ->orWhere('lastname', 'like', "%{$searchValue}%")
                           ->orWhere('email', 'like', "%{$searchValue}%");
                     })->orWhereHas('product', function($productQuery) use ($searchValue) {
-                        $productQuery->where('title', 'like', "%{$searchValue}%")
+                        $productQuery->where('shortdescr', 'like', "%{$searchValue}%") // Product title
+                          ->orWhere('shortdescrAR', 'like', "%{$searchValue}%")
+                          ->orWhere('title', 'like', "%{$searchValue}%") // Short description
+                          ->orWhere('titleAR', 'like', "%{$searchValue}%")
                           ->orWhere('productcode', 'like', "%{$searchValue}%");
                     });
                 });
@@ -51,7 +54,10 @@ class WishlistController extends Controller
                           ->orWhere('lastname', 'like', "%{$searchValue}%")
                           ->orWhere('email', 'like', "%{$searchValue}%");
                     })->orWhereHas('product', function($productQuery) use ($searchValue) {
-                        $productQuery->where('title', 'like', "%{$searchValue}%")
+                        $productQuery->where('shortdescr', 'like', "%{$searchValue}%") // Product title
+                          ->orWhere('shortdescrAR', 'like', "%{$searchValue}%")
+                          ->orWhere('title', 'like', "%{$searchValue}%") // Short description
+                          ->orWhere('titleAR', 'like', "%{$searchValue}%")
                           ->orWhere('productcode', 'like', "%{$searchValue}%");
                     });
                 });
@@ -72,14 +78,14 @@ class WishlistController extends Controller
             $length = $request->input('length', 25);
             $wishlists = $query->skip($start)->take($length)->get();
 
-            // Format data for DataTables
+            // Format data for DataTables - Match CI project: shortdescr is product title
             $data = [];
             $wishlistBaseUrl = url('/admin/wishlist');
             foreach ($wishlists as $wishlist) {
                 $customerName = $wishlist->customer ? trim(($wishlist->customer->firstname ?? '') . ' ' . ($wishlist->customer->lastname ?? '')) : 'N/A';
                 $data[] = [
                     'product' => [
-                        'title' => $wishlist->product ? $wishlist->product->title : 'N/A',
+                        'title' => $wishlist->product ? ($wishlist->product->shortdescr ?? 'N/A') : 'N/A', // Use shortdescr as title (matching CI/frontend)
                         'productcode' => $wishlist->product ? $wishlist->product->productcode : 'N/A',
                         'photo' => $wishlist->product ? $wishlist->product->photo : null
                     ],
@@ -120,7 +126,10 @@ class WishlistController extends Controller
                   ->orWhere('lastname', 'like', "%{$search}%")
                   ->orWhere('email', 'like', "%{$search}%");
             })->orWhereHas('product', function($q) use ($search) {
-                $q->where('title', 'like', "%{$search}%")
+                $q->where('shortdescr', 'like', "%{$search}%") // Product title
+                  ->orWhere('shortdescrAR', 'like', "%{$search}%")
+                  ->orWhere('title', 'like', "%{$search}%") // Short description
+                  ->orWhere('titleAR', 'like', "%{$search}%")
                   ->orWhere('productcode', 'like', "%{$search}%");
             });
         }
@@ -159,7 +168,7 @@ class WishlistController extends Controller
                     $customerName ?: 'N/A',
                     $customerEmail,
                     $wishlist->product->productcode ?? 'N/A',
-                    $wishlist->product->title ?? 'N/A',
+                    $wishlist->product ? ($wishlist->product->shortdescr ?? 'N/A') : 'N/A', // Use shortdescr as title (matching CI/frontend)
                     $wishlist->createdon ? \Carbon\Carbon::parse($wishlist->createdon)->format('d-M-Y H:i:s') : 'N/A'
                 ]);
             }
