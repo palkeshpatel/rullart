@@ -60,8 +60,19 @@ class ReturnRequestController extends Controller
             $orderColumnIndex = $request->input('order.0.column', 0);
             $orderDir = $request->input('order.0.dir', 'desc');
 
-            // Default order by submiton
-            $query->orderBy('submiton', $orderDir);
+            $columns = [
+                'firstname',
+                'lastname',
+                'email',
+                'orderno',
+                'mobile',
+                'reason',
+                'submiton',
+                'requestid' // For action column
+            ];
+
+            $orderColumn = $columns[$orderColumnIndex] ?? 'submiton';
+            $query->orderBy($orderColumn, $orderDir);
 
             // Pagination
             $start = $request->input('start', 0);
