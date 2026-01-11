@@ -117,7 +117,8 @@
                 <div
                     class="sort-by {{ !empty($collections['category']->category_description ?? '') ? 'sort-by-mobile-bottom' : '' }}">
                     <select class="cs" name="sortby" id="sortby">
-                        <option value="relevance" {{ $sortby == 'relevance' ? 'selected' : '' }}>{{ trans('common.Relevance') }}
+                        <option value="relevance" {{ $sortby == 'relevance' ? 'selected' : '' }}>
+                            {{ trans('common.Relevance') }}
                         </option>
                         <option value="lowtohigh" {{ $sortby == 'lowtohigh' ? 'selected' : '' }}>
                             {{ trans('common.Price Low to High') }}</option>
@@ -196,17 +197,28 @@
                                                                 // Translate currency code for Arabic locale
                                                                 $displayCurrency = $currencyCode;
                                                                 if ($locale == 'ar') {
-                                                                    $currencyTranslation = trans('common.' . $currencyCode, [], 'ar');
+                                                                    $currencyTranslation = trans(
+                                                                        'common.' . $currencyCode,
+                                                                        [],
+                                                                        'ar',
+                                                                    );
                                                                     // If translation exists and is not the key itself, use it
-                                                                    if ($currencyTranslation != 'common.' . $currencyCode) {
+                                                                    if (
+                                                                        $currencyTranslation !=
+                                                                        'common.' . $currencyCode
+                                                                    ) {
                                                                         $displayCurrency = $currencyTranslation;
-                                                                    } elseif ($currencyCode == 'KWD' || $currencyCode == 'KD') {
+                                                                    } elseif (
+                                                                        $currencyCode == 'KWD' ||
+                                                                        $currencyCode == 'KD'
+                                                                    ) {
                                                                         $displayCurrency = 'دك';
                                                                     }
                                                                 }
                                                             @endphp
                                                             @if ($discount > 0)
-                                                                <span class="standard-price">{{ number_format($price * $currencyRate, 0) }}
+                                                                <span
+                                                                    class="standard-price">{{ number_format($price * $currencyRate, 0) }}
                                                                     {{ $displayCurrency }}</span>
                                                             @endif
                                                             <span class="actual-price">{{ number_format($finalPrice, 0) }}

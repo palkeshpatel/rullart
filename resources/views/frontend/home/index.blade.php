@@ -117,11 +117,8 @@
                 <div class="row">
                     @foreach ($popular as $product)
                         @php
-                            // Repository maps: title = shortdescr/shortdescrAR, shortdescr = title/titleAR
-                            $productTitle =
-                                $locale == 'ar'
-                                    ? $product->title ?? ($product->shortdescr ?? '')
-                                    : $product->shortdescr ?? ($product->title ?? '');
+                            // Repository maps: title = shortdescr/shortdescrAR (same as CI project)
+                            $productTitle = $product->title ?? '';
                             $price = isset($product->sellingprice) ? $product->sellingprice : $product->price;
                             $finalPrice = $price * $currencyRate;
                             $discount = isset($product->discount) ? $product->discount : 0;
