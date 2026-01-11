@@ -72,11 +72,12 @@ class ShoppingCartController extends Controller
                 $query->where('o.country', $country);
             }
 
-            // DataTables search - match CI project column_search: o.firstname, o.lastname, c.email, paymentmethod
+            // DataTables search - include cartid for searching by cart ID
             $searchValue = $request->input('search.value', '');
             if (!empty($searchValue)) {
                 $query->where(function ($q) use ($searchValue) {
-                    $q->where('o.firstname', 'like', "%{$searchValue}%")
+                    $q->where('o.cartid', 'like', "%{$searchValue}%")
+                        ->orWhere('o.firstname', 'like', "%{$searchValue}%")
                         ->orWhere('o.lastname', 'like', "%{$searchValue}%")
                         ->orWhere('c.email', 'like', "%{$searchValue}%")
                         ->orWhere('o.paymentmethod', 'like', "%{$searchValue}%");
@@ -96,7 +97,8 @@ class ShoppingCartController extends Controller
 
             if (!empty($searchValue)) {
                 $filteredCountQuery->where(function ($q) use ($searchValue) {
-                    $q->where('o.firstname', 'like', "%{$searchValue}%")
+                    $q->where('o.cartid', 'like', "%{$searchValue}%")
+                        ->orWhere('o.firstname', 'like', "%{$searchValue}%")
                         ->orWhere('o.lastname', 'like', "%{$searchValue}%")
                         ->orWhere('c.email', 'like', "%{$searchValue}%")
                         ->orWhere('o.paymentmethod', 'like', "%{$searchValue}%");
