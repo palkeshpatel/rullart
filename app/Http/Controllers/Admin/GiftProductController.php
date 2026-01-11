@@ -40,9 +40,11 @@ class GiftProductController extends Controller
             $countQuery = Product::where('isgift', 1);
             $totalRecords = $countQuery->count();
 
+            // Map shortdescr as title to match frontend/CI project behavior
             $query = Product::with('category')
                 ->where('isgift', 1)
                 ->select('products.*')
+                ->selectRaw('products.shortdescr as display_title, products.title as display_shortdescr')
                 ->selectRaw('IFNULL((SELECT SUM(qty) FROM productsfilter WHERE fkproductid=products.productid AND filtercode=\'size\'), 0) as quantity');
             $filteredCountQuery = Product::where('isgift', 1);
 
@@ -63,17 +65,21 @@ class GiftProductController extends Controller
 
             $filteredCount = $filteredCountQuery->count();
 
-            // DataTables search
+            // DataTables search - search in shortdescr (product title) and title (short description) to match CI behavior
             $searchValue = $request->input('search.value', '');
             if (!empty($searchValue)) {
                 $query->where(function ($q) use ($searchValue) {
-                    $q->where('title', 'like', "%{$searchValue}%")
-                        ->orWhere('titleAR', 'like', "%{$searchValue}%")
-                        ->orWhere('productcode', 'like', "%{$searchValue}%");
+                    $q->where('products.shortdescr', 'like', "%{$searchValue}%") // Product title
+                        ->orWhere('products.shortdescrAR', 'like', "%{$searchValue}%")
+                        ->orWhere('products.title', 'like', "%{$searchValue}%") // Short description
+                        ->orWhere('products.titleAR', 'like', "%{$searchValue}%")
+                        ->orWhere('products.productcode', 'like', "%{$searchValue}%");
                 });
 
                 $filteredCountQuery->where(function ($q) use ($searchValue) {
-                    $q->where('title', 'like', "%{$searchValue}%")
+                    $q->where('shortdescr', 'like', "%{$searchValue}%") // Product title
+                        ->orWhere('shortdescrAR', 'like', "%{$searchValue}%")
+                        ->orWhere('title', 'like', "%{$searchValue}%") // Short description
                         ->orWhere('titleAR', 'like', "%{$searchValue}%")
                         ->orWhere('productcode', 'like', "%{$searchValue}%");
                 });
@@ -99,13 +105,13 @@ class GiftProductController extends Controller
             $length = $request->input('length', 25);
             $products = $query->skip($start)->take($length)->get();
 
-            // Format data
+            // Format data - Match CI project: shortdescr is displayed as title (product title)
             $data = [];
             foreach ($products as $product) {
                 $photoUrl = $product->photo1 ? asset('storage/' . $product->photo1) : null;
                 $data[] = [
                     'productcode' => $product->productcode ?? '',
-                    'title' => $product->title ?? '',
+                    'title' => $product->display_title ?? $product->shortdescr ?? '', // Use shortdescr as title (matching CI/frontend)
                     'sellingprice' => number_format($product->sellingprice ?? 0, 3),
                     'category' => $product->category->category ?? 'N/A',
                     'photo' => $photoUrl ? '<img src="' . $photoUrl . '" alt="Product" style="width: 50px; height: 50px; object-fit: cover; border-radius: 4px;">' : '<span class="text-muted">-</span>',
