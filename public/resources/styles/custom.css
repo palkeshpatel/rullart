@@ -297,3 +297,70 @@
 a.whatsapp{
     font-size: 28px!important;
 }
+
+/* Prevent horizontal scrollbar */
+html {
+    overflow-x: hidden;
+}
+
+body {
+    overflow-x: hidden;
+    width: 100%;
+}
+
+.page-wrapper {
+    overflow-x: hidden;
+    width: 100%;
+}
+
+/* Welcome Content Section */
+.welcome-content {
+    padding: 60px 0;
+    background-color: #f5f5f0;
+    max-width: 100%;
+    overflow-x: hidden;
+}
+
+.welcome-content .container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 15px;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.welcome-content h1 {
+    font-size: 32px;
+    font-weight: 400;
+    margin-bottom: 20px;
+    text-align: center;
+    color: #4a4a4a;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    line-height: 1.4;
+}
+
+.welcome-content p {
+    font-size: 16px;
+    line-height: 1.6;
+    color: #8a8a8a;
+    text-align: center;
+    margin: 0;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+}
+
+@media (max-width: 768px) {
+    .welcome-content {
+        padding: 40px 0;
+    }
+    
+    .welcome-content h1 {
+        font-size: 24px;
+        margin-bottom: 15px;
+    }
+    
+    .welcome-content p {
+        font-size: 14px;
+    }
+}

@@ -93,6 +93,13 @@
     @if (!empty($pageDescription) || !empty($pageTitle))
         <section class="welcome-content">
             <div class="container">
+                <h1>We pride ourselves with gifts that are defined by their artistic craftsmanship and elegance.</h1>
+                <p>Explore our wide range of exclusively designed gifts and accessories for all your special occasions.
+                </p>
+            </div>
+        </section>
+        {{-- <section class="welcome-content">
+            <div class="container">
                 @if (!empty($pageTitle))
                     <h1>{!! $pageTitle !!}</h1>
                 @endif
@@ -100,7 +107,7 @@
                     <p>{!! $pageDescription !!}</p>
                 @endif
             </div>
-        </section>
+        </section> --}}
     @endif
 
     @if (isset($popular) && $popular->count() > 0)
