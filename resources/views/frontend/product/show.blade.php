@@ -136,6 +136,9 @@
                                 <span class="actual-price" id="price">{{ number_format($finalPrice, 0) }}
                                     {{ $displayCurrency }}</span>
                             </p>
+                            <p class="product-brief">
+                            <div id="TabbyPromo"></div>
+                            </p>
 
                             {{-- Quantity and Size Selection --}}
                             <div class="product-attributes">
@@ -408,5 +411,67 @@
     @push('scripts')
         <script src="{{ $resourceUrl }}scripts/details.js?v=0.9"></script>
         <script src="{{ $resourceUrl }}scripts/product.js?v=0.9"></script>
+
+        {{-- Tabby Payment Plan --}}
+        @php
+            // Match CI project logic: use config values (like CI $this->config->item())
+            // Check config first, then settings table as fallback
+            $allowTabby = config('tabby.allow_tabby', $settingsArr['allow_tabby'] ?? false);
+            // Handle boolean or string values
+            if (is_string($allowTabby)) {
+                $allowTabby = $allowTabby == 'Yes' || $allowTabby == 'true' || $allowTabby == '1';
+            }
+
+            $ccode = $currencyCode;
+            $showTabby = false;
+            $tabbyToken = '';
+            $merchantCode = '';
+            $tabbyAmount = 0;
+
+            if (($ccode == 'KWD' || $ccode == 'SAR') && $allowTabby) {
+                if ($ccode == 'SAR') {
+                    $merchantCode = config(
+                        'tabby.tabby_merchantcode_KSA',
+                        $settingsArr['tabby_merchantcode_KSA'] ?? '',
+                    );
+                    $tabbyToken = config('tabby.tabby_public_key_KSA', $settingsArr['tabby_public_key_KSA'] ?? '');
+                } else {
+                    $merchantCode = config(
+                        'tabby.tabby_merchantcode_KWT',
+                        $settingsArr['tabby_merchantcode_KWT'] ?? '',
+                    );
+                    $tabbyToken = config('tabby.tabby_public_key_KWT', $settingsArr['tabby_public_key_KWT'] ?? '');
+                }
+
+                if (!empty($tabbyToken) && !empty($merchantCode)) {
+                    $showTabby = true;
+                    // Calculate amount with currency conversion (matching CI: converted_value($product->sellingprice, $ccode, $currencyrate, false))
+                    // The false parameter means no formatting, just conversion
+                    $tabbyAmount = $price * $currencyRate;
+                    // Format for Tabby (3 decimals for KWD, 2 for SAR) - matching CI project
+                    if ($ccode == 'KWD') {
+                        $tabbyAmount = number_format($tabbyAmount, 3, '.', '');
+                    } else {
+                        $tabbyAmount = number_format($tabbyAmount, 2, '.', '');
+                    }
+                }
+            }
+        @endphp
+
+        @if ($showTabby)
+            <script src="https://checkout.tabby.ai/tabby-promo.js"></script>
+            <script>
+                new TabbyPromo({
+                    selector: '#TabbyPromo',
+                    currency: '{{ $ccode }}',
+                    price: '{{ $tabbyAmount }}',
+                    installmentsCount: 4,
+                    lang: '{{ $locale }}',
+                    source: 'product',
+                    publicKey: '{{ $tabbyToken }}',
+                    merchantCode: '{{ $merchantCode }}'
+                });
+            </script>
+        @endif
     @endpush
 @endsection
