@@ -366,7 +366,7 @@
         {{-- Related Products --}}
         @if (isset($relatedProducts) && $relatedProducts->count() > 0)
             <section class="related-products">
-                <div class="container">
+                <div class="container-fluid">
                     <h3>{{ __('Related Products') }}</h3>
                     <div class="row">
                         @foreach ($relatedProducts as $related)
