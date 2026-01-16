@@ -2,13 +2,6 @@
 
 @section('content')
     @php
-        // Debug logging for locale in home page
-        $currentLocale = $locale ?? app()->getLocale();
-        \Log::info('Home View - $locale variable: ' . ($locale ?? 'NOT SET'));
-        \Log::info('Home View - app()->getLocale(): ' . app()->getLocale());
-        \Log::info('Home View - session("locale"): ' . session('locale', 'NOT SET'));
-        \Log::info('Home View - Translation test - "Popular Items": ' . __('Popular Items'));
-
         // Mobile detection for responsive images (presentation logic - acceptable in view)
         $is_mobile = preg_match(
             '/(android|iphone|ipod|ipad|windows phone|blackberry|mobile)/i',
