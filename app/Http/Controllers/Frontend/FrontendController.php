@@ -185,10 +185,8 @@ class FrontendController extends Controller
 
     protected function shareCommonData()
     {
-        $cartCount = $this->getCartCount();
-        $wishlistCount = $this->getWishlistCount();
-
-
+        // Share static data that doesn't depend on session
+        // Cart and wishlist count are shared by ShareCartCount middleware AFTER session loads
         View::share([
             'resourceUrl' => $this->resourceUrl,
             'imageUrl' => $this->imageUrl,
@@ -200,9 +198,9 @@ class FrontendController extends Controller
             'locale' => $this->locale,
             'currencyRate' => $this->currencyRate,
             'currencyCode' => $this->currencyCode,
-            'locale' => $this->locale,
-            'cartCount' => $cartCount,
-            'wishlistCount' => $wishlistCount,
+            // Cart and wishlist count default to 0 - will be updated by ShareCartCount middleware
+            'cartCount' => 0,
+            'wishlistCount' => 0,
         ]);
     }
 
@@ -210,6 +208,15 @@ class FrontendController extends Controller
     {
         $shoppingCartId = Session::get('shoppingcartid');
         $sessionId = Session::getId();
+
+        // Log session details for debugging
+        Log::info('=== GET CART COUNT START ===', [
+            'session_id' => $sessionId,
+            'shoppingcartid_from_session' => $shoppingCartId,
+            'session_has_data' => Session::has('shoppingcartid'),
+            'session_all_keys' => array_keys(Session::all()),
+        ]);
+
         // Try multiple ways to get customer ID
         $customerId = Session::get('customerid', 0);
         if ($customerId == 0) {
@@ -227,6 +234,11 @@ class FrontendController extends Controller
             $count = DB::table('shoppingcartitems')
                 ->where('fkcartid', $shoppingCartId)
                 ->count();
+
+            Log::info('Cart count found from session cartid', [
+                'shoppingcartid' => $shoppingCartId,
+                'count' => $count,
+            ]);
 
             return $count;
         }
@@ -258,78 +270,41 @@ class FrontendController extends Controller
                 if ($cartId) {
                     Session::put('shoppingcartid', $cartId);
                     $count = $cartRepository->getCartItemCount($cartId);
+                    Log::info('Cart count found by customer ID', [
+                        'customerid' => $customerId,
+                        'cartid' => $cartId,
+                        'count' => $count,
+                    ]);
                     return $count;
                 }
             }
         }
 
-        // Try to find cart by session ID
+        // Try to find cart by session ID (strictly session-based - no fallback to other sessions)
         if ($sessionId) {
             $cartId = $cartRepository->getCartIdBySessionId($sessionId, $customerId);
 
             if ($cartId) {
                 Session::put('shoppingcartid', $cartId);
                 $count = $cartRepository->getCartItemCount($cartId);
+                Log::info('Cart count found by session ID', [
+                    'session_id' => $sessionId,
+                    'cartid' => $cartId,
+                    'count' => $count,
+                ]);
                 return $count;
+            } else {
+                Log::warning('No cart found by session ID', [
+                    'session_id' => $sessionId,
+                    'customerid' => $customerId,
+                ]);
             }
         }
 
-        // Last resort: For guest users, try to find the most recent cart created in the last 30 minutes
-        // This is a fallback in case session ID changes (shouldn't happen, but as a safety net)
-        if ($customerId == 0 && $sessionId) {
-            $thirtyMinutesAgo = \Carbon\Carbon::now()->subMinutes(30)->format('Y-m-d H:i:s');
-            $recentCart = DB::table('shoppingcartmaster')
-                ->where('fkcustomerid', 0)
-                ->where('orderdate', '>=', $thirtyMinutesAgo)
-                ->orderBy('cartid', 'desc')
-                ->first();
-
-            if ($recentCart) {
-                // Check if items exist for this cart
-                $count = DB::table('shoppingcartitems')
-                    ->where('fkcartid', $recentCart->cartid)
-                    ->count();
-
-                // Check for orphaned items (fkcartid = 0) that might belong to this cart
-                $cartTime = \Carbon\Carbon::parse($recentCart->orderdate);
-                $oneHourAfter = $cartTime->copy()->addHours(1)->format('Y-m-d H:i:s');
-                $oneHourBefore = $cartTime->copy()->subHours(1)->format('Y-m-d H:i:s');
-                $twoHoursAgo = \Carbon\Carbon::now()->subHours(2)->format('Y-m-d H:i:s');
-
-                $orphanedItems = DB::table('shoppingcartitems')
-                    ->where('fkcartid', 0)
-                    ->where(function ($query) use ($oneHourBefore, $oneHourAfter, $twoHoursAgo) {
-                        $query->where(function ($q) use ($oneHourBefore, $oneHourAfter) {
-                            $q->where('createdon', '>=', $oneHourBefore)
-                                ->where('createdon', '<=', $oneHourAfter);
-                        })
-                            ->orWhere('createdon', '>=', $twoHoursAgo);
-                    })
-                    ->get();
-
-                // Fix orphaned items by updating their fkcartid
-                if ($orphanedItems->count() > 0) {
-                    $orphanedIds = $orphanedItems->pluck('cartitemid')->toArray();
-                    DB::table('shoppingcartitems')
-                        ->whereIn('cartitemid', $orphanedIds)
-                        ->update(['fkcartid' => $recentCart->cartid]);
-
-                    // Recalculate count after fixing
-                    $count = DB::table('shoppingcartitems')
-                        ->where('fkcartid', $recentCart->cartid)
-                        ->count();
-                }
-
-                // Update the cart's session ID to match current session
-                DB::table('shoppingcartmaster')
-                    ->where('cartid', $recentCart->cartid)
-                    ->update(['sessionid' => $sessionId]);
-
-                Session::put('shoppingcartid', $recentCart->cartid);
-                return $count;
-            }
-        }
-
+        // No cart found - return 0
+        // REMOVED: Fallback logic that was finding carts from other sessions/devices
+        // Cart must be strictly session-based to prevent showing cart count across different browsers/devices
+        Log::info('=== GET CART COUNT END === No cart found, returning 0');
         return 0;
     }
 

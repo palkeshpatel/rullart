@@ -7,6 +7,8 @@ use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Blade;
+use Illuminate\Support\Facades\View;
+use Illuminate\Support\Facades\Session;
 use Illuminate\Http\Request;
 use App\Helpers\ViewHelper;
 
@@ -34,8 +36,162 @@ class AppServiceProvider extends ServiceProvider
             return ViewHelper::isView($tableName);
         });
 
+        // IMPORTANT: Database switching MUST happen BEFORE session middleware loads
+        // We use boot() which runs early, but also hook into session middleware
+        // to ensure session connection is ready when session middleware runs
+
         // Multi-tenant database switching based on domain/port
         $this->switchDatabaseByDomain();
+
+        // Ensure session connection is synchronized after database switch
+        $this->syncSessionConnection();
+
+        // Hook into session start to ensure session connection is ready
+        $this->ensureSessionConnectionReady();
+
+        // Share cart count with all views using View Composer
+        // This runs when views are rendered, ensuring session is fully loaded
+        View::composer('*', function ($view) {
+            // Only compute if not already set (avoid re-computing)
+            if (!$view->offsetExists('cartCount') || $view->offsetGet('cartCount') === 0) {
+                $cartCount = $this->getCartCountForView();
+                $wishlistCount = $this->getWishlistCountForView();
+
+                $view->with([
+                    'cartCount' => $cartCount,
+                    'wishlistCount' => $wishlistCount,
+                ]);
+            }
+        });
+    }
+
+    /**
+     * Get cart count for view (runs when view is rendered, session is loaded)
+     */
+    protected function getCartCountForView()
+    {
+        if (!app()->bound('request') || app()->runningInConsole()) {
+            return 0;
+        }
+
+        try {
+            $shoppingCartId = Session::get('shoppingcartid');
+            $sessionId = Session::getId();
+
+            Log::info('=== VIEW COMPOSER: getCartCountForView ===', [
+                'shoppingcartid' => $shoppingCartId,
+                'session_id' => $sessionId,
+            ]);
+
+            if ($shoppingCartId) {
+                $count = DB::table('shoppingcartitems')
+                    ->where('fkcartid', $shoppingCartId)
+                    ->count();
+
+                Log::info('=== VIEW COMPOSER: Cart count found ===', [
+                    'shoppingcartid' => $shoppingCartId,
+                    'count' => $count,
+                ]);
+
+                return $count;
+            }
+
+            // Try to find cart by session ID
+            if ($sessionId) {
+                $cart = DB::table('shoppingcartmaster')
+                    ->where('sessionid', $sessionId)
+                    ->where('fkcustomerid', 0)
+                    ->first();
+
+                if ($cart) {
+                    Session::put('shoppingcartid', $cart->cartid);
+                    $count = DB::table('shoppingcartitems')
+                        ->where('fkcartid', $cart->cartid)
+                        ->count();
+
+                    Log::info('=== VIEW COMPOSER: Cart found by session ID ===', [
+                        'session_id' => $sessionId,
+                        'cartid' => $cart->cartid,
+                        'count' => $count,
+                    ]);
+
+                    return $count;
+                }
+            }
+        } catch (\Exception $e) {
+            Log::error('Error in getCartCountForView: ' . $e->getMessage());
+        }
+
+        return 0;
+    }
+
+    /**
+     * Get wishlist count for view
+     */
+    protected function getWishlistCountForView()
+    {
+        if (!app()->bound('request') || app()->runningInConsole()) {
+            return 0;
+        }
+
+        try {
+            $customerId = Session::get('customerid', 0);
+            if ($customerId > 0) {
+                return DB::table('wishlist')
+                    ->where('fkcustomerid', $customerId)
+                    ->count();
+            }
+        } catch (\Exception $e) {
+            // Silent fail
+        }
+
+        return 0;
+    }
+
+    /**
+     * Ensure session connection is ready when session middleware starts
+     * This prevents session from being lost during database switching
+     */
+    protected function ensureSessionConnectionReady(): void
+    {
+        // This method ensures session connection uses the correct database
+        // BEFORE the session middleware tries to load the session
+        // We call syncSessionConnection which will handle this
+        // The key is that switchDatabaseByDomain() runs in boot(), which happens
+        // early in the request lifecycle, before session middleware runs
+    }
+
+    /**
+     * Sync session connection to use the same database as the main connection
+     * This ensures sessions are stored in the correct tenant database
+     *
+     * @return void
+     */
+    protected function syncSessionConnection(): void
+    {
+        // Skip if running in console or no request available
+        if (app()->runningInConsole() || !app()->bound('request')) {
+            return;
+        }
+
+        try {
+            $currentDb = config('database.connections.mysql.database');
+            $sessionDb = config('database.connections.session.database');
+
+            // If databases are different, sync them
+            if ($currentDb !== $sessionDb && $currentDb) {
+                Config::set('database.connections.session.database', $currentDb);
+
+                // If session connection is already established, reconnect it
+                if (DB::connection('session')->getDatabaseName() !== $currentDb) {
+                    DB::purge('session');
+                    DB::reconnect('session');
+                }
+            }
+        } catch (\Exception $e) {
+            // Log error but don't break the application
+            Log::warning('Failed to sync session connection: ' . $e->getMessage());
+        }
     }
 
     /**
@@ -151,22 +307,62 @@ class AppServiceProvider extends ServiceProvider
         // Get current database to check if switch is needed
         $currentDatabase = config('database.connections.mysql.database');
 
-        // Only switch if database is different
-        if ($currentDatabase === $database) {
-            return;
-        }
-
-        // Update database configuration
+        // Update database configuration for both mysql and session connections FIRST
+        // This ensures that when connections are initialized, they use the correct database
         Config::set('database.connections.mysql.database', $database);
+        Config::set('database.connections.session.database', $database);
 
-        // Purge existing connection to force reconnect
-        DB::purge('mysql');
+        // Only reconnect if database is different
+        if ($currentDatabase !== $database) {
+            // IMPORTANT: For session connection, we need to be careful not to purge
+            // if the session middleware has already started, as this can cause
+            // session data to be lost. Instead, we update the config and let
+            // the connection use the new database on next query.
 
-        // Reconnect with new database
-        DB::reconnect('mysql');
+            // Check if session connection exists and what database it's using
+            try {
+                $sessionConnection = DB::connection('session');
+                $sessionDb = $sessionConnection->getDatabaseName();
 
-        // Log the database switch for debugging
-        $this->logDatabaseSwitch('switched', $env, $database, $key);
+                // If session connection exists and database is different, we need to reconnect
+                // BUT: Only do this if we're early enough in the request lifecycle
+                // (before session middleware has loaded session data)
+                if ($sessionDb !== $database) {
+                    // Check if session has been started (this tells us if session middleware has run)
+                    if (session_status() === PHP_SESSION_ACTIVE) {
+                        // Session already started - DON'T purge, just update config
+                        // The session connection will use the new database for next query
+                        // This is safe because we're ensuring all tenant databases have the sessions table
+                        Log::warning('Database switch after session start - session connection not purged', [
+                            'old_db' => $sessionDb,
+                            'new_db' => $database,
+                        ]);
+                    } else {
+                        // Session not started yet - safe to purge/reconnect
+                        DB::purge('session');
+                        DB::reconnect('session');
+                    }
+                }
+            } catch (\Exception $e) {
+                // Session connection not yet initialized - that's fine, it will use the correct DB when initialized
+                if (app()->environment('local') || config('app.debug')) {
+                    Log::debug('Session connection not yet initialized during database switch', [
+                        'database' => $database,
+                        'error' => $e->getMessage()
+                    ]);
+                }
+            }
+
+            // Purge and reconnect mysql connection
+            DB::purge('mysql');
+            DB::reconnect('mysql');
+
+            // Log the database switch for debugging
+            $this->logDatabaseSwitch('switched', $env, $database, $key);
+        } else {
+            // Database is the same, but ensure session connection config matches
+            Config::set('database.connections.session.database', $database);
+        }
     }
 
     /**

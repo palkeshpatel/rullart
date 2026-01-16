@@ -614,7 +614,19 @@ class ShoppingCartController extends FrontendController
             if (isset($returnarr['fkcartid']) && $returnarr['fkcartid'] > 0) {
                 $shoppingcartid = $returnarr['fkcartid'];
                 Session::put('shoppingcartid', $shoppingcartid);
-                Log::info('Updated cart ID in session', ['cartid' => $shoppingcartid]);
+                Log::info('Updated cart ID in session', [
+                    'cartid' => $shoppingcartid,
+                    'session_id' => Session::getId(),
+                    'session_saved' => Session::has('shoppingcartid'),
+                    'session_value_after_put' => Session::get('shoppingcartid'),
+                ]);
+                
+                // Force session save to ensure it's persisted
+                Session::save();
+                Log::info('Session saved after updating cart ID', [
+                    'cartid' => $shoppingcartid,
+                    'session_id' => Session::getId(),
+                ]);
             }
 
             // Remove from wishlist
