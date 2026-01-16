@@ -375,6 +375,7 @@ class CategoryController extends FrontendController
                     'c.categoryid',
                     'c.categorycode',
                     'c.parentid',
+                    'c.categoryAR',
                     DB::raw("(SELECT COUNT(*) FROM products WHERE ispublished=1 AND fkcategoryid=c.categoryid) as productcnt")
                 ])
                 ->distinct()
@@ -439,20 +440,25 @@ class CategoryController extends FrontendController
                 ->where('p.ispublished', 1)
                 ->where('c.ispublished', 1);
 
-            if ($main == 0) {
-                if ($parentId > 0) {
-                    $productsQuery->where(function ($query) use ($parentId, $categoryId) {
-                        $query->where('c.parentid', $parentId)
-                            ->orWhere('c.categoryid', $parentId);
-                    });
-                } else {
-                    $productsQuery->where(function ($query) use ($categoryId) {
-                        $query->where('c.parentid', $categoryId)
-                            ->orWhere('c.categoryid', $categoryId);
-                    });
-                }
+            // Apply subcategory filter if provided
+            if ($subcategory) {
+                $productsQuery->where('c.categorycode', $subcategory);
             } else {
-                $productsQuery->where('c.categoryid', $categoryId);
+                if ($main == 0) {
+                    if ($parentId > 0) {
+                        $productsQuery->where(function ($query) use ($parentId, $categoryId) {
+                            $query->where('c.parentid', $parentId)
+                                ->orWhere('c.categoryid', $parentId);
+                        });
+                    } else {
+                        $productsQuery->where(function ($query) use ($categoryId) {
+                            $query->where('c.parentid', $categoryId)
+                                ->orWhere('c.categoryid', $categoryId);
+                        });
+                    }
+                } else {
+                    $productsQuery->where('c.categoryid', $categoryId);
+                }
             }
 
             // Add wishlist join if customer is logged in
@@ -515,19 +521,22 @@ class CategoryController extends FrontendController
             }
 
             // Apply price filter
+            // Note: Price filter values are in BASE currency (not converted), matching CI behavior
             if ($price) {
                 $prices = explode('-', $price);
                 $sellingPriceColumn = $hasProductPriceView ? 'pp.sellingprice' : DB::raw('COALESCE(p.sellingprice, p.price)');
                 if (count($prices) == 1) {
-                    $priceValue = $prices[0] / $currencyRate;
+                    // Single price value (already in base currency)
+                    $priceValue = $prices[0];
                     if ($price == 5) {
                         $productsQuery->where($sellingPriceColumn, '<=', $priceValue);
                     } else {
                         $productsQuery->where($sellingPriceColumn, '>', $priceValue);
                     }
                 } else if (count($prices) == 2) {
-                    $minPrice = $prices[0] / $currencyRate;
-                    $maxPrice = $prices[1] / $currencyRate;
+                    // Price range (already in base currency)
+                    $minPrice = $prices[0];
+                    $maxPrice = $prices[1];
                     $productsQuery->where($sellingPriceColumn, '>=', $minPrice)
                         ->where($sellingPriceColumn, '<', $maxPrice);
                 }
@@ -578,7 +587,7 @@ class CategoryController extends FrontendController
                 throw $e;
             }
 
-            // Get price range
+            // Get price range (using the same query conditions as products, including subcategory filter)
             $priceQuery = clone $productsQuery;
             if ($hasProductPriceView) {
                 $productPrices = $priceQuery->select('pp.sellingprice')->get();
@@ -607,20 +616,25 @@ class CategoryController extends FrontendController
                 ->where('fv.fkfilterid', 2)
                 ->where('pf.filtercode', 'color');
 
-            if ($main == 0) {
-                if ($parentId > 0) {
-                    $colorsQuery->where(function ($query) use ($parentId, $categoryId) {
-                        $query->where('c.parentid', $parentId)
-                            ->orWhere('c.categoryid', $parentId);
-                    });
-                } else {
-                    $colorsQuery->where(function ($query) use ($categoryId) {
-                        $query->where('c.parentid', $categoryId)
-                            ->orWhere('c.categoryid', $categoryId);
-                    });
-                }
+            // Apply subcategory filter if provided
+            if ($subcategory) {
+                $colorsQuery->where('c.categorycode', $subcategory);
             } else {
-                $colorsQuery->where('c.categoryid', $categoryId);
+                if ($main == 0) {
+                    if ($parentId > 0) {
+                        $colorsQuery->where(function ($query) use ($parentId, $categoryId) {
+                            $query->where('c.parentid', $parentId)
+                                ->orWhere('c.categoryid', $parentId);
+                        });
+                    } else {
+                        $colorsQuery->where(function ($query) use ($categoryId) {
+                            $query->where('c.parentid', $categoryId)
+                                ->orWhere('c.categoryid', $categoryId);
+                        });
+                    }
+                } else {
+                    $colorsQuery->where('c.categoryid', $categoryId);
+                }
             }
 
             if ($size) {
@@ -642,16 +656,17 @@ class CategoryController extends FrontendController
                 } else {
                     $sellingPriceColumn = DB::raw('COALESCE(p.sellingprice, p.price)');
                 }
+                // Price filter values are in BASE currency (not converted)
                 if (count($prices) == 1) {
-                    $priceValue = $prices[0] / $currencyRate;
+                    $priceValue = $prices[0];
                     if ($price == 5) {
                         $colorsQuery->where($sellingPriceColumn, '<=', $priceValue);
                     } else {
                         $colorsQuery->where($sellingPriceColumn, '>', $priceValue);
                     }
                 } else if (count($prices) == 2) {
-                    $minPrice = $prices[0] / $currencyRate;
-                    $maxPrice = $prices[1] / $currencyRate;
+                    $minPrice = $prices[0];
+                    $maxPrice = $prices[1];
                     $colorsQuery->where($sellingPriceColumn, '>=', $minPrice)
                         ->where($sellingPriceColumn, '<=', $maxPrice);
                 }
@@ -687,20 +702,25 @@ class CategoryController extends FrontendController
                 ->where('pf.filtercode', 'size')
                 ->where('fv.filtervalueid', '>', 0);
 
-            if ($main == 0) {
-                if ($parentId > 0) {
-                    $sizesQuery->where(function ($query) use ($parentId, $categoryId) {
-                        $query->where('c.parentid', $parentId)
-                            ->orWhere('c.categoryid', $parentId);
-                    });
-                } else {
-                    $sizesQuery->where(function ($query) use ($categoryId) {
-                        $query->where('c.parentid', $categoryId)
-                            ->orWhere('c.categoryid', $categoryId);
-                    });
-                }
+            // Apply subcategory filter if provided
+            if ($subcategory) {
+                $sizesQuery->where('c.categorycode', $subcategory);
             } else {
-                $sizesQuery->where('c.categoryid', $categoryId);
+                if ($main == 0) {
+                    if ($parentId > 0) {
+                        $sizesQuery->where(function ($query) use ($parentId, $categoryId) {
+                            $query->where('c.parentid', $parentId)
+                                ->orWhere('c.categoryid', $parentId);
+                        });
+                    } else {
+                        $sizesQuery->where(function ($query) use ($categoryId) {
+                            $query->where('c.parentid', $categoryId)
+                                ->orWhere('c.categoryid', $categoryId);
+                        });
+                    }
+                } else {
+                    $sizesQuery->where('c.categoryid', $categoryId);
+                }
             }
 
             if ($color) {
@@ -722,16 +742,17 @@ class CategoryController extends FrontendController
                 } else {
                     $sellingPriceColumn = DB::raw('COALESCE(p.sellingprice, p.price)');
                 }
+                // Price filter values are in BASE currency (not converted)
                 if (count($prices) == 1) {
-                    $priceValue = $prices[0] / $currencyRate;
+                    $priceValue = $prices[0];
                     if ($price == 5) {
                         $sizesQuery->where($sellingPriceColumn, '<=', $priceValue);
                     } else {
                         $sizesQuery->where($sellingPriceColumn, '>', $priceValue);
                     }
                 } else if (count($prices) == 2) {
-                    $minPrice = $prices[0] / $currencyRate;
-                    $maxPrice = $prices[1] / $currencyRate;
+                    $minPrice = $prices[0];
+                    $maxPrice = $prices[1];
                     $sizesQuery->where($sellingPriceColumn, '>=', $minPrice)
                         ->where($sellingPriceColumn, '<=', $maxPrice);
                 }
@@ -1426,19 +1447,20 @@ class CategoryController extends FrontendController
             }
 
             // Apply price filter
+            // Note: Price filter values are in BASE currency (not converted), matching CI behavior
             $sellingPriceColumn = $hasProductPriceView ? 'pp.sellingprice' : DB::raw('COALESCE(p.sellingprice, p.price)');
             if ($price) {
                 $prices = explode('-', $price);
                 if (count($prices) == 1) {
-                    $priceValue = $prices[0] / $currencyRate;
+                    $priceValue = $prices[0];
                     if ($price == 5) {
                         $productsQuery->where($sellingPriceColumn, '<=', $priceValue);
                     } else {
                         $productsQuery->where($sellingPriceColumn, '>', $priceValue);
                     }
                 } else if (count($prices) == 2) {
-                    $minPrice = $prices[0] / $currencyRate;
-                    $maxPrice = $prices[1] / $currencyRate;
+                    $minPrice = $prices[0];
+                    $maxPrice = $prices[1];
                     $productsQuery->where($sellingPriceColumn, '>=', $minPrice)
                         ->where($sellingPriceColumn, '<', $maxPrice);
                 }
@@ -1614,19 +1636,20 @@ class CategoryController extends FrontendController
             }
 
             // Apply price filter
+            // Note: Price filter values are in BASE currency (not converted), matching CI behavior
             $sellingPriceColumn = $hasProductPriceView ? 'pp.sellingprice' : DB::raw('COALESCE(p.sellingprice, p.price)');
             if ($price) {
                 $prices = explode('-', $price);
                 if (count($prices) == 1) {
-                    $priceValue = $prices[0] / $currencyRate;
+                    $priceValue = $prices[0];
                     if ($price == 5) {
                         $productsQuery->where($sellingPriceColumn, '<=', $priceValue);
                     } else {
                         $productsQuery->where($sellingPriceColumn, '>', $priceValue);
                     }
                 } else if (count($prices) == 2) {
-                    $minPrice = $prices[0] / $currencyRate;
-                    $maxPrice = $prices[1] / $currencyRate;
+                    $minPrice = $prices[0];
+                    $maxPrice = $prices[1];
                     $productsQuery->where($sellingPriceColumn, '>=', $minPrice)
                         ->where($sellingPriceColumn, '<', $maxPrice);
                 }

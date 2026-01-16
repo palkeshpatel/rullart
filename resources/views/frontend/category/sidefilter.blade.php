@@ -16,24 +16,63 @@
     </a>
     <h3 class="filters-heading">{{ trans('common.Refine By') }}</h3>
     
-    {{-- "All" link --}}
+    {{-- Subcategory/Product Type Filter --}}
     @php
-        // Get current category code for "all" link
         $currentCategoryCode = $collections['category']->categorycode ?? '';
-        
-        // Check if "all" should be active (when viewing the main category without subcategory filter)
-        $isAllActive = ($categoryCode == $currentCategoryCode);
+        $subcategorycnt = count($subcategory);
+        // "All" is active when no subcategory filter is applied
+        $selectedSubcategory = request()->get('category', '');
+        $isAllActive = empty($selectedSubcategory);
     @endphp
     
-    @if(!empty($currentCategoryCode))
+    @if($subcategorycnt > 0)
         <div class="filter-item">
             <div class="filter-content">
                 <ul class="list-unstyled cat-filters">
-                    <li {!! $isAllActive ? "class='active'" : '' !!}>
-                        <a href="{{ route('category.index', ['locale' => $locale, 'categoryCode' => $currentCategoryCode]) }}">
-                            {{ strtolower(trans('common.All')) }}
-                        </a>
-                    </li>
+                    {{-- "All" link --}}
+                    @if(!empty($currentCategoryCode))
+                        <li {!! $isAllActive ? "class='active'" : '' !!}>
+                            <a href="{{ route('category.index', ['locale' => $locale, 'categoryCode' => $currentCategoryCode]) }}">
+                                {{ strtolower(trans('common.All')) }}
+                            </a>
+                        </li>
+                    @endif
+                    
+                    {{-- Subcategory links --}}
+                    @foreach($subcategory as $row)
+                        @php
+                            $active = '';
+                            $selectedSubcategory = request()->get('category', '');
+                            // Check if this subcategory is currently active
+                            if ($row->parentid == 0) {
+                                // Main category - check query parameter
+                                if ($selectedSubcategory == $row->categorycode) {
+                                    $active = "class='active'";
+                                }
+                            } else {
+                                // Child category - check if current category code matches or query parameter
+                                if ($categoryCode == $row->categorycode || $selectedSubcategory == $row->categorycode) {
+                                    $active = "class='active'";
+                                }
+                            }
+                            $subcategoryName = $locale == 'ar' ? ($row->categoryAR ?? $row->category) : ($row->category ?? '');
+                        @endphp
+                        @if(($row->productcnt ?? 0) > 0)
+                            <li {!! $active !!}>
+                                @if($row->parentid == 0)
+                                    {{-- Main category: use query parameter --}}
+                                    <a href="{{ route('category.index', ['locale' => $locale, 'categoryCode' => $currentCategoryCode]) }}?category={{ $row->categorycode }}">
+                                        {{ $subcategoryName }}
+                                    </a>
+                                @else
+                                    {{-- Child category: navigate to new category page --}}
+                                    <a href="{{ route('category.index', ['locale' => $locale, 'categoryCode' => $row->categorycode]) }}">
+                                        {{ $subcategoryName }}
+                                    </a>
+                                @endif
+                            </li>
+                        @endif
+                    @endforeach
                 </ul>
             </div>
         </div>
