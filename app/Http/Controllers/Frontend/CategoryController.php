@@ -22,18 +22,9 @@ class CategoryController extends FrontendController
         $currentDb = config('database.connections.mysql.database');
         $currentPort = request()->getPort();
 
-        \Log::info("CategoryController index called");
-        \Log::info("Request URL: " . request()->fullUrl());
-        \Log::info("Request Path: " . request()->path());
-        \Log::info("Current Port: {$currentPort}");
-        \Log::info("Current Database: {$currentDb}");
-        \Log::info("Route parameters: " . json_encode(request()->route()->parameters()));
-
         // Get categoryCode from route parameters directly to ensure correct value
         // Laravel binds route parameters by position, so we need to get it from route
         $categoryCode = request()->route('categoryCode') ?? $categoryCode;
-        \Log::info("categoryCode from route: " . request()->route('categoryCode'));
-        \Log::info("categoryCode parameter value: {$categoryCode}");
 
         // Handle 'all' category - matching CI behavior
         $isall = false;
@@ -87,21 +78,15 @@ class CategoryController extends FrontendController
 
                 return view('frontend.category.index', $data);
             } catch (\Exception $e) {
-                \Log::error('CategoryController index (all) error: ' . $e->getMessage());
                 abort(404);
             }
         }
-
-        \Log::info("CategoryController: Searching for category '{$categoryCode}' in database: {$currentDb}");
 
         $category = Category::where('categorycode', $categoryCode)
             ->where('ispublished', 1)
             ->first();
 
-        \Log::info("Category found: " . ($category ? "Yes - ID: {$category->categoryid}, Code: {$category->categorycode}" : "No"));
-
         if (!$category) {
-            \Log::error("CategoryController: Category '{$categoryCode}' not found or not published in database: {$currentDb}");
             abort(404, 'Category not found');
         }
 
@@ -115,17 +100,12 @@ class CategoryController extends FrontendController
         $subcategory = request()->get('category', '');
 
         try {
-            \Log::info("Calling getCategoryProducts for: {$categoryCode}");
             $collections = $this->getCategoryProducts($categoryCode, $locale, $sortby, $color, $size, $price, $page, $main, $subcategory);
 
-            \Log::info("getCategoryProducts returned: " . ($collections ? "Data" : "False"));
-
             if (!$collections) {
-                \Log::error("CategoryController: getCategoryProducts returned false for category: {$categoryCode}");
                 abort(404, 'Category not found');
             }
         } catch (\Exception $e) {
-            \Log::error("CategoryController index error: " . $e->getMessage());
             \Log::error($e->getTraceAsString());
             abort(404, 'Error loading category: ' . $e->getMessage());
         }
@@ -1068,13 +1048,6 @@ class CategoryController extends FrontendController
         $subcategory = request()->get('category', '');
         $firstload = request()->get('firstload', 1);
 
-        \Log::info("CategoryController prodlisting called");
-        \Log::info("Request URL: " . request()->fullUrl());
-        \Log::info("Category Code: {$categoryCode}");
-        \Log::info("Color filter: {$color}");
-        \Log::info("Size filter: {$size}");
-        \Log::info("Price filter: {$price}");
-        \Log::info("Sort by: {$sortby}");
 
         try {
             if ($categoryCode == '') {
@@ -1085,7 +1058,6 @@ class CategoryController extends FrontendController
                 $collections = $this->getCategoryProducts($categoryCode, $locale, $sortby, $color, $size, $price, $page, $main, $subcategory);
             }
 
-            \Log::info("prodlisting collections: " . ($collections ? "Found " . count($collections['products']) . " products" : "False"));
 
             if (!$collections || count($collections['products']) == 0) {
                 return response()->json('FALSE');

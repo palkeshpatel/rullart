@@ -1,20 +1,9 @@
 @php
-    // Debug logging for locale in header
-    $currentLocale = $locale ?? app()->getLocale();
-    $appLocale = app()->getLocale();
-    \Log::info('Header View - $locale variable: ' . ($locale ?? 'NOT SET'));
-    \Log::info('Header View - app()->getLocale(): ' . $appLocale);
-    \Log::info('Header View - session("locale"): ' . session('locale', 'NOT SET'));
-    // Ensure locale is set correctly for translations BEFORE testing
+    // Ensure locale is set correctly for translations
     if (!isset($locale) || empty($locale)) {
         $locale = app()->getLocale();
     }
     app()->setLocale($locale);
-
-    \Log::info('Header View - Translation test with trans() - "whats new": ' . trans('common.whats new'));
-    \Log::info('Header View - Translation test with trans() - "sale": ' . trans('common.sale'));
-    \Log::info('Header View - Translation test with trans() - "about us": ' . trans('common.about us'));
-    \Log::info('Header View - Translation test with trans() - "contact": ' . trans('common.contact'));
 @endphp
 <header class="ra-header">
     <div class="container-fluid">

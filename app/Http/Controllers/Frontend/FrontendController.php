@@ -82,37 +82,21 @@ class FrontendController extends Controller
         $request = request();
         $locale = $request->segment(1);
 
-        Log::info('FrontendController::initializeLocale - URL segment(1): ' . $locale);
-        Log::info('FrontendController::initializeLocale - Full path: ' . $request->path());
-        Log::info('FrontendController::initializeLocale - Full URL: ' . $request->fullUrl());
-
         // Validate locale from URL
         if (!in_array($locale, ['en', 'ar'])) {
             // Fallback to session or default
             $locale = Session::get('locale', 'en');
-            Log::info('FrontendController::initializeLocale - Locale from URL invalid, using session: ' . $locale);
         }
 
         // Validate locale
         if (!in_array($locale, ['en', 'ar'])) {
             $locale = 'en';
-            Log::info('FrontendController::initializeLocale - Locale invalid, defaulting to: ' . $locale);
         }
 
         // Set locale in application and session
         App::setLocale($locale);
         Session::put('locale', $locale);
         $this->locale = $locale;
-
-        Log::info('FrontendController::initializeLocale - Final locale set: ' . $locale);
-        Log::info('FrontendController::initializeLocale - App::getLocale(): ' . App::getLocale());
-        Log::info('FrontendController::initializeLocale - Session locale: ' . Session::get('locale'));
-
-        // Test translation
-        $testTranslation = __('whats new');
-        Log::info('FrontendController::initializeLocale - Translation test "whats new": ' . $testTranslation);
-        $testTranslation2 = __('Popular Items');
-        Log::info('FrontendController::initializeLocale - Translation test "Popular Items": ' . $testTranslation2);
     }
 
     protected function initializeCurrency()
