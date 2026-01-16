@@ -61,15 +61,10 @@
                                 </div>
                             </div>
                         @else
-                            <div class="item {{ $active }}">
-                                @if (!empty($item->link) && $item->link != '-')
-                                    <a href="{{ $item->link }}" target="_blank">
-                                @endif
-                                <img src="{{ asset('storage/upload/homegallery/' . $photo) }}" alt="{{ $title }}"
-                                    class="img-responsive fill2">
-                                @if (!empty($item->link) && $item->link != '-')
-                                    </a>
-                                @endif
+                            <div class="item {{ $active }}"
+                                @if (!empty($item->link) && $item->link != '-') onclick="window.open('{{ $item->link }}', '_blank');" @endif>
+                                <img class="fill2" src="{{ asset('storage/upload/homegallery/' . $photo) }}"
+                                    alt="{{ $title }}">
                             </div>
                         @endif
                     @endforeach
@@ -92,80 +87,75 @@
 
     @if (!empty($pageDescription) || !empty($pageTitle))
         <section class="welcome-content">
-            <div class="container">
-                <h1>We pride ourselves with gifts that are defined by their artistic craftsmanship and elegance.</h1>
-                <p>Explore our wide range of exclusively designed gifts and accessories for all your special occasions.
-                </p>
-            </div>
+            @if (!empty($pageTitle))
+                <h1>{!! $pageTitle !!}</h1>
+            @endif
+            @if (!empty($pageDescription))
+                <p>{!! $pageDescription !!}</p>
+            @endif
         </section>
-        {{-- <section class="welcome-content">
-            <div class="container">
-                @if (!empty($pageTitle))
-                    <h1>{!! $pageTitle !!}</h1>
-                @endif
-                @if (!empty($pageDescription))
-                    <p>{!! $pageDescription !!}</p>
-                @endif
-            </div>
-        </section> --}}
     @endif
 
     @if (isset($popular) && $popular->count() > 0)
-        <section class="popular-items">
-            <div class="container">
-                <h2 class="section-title">{{ trans('common.Popular Items') }}</h2>
+        <section class="home-products">
+            <div class="container-fluid">
+                <h3><span><span class="before-icon"></span>{{ trans('common.Popular Items') }}<span
+                            class="after-icon"></span></span></h3>
                 <div class="row">
                     @foreach ($popular as $product)
                         @php
                             // Repository maps: title = shortdescr/shortdescrAR (same as CI project)
                             $productTitle = $product->title ?? '';
-                            $price = isset($product->sellingprice) ? $product->sellingprice : $product->price;
-                            $finalPrice = $price * $currencyRate;
+                            $standardPrice = isset($product->price) ? $product->price : 0;
+                            $sellingPrice = isset($product->sellingprice) ? $product->sellingprice : $standardPrice;
                             $discount = isset($product->discount) ? $product->discount : 0;
                             $photo = $product->photo1 ?? '';
+                            if ($photo == '') {
+                                $photo = 'noimage.jpg';
+                            }
                             $isSoldOut = isset($product->qty) && $product->qty <= 0;
+
+                            // Calculate prices with currency rate
+                            $displaySellingPrice = $sellingPrice * $currencyRate;
+                            $displayStandardPrice = $standardPrice * $currencyRate;
+
+                            // Translate currency code to Arabic if locale is Arabic
+                            $displayCurrency = $currencyCode;
+                            if ($locale == 'ar') {
+                                $currencyTranslation = trans('common.' . $currencyCode, [], 'ar');
+                                if ($currencyTranslation != 'common.' . $currencyCode) {
+                                    $displayCurrency = $currencyTranslation;
+                                } elseif ($currencyCode == 'KWD' || $currencyCode == 'KD') {
+                                    $displayCurrency = 'دك';
+                                }
+                            }
+
+                            // Format price based on CI project converted_value format
+                            $formattedSellingPrice = number_format($displaySellingPrice, 0) . ' ' . $displayCurrency;
+                            $formattedStandardPrice = number_format($displayStandardPrice, 0) . ' ' . $displayCurrency;
                         @endphp
-                        <div class="col-xs-6 col-sm-4 col-md-3 product-item">
-                            <div class="product-box">
-                                <a
-                                    href="{{ route('product.show', ['locale' => $locale, 'category' => $product->categorycode, 'product' => $product->productcode]) }}">
-                                    <div class="product-image">
-                                        <img src="{{ asset('storage/upload/product/' . $photo) }}"
-                                            alt="{{ $productTitle }}" class="img-responsive">
-                                        @if ($discount > 0)
-                                            <span class="discount-badge">{{ round(($discount / $price) * 100) }}%</span>
-                                        @endif
-                                        @if ($isSoldOut)
-                                            <span class="sold-out-badge">{{ trans('common.Sold Out') }}</span>
-                                        @endif
-                                    </div>
-                                    <div class="product-info">
-                                        <h3 class="product-title">{{ $productTitle }}</h3>
-                                        <div class="product-price">
-                                            @php
-                                                // Translate currency code to Arabic if locale is Arabic
-                                                $displayCurrency = $currencyCode;
-                                                if ($locale == 'ar') {
-                                                    $currencyTranslation = trans('common.' . $currencyCode, [], 'ar');
-                                                    // If translation exists and is not the key itself, use it
-                                                    if ($currencyTranslation != 'common.' . $currencyCode) {
-                                                        $displayCurrency = $currencyTranslation;
-                                                    } elseif ($currencyCode == 'KWD' || $currencyCode == 'KD') {
-                                                        $displayCurrency = 'دك';
-                                                    }
-                                                }
-                                            @endphp
+                        <div class="col-xs-6 col-sm-3">
+                            <div class="product-item">
+                                <a href="{{ route('product.show', ['locale' => $locale, 'category' => $product->categorycode, 'product' => $product->productcode]) }}"
+                                    title="{{ $productTitle }}">
+                                    <span class="product-image"><img src="{{ asset('storage/upload/product/' . $photo) }}"
+                                            alt="{{ $productTitle }}"></span>
+                                    <span class="product-content">
+                                        <span class="product-title">{{ $productTitle }}</span>
+                                        <span class="product-price">
                                             @if ($discount > 0)
-                                                <span class="old-price">{{ number_format($price * $currencyRate, 0) }}
-                                                    {{ $displayCurrency }}</span>
-                                                <span class="new-price">{{ number_format($finalPrice, 0) }}
-                                                    {{ $displayCurrency }}</span>
-                                            @else
-                                                <span class="price">{{ number_format($finalPrice, 0) }}
-                                                    {{ $displayCurrency }}</span>
+                                                <span class="standard-price">{{ $formattedStandardPrice }}</span>
                                             @endif
-                                        </div>
-                                    </div>
+                                            <span class="actual-price">{{ $formattedSellingPrice }}</span>
+                                        </span>
+                                    </span>
+                                    @if ($discount > 0)
+                                        <span
+                                            class="product-discount">-{{ round(($discount / $standardPrice) * 100) }}%</span>
+                                    @endif
+                                    @if ($isSoldOut)
+                                        <p class="sold-out">{{ trans('common.SOLD OUT') }}</p>
+                                    @endif
                                 </a>
                             </div>
                         </div>
