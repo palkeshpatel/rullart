@@ -114,7 +114,13 @@ Route::group(['prefix' => '{locale}', 'where' => ['locale' => 'en|ar'], 'middlew
     Route::get('/category/{categoryCode}', [CategoryController::class, 'index'])
         ->where('categoryCode', '[a-zA-Z0-9\-]+')
         ->name('category.index');
-    Route::get('/all', [CategoryController::class, 'all'])->name('category.all');
+    // Redirect /all to /category/all to match CI project behavior
+    Route::get('/all', function () {
+        return redirect()->route('category.index', [
+            'locale' => app()->getLocale(),
+            'categoryCode' => 'all'
+        ]);
+    })->name('category.all');
 
     // AJAX product listing routes (for dynamic filtering)
     Route::get('/prodlisting/category/{categoryCode}', [CategoryController::class, 'prodlisting'])

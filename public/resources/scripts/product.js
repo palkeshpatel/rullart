@@ -58,10 +58,10 @@ function productlist(url,firstload){
            
 
             $.each(obj["products"], function(k, v) {
-              photo = v.photo1;
-              if (photo=='')
-                photo = 'noimage.jpg';
-              prodlist += '<div class="col-xs-6 col-sm-4"><div class="product-item"><a href="' + produrl + v.categorycode + '/' + v.productcode+'"><span class="product-image"><img src="/storage/thumb-'+photo+'" alt="'+v.title+'"></span>';
+              // Controller now formats photo1 as asset('storage/upload/product/' . $photo)
+              // So we can use it directly
+              photo = v.photo1 || '/storage/upload/product/noimage.jpg';
+              prodlist += '<div class="col-xs-6 col-sm-4"><div class="product-item"><a href="' + produrl + v.categorycode + '/' + v.productcode+'"><span class="product-image"><img src="'+photo+'" alt="'+v.title+'"></span>';
               prodlist += '<span class="product-content"><span class="product-title">'+v.title+'</span><span class="product-price">';
               if (v.discount>0)
                 prodlist += '<span class="standard-price">' + KD + ' '+ parseFloat(v.price * currencyrate).toFixed(2)  +'</span>';
