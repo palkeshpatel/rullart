@@ -78,12 +78,17 @@
 
         @media (max-width: 767px) {
             .sort-by-mobile-bottom {
-                bottom: -125px !important;
+                bottom: -40px !important;
+            }
+            
+            .filter-toggle {
+                position: absolute;
+                top: 0;
             }
         }
     </style>
 
-    <main class="inside">
+    <main class="inside cate-sec">
         @if (isset($collections['category']) && $collections['category']->photo)
             <div class="inside-hero">
                 <img src="{{ url('storage/' . $collections['category']->photo) }}" alt="{{ $categoryTitle }}">
@@ -135,7 +140,7 @@
             @if ($productcnt >= 0)
                 <div class="container-fluid">
                     @if (!empty($collections['category']->category_description ?? ''))
-                        <div class="hidden-lg hidden-md" style="margin:3rem !important;">
+                        <div class="hidden-lg hidden-md mobile-top-space">
                             <p class="text-center m-3 fs-3">{{ $collections['category']->category_description ?? '' }}</p>
                         </div>
                     @endif
